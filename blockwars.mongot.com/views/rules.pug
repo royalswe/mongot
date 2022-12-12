@@ -1,0 +1,209 @@
+extends base
+block head
+  - var title = 'How to play'
+  style.
+    body{background-color: #E0E0E0}
+
+block body
+  main#rules
+    ul.lang-menu
+      li.nav-parent
+        a.link(href='#english')
+          img(src='/img/uk-flag.png', alt='Rules in swedish')
+      li.nav-parent
+        a.link(href='#swedish')
+          img(src='/img/swedish-flag.png', alt='Rules in swedish')
+
+    #lang_content
+      #english.page
+        h1 How to play
+        h2(style="text-align:center;") This page is under construction
+        img(src='/img/uk-flag.png', alt='Rules in swedish', class="center flags")
+
+        | Blockwar is a Tetris variant where the goal is to stay alive for as long as possible until the opponents fill their playing field before your own gets filled. <br>
+        | Different blocks fall from above and the goal is to fill horizontal lines on the playing field to make them disappear. <br>
+        | The game consists of up to 5 players, you can play with or without ranking.
+        h2(style="text-align:center;") Game field
+        img(src='/img/rules-game-arena.png', alt='Game field', class="center", width="60%")
+
+        h4 <br><br>The following keys are used to move the blocks: <br><br>
+
+        | <b>Left Arrow</b> - Moves the block to the left<br>
+        | <b>Right Arrow</b> - Move the block to the right<br>
+        | <b>Down Arrow</b> - Move the block faster down<br>
+        | <b>Up arrow</b> - Rotate block counterclockwise<br>
+        | <b>Z</b> - Rotate the block clockwise<br>
+        | <b>Spacebar</b> - Drops the block<br>
+        | <b>ctrl + c</b> - Shortcut to enable and disable chat input<br><br>
+        
+        | For devices without keyboard there are touch buttons below the game field. <br><br>
+        
+        | The game is lost if a new block can not enter the player's playing field. The strategy is to keep their blocks as far down the playing field as possible.<br>
+        | To remove blocks from the playing field you have to build horizontal lines without holes. Then that line will be removed.<br>
+        | With specials you can give yourself advantage or sabotage for the opponents. To earn specials you must remove two rows at the same time. If four lines are removed you will earn two specials.<br>
+        | There must be blocks left on the playing field to obtain specials. If there are no blocks on the field then the specials will be lost.<br>
+        | The specials are not useful until they are collected. To collect a special items you have to create a full line with the specials.<br>
+        | As soon as a special item is collected, it can be thrown on any of the active game fields, including your own. To throw a special, press the 1-5 buttons (the numbers are bellow the fields). Press [3] to throw the special on yourself.<br><br>
+        
+        <h4>There are 12 different special items:</h4>
+
+        ul.specials-list
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/8.gif')
+            | <b>Add row</b> - Add one line at the bottom with an hole
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/9.gif')
+            | <b>Remove row</b> - Removes the row at the bottom
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/10.gif')
+            | <b>Earthquake</b> - Scramble all lines horizontal
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/12.gif')
+            | <b>Clear specials</b> - Converts all special items to regular blocks
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/13.gif')
+            | <b>Shotgun</b> - Creates random holes in the field
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/14.gif')
+            | <b>Gravity</b> - Pushes blocks downwards, filling all gaps and clearing all whole rows afterwards
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/15.gif')
+            | <b>Clear arena</b> - Removes all blocks from the field
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/16.gif')
+            | <b>Switch arena</b> - Swap your field with the opponents, remove the 4 top rows if they exist
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/17.gif')
+            | <b>Monster</b> - Builds a monster with blocks
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/18.gif')
+            | <b>Mini bomb</b> - Change all specials to deadly mines
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/19.gif')
+            | <b>Mine</b> -You lose the game if you collect this
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/11.gif')
+            | <b>Milkshake</b> - Scramble all lines vertical
+        
+        div.settings
+          h4 Settings
+          <br>
+          img(src='/img/game-settings-rules.png' align="left")
+          | Inside the game room there is a menu for settings in the upper left corner.<br><br>
+          | In the menu it is possible to:
+          li Read the game rules
+          li Change the control keys
+          li Mute the sound
+          li Turn on fullscreen
+
+      #swedish.page
+        h1 Hur man spelar
+        h2(style="text-align:center;") Den här sidan är under uppbyggnad
+
+        img(src='img/swedish-flag.png', alt='Rules in swedish', class="center flags")
+
+        | Blockwar är en Tetris variant där huvudmålet är att hålla sig i liv så länge som möjligt tills motståndarna fyller sin spelplan före din egna.<br>
+        | Olikformade block faller uppifrån och målet är att man ska göra hela horisontella rader på spelplanen för att få dem att försvinna.<br>
+        | Spelet består upp till 5 spelare med eller utan ranking.<br>
+        h2(style="text-align:center;") Spelplanen
+        img(src='/img/rules-game-arena.png', alt='spelplanen', class="center", width="60%")
+
+        h4 <br><br>För att kontrollera blocken används följande tangenter:<br><br>
+
+        | <b>Vänster Pil</b> - flyttar blocken åt vänster<br>
+        | <b>Höger Pil</b> - flyttar blocken åt höger<br>
+        | <b>Pil Ner</b> - flyttar blocken fortare nedåt<br>
+        | <b>Pil Upp</b> - roterar blocken moturs<br>
+        | <b>Z</b> - roterar blocken medurs<br>
+        | <b>Mellanslag</b> - droppar blocken<br>
+        | <b>ctrl + c</b> - snabb komando för att aktivera och avaktivera chat inmatning<br><br>
+
+        | För enheter utan tangentbord finns det touch knappar nedanför spelplanen.<br><br>
+
+        | Spelet förloras om ett nytt block inte kan komma in på spelarens spelplan. Strategin är att hålla sina block så långt ner på spelplanen som möjligt.<br>
+        | För att plocka bort block från spelplanen gäller det att manövrera dem så att det bildas en horisontell rad utan hål vilket resulterar att raden försvinner.<br>
+
+        | Med specialare kan man ge sig själv fördel eller sabotera för motståndarna. För att förtjäna specialare måste man ta bort två rader på samma gång eller fler. Om fyra rader tas bort har man förtjänat 2 två specialare.<br>
+        | Det måste finnas block kvar på spelplanen, när man förtjänar specialare. Om inga block finns, är specialaren förlorad.<br>
+        | Specialaren är inte användbar förrän de är insamlade. För att samla in en specialare måste raden specialaren ligger i tas bort.<br>
+        | Så fort en specialare är insamlad den kan bli kastad på något av de aktiva spelplanerna inklusive sin egen. För att kasta en specialare, tryck på tangenterna 1-5 (numrerna syns under varje spelplan). För att kasta på din egen spelplan trycker du på tangenten [3].<br><br>
+        
+        h4 Det finns 12 olika specialare:
+
+        ul.specials-list
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/8.gif')
+            | <b>Add row</b> - Lägg till en rad i botten med ett hål
+          li
+            img(src='https://blockwars.mongotom/img/game/specials/9.gif')
+            | <b>Remove row</b> - Tar bort raden längst ner på spelplanen
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/10.gif')
+            | <b>Earthquake</b> - Skakar omkring blocken rad för rad över hela spelplanen
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/12.gif')
+            | <b>Specials away</b> - Tar bort alla specialare från spelplanen
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/13.gif')
+            | <b>Shootgun</b> - Tar bort block slumpvis över hela spelplanen
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/14.gif')
+            | <b>Gravity</b> - Tar bort alla hål och jämnar till alla rader (Inga specialare förtjänas)
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/15.gif')
+            | <b>Clear arena</b> - Tar bort alla block från spelplanen
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/16.gif')
+            | <b>Switch arena</b> - Byter spelplan mellan dig och utvald spelare
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/17.gif')
+            | <b>Monster</b> - Fyller spelplanen med ett förutbestämt mönster
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/18.gif')
+            | <b>Mini bomb</b> - Ändra specialare till dödliga minor
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/19.gif')
+            | <b>Mine</b> - Tar du denna förlorar du spelet
+          li
+            img(src='https://blockwars.mongot.com/img/game/specials/11.gif')
+            | <b>Milkshake</b> - Skakar hela spelplanen vertikalt. Kan påverka höjden av blocken på spelplanen
+        
+        div.settings
+          h4 Inställningar
+          <br>
+          img(src='/img/game-settings-rules.png' align="left")
+          | Inne i spelrummet finns en meny för inställningar uppe i vänstra hörnet.<br><br>
+          | I menyn går det att:
+          li Läsa spelregler
+          li Byta tangenternas kontrollinställningar
+          li Slå av och på ljudet
+          li Slå på och av helskärmsläge
+        
+
+  script.
+    (function() {
+
+      var page = document.getElementsByClassName('page');
+      for (var i = 0; i < page.length; i++) {
+        page[i].style.display = 'none';
+      }
+
+      var hash = document.location.hash;
+      if(hash === ''){ hash = '#english'; }
+
+      document.querySelector(hash).style.display = '';
+      document.querySelector('a[href="'+hash+'"]').parentNode.classList.add("active");
+
+      window.addEventListener("hashchange",function(){
+        for (var i = 0; i < page.length; i++) {
+          page[i].style.display = 'none';
+        }
+
+        document.querySelector('.nav-parent.active').classList.remove('active');
+        
+        var hash = document.location.hash;
+        document.querySelector('a[href="'+hash+'"]').parentNode.classList.add("active");
+        document.querySelector(hash).style.display = '';
+      });
+
+    })();

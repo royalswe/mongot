@@ -1,0 +1,32 @@
+extends base
+block head
+  - var title = 'General'
+  link(rel='stylesheet', type='text/css', href='/css/home.css?v=1.2')
+
+block body
+  div#myHeader.container.theme.padding
+    .center
+      h1.xxxlarge.animate-bottom General
+      h2 Conquer the world in a realtime Risk-like strategy game
+      .padding-32
+
+  .row-padding.center
+    a.third(href='/lobby')
+      .card-2.padding-top
+        h4 Lobby
+        br
+        i.fa.fa-globe.margin-bottom.text-theme
+        p Check out the lobby to join games.
+        p Note that you have to be registered to play games.
+    a.third(href='/highscore')
+      .card-2.padding-top
+        h4 High Score
+        br
+        i.fa.fa-trophy.margin-bottom.text-theme
+        p Check out the top 30 users.
+    a.third(href='/rules')
+      .card-2.padding-top
+        h4 How to play
+        br
+        i.fa.fa-leanpub.margin-bottom.text-theme
+        p First time playing? You can find the rules here.

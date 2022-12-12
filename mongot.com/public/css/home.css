@@ -1,0 +1,179 @@
+a.third, a.half {
+  color: #000;
+  text-decoration:none;
+}
+a.third:hover, a.half:hover {
+  transform: scale(1.05);
+}
+.card-2:hover{
+  background-color: #ffffff !important;
+}
+#logo_header{
+  min-height: 300px;
+}
+.theme {
+  color: #ffffff;
+  background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("../img/blipvile.jpg") #356aa0;
+  background-size: cover;
+}
+@media only screen and (min-width:700px) {
+  .theme {
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("../img/blipvile-double.jpg") #356aa0;
+    background-size: cover;
+  }
+  .row-padding {
+    margin-left: 5%;
+    margin-right: 5%;  
+  }
+  a.third, a.half {
+    margin-top: -80px;
+  }
+}
+@media only screen and (min-width:1000px) {
+  .row-padding {
+    margin-left: 10%;
+    margin-right: 10%;  
+  }
+  a.third, a.half {
+    margin-top: -80px;
+  }
+}
+.text-theme {
+  color: #000000;
+}
+* {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+html {
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  background-color: #a2a2a2;
+}
+a {
+  background-color: transparent;
+}
+a:active,a:hover {
+  outline: 0;
+}
+html,body {
+  font-family: Verdana,sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+html {
+  overflow-x: hidden;
+}
+h1,h2,h3,h4,h5,h6 {
+  font-family: "Segoe UI",Arial,sans-serif;
+}
+h1,h2,h3,h4,h5,h6 {
+  font-weight: 400;
+  margin: 10px 0;
+}
+h1 a,h2 a,h3 a,h4 a,h5 a,h6 a {
+  font-weight: inherit;
+}
+h1 {
+  font-size: 36px;
+  font-weight: 700;
+  text-shadow: -3px 0 black, 0 3px black, 3px 0 black, 0 -3px black;
+}
+h2 {
+  font-size: 30px;
+  font-weight: 700;
+  text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+  
+}
+h4 {
+  font-size: 20px;
+}
+a {
+  color: inherit;
+}
+.container:after,.row:after,.row-padding:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+.half, .third {
+  float: left;
+  width: 100%;
+}
+.half, .third {
+  width: 99.99999%;
+}
+@media only screen and (min-width:601px) {
+  .third {
+    width: 33.33333%;
+  }
+  .half {
+    width: 50%;
+  }
+  a.third, a.half {
+    margin-top: -80px;
+  }
+}
+.xxxlarge {
+  font-size: 48px!important;
+}
+.center {
+  text-align: center!important;
+}
+.margin-bottom {
+  margin-bottom: 16px!important;
+}
+.padding {
+  padding: 8px 16px!important;
+}
+.padding-32 {
+  padding-top: 32px!important;
+  padding-bottom: 32px!important;
+}
+.padding-top {
+  padding-top: 8px!important;
+}
+.row-padding,.row-padding>.third, .row-padding>.half {
+  padding: 4px 8px;
+}
+.container {
+  padding: 0.01em 16px;
+}
+.card-2 {
+  min-height:460px;
+  box-shadow: 0 1rem 3rem #485460;
+  background-color: #ececec;
+  border-radius: 10px;
+}
+.card-2 img{
+  width: 100%
+}
+.animate-bottom {
+  position: relative;
+  -webkit-animation: animatebottom 0.4s;
+  animation: animatebottom 0.4s;
+}
+@-webkit-keyframes animatebottom {
+  from {
+    bottom: -300px;
+    opacity: 0;
+  }
+  to {
+    bottom: 0px;
+    opacity: 1;
+  }
+}
+@keyframes animatebottom {
+  from {
+    bottom: -300px;
+    opacity: 0;
+  }
+  to {
+    bottom: 0;
+    opacity: 1;
+  }
+}

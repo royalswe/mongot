@@ -1,0 +1,109 @@
+extends base
+block head
+  - var title = 'High score'
+    style.
+      body {
+        background-color: #E0E0E0;
+      }
+      .costum-table-dark .table th {
+        padding: 15px 10px !important;
+        background-color: #212121;
+        color: #EC7149;
+        border-top: 0 !important;
+        border-bottom: 2px solid #505050 !important;
+      }
+      .costum-table-dark .table tr:hover {
+        background-color: #3A3A3A;
+      }
+      .costum-table-dark {
+        background: #434242;
+        color: #FFF;
+        width: 90%;
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 20px;
+      }
+      tr:nth-child(even) {
+        background: #666666;
+      }
+      td{
+        padding-left: 5px;
+      }
+      td a{
+        color: #ffffff;
+        text-decoration: none;
+      }
+      th {
+      border-top: 1px solid #505050;
+        text-align: left;
+      }
+      h1{
+        text-align: center;
+        padding: 10px;
+        text-shadow: 0 1px 0 #ccc,
+        0 2px 0 #c9c9c9,
+        0 3px 0 #bbb,
+        0 4px 0 #b9b9b9,
+        0 5px 0 #aaa,
+        0 6px 1px rgba(0, 0, 0, .1),
+        0 0 5px rgba(0, 0, 0, .1),
+        0 1px 3px rgba(0, 0, 0, .3),
+        0 3px 5px rgba(0, 0, 0, .2),
+        0 5px 10px rgba(0, 0, 0, .25),
+        0 10px 10px rgba(0, 0, 0, .2),
+        0 20px 20px rgba(0, 0, 0, .15);
+        color: #656565;
+        font-size: 35px;
+      }
+
+block body
+  h1 High Score
+  .costum-table-dark
+    table.table
+      thead
+        tr
+          th(width='2%')
+            | No
+          th
+            | Username
+          th
+            | Points
+          th
+            | Won/Lost
+      - for (var i=0; i<highscores.length; i++)
+
+        - var points = highscores[i].points_general;
+        if points < 900
+          - var img = "crown0.png";
+        else if points >= 900 && points < 1300
+          - var img = "crown1.png";
+        else if points >= 1300 && points < 1500
+          - var img = "crown2.png";
+        else if points >= 1500 && points < 1700
+          - var img = "crown3.png";
+        else if points >= 1700 && points < 1900
+          - var img = "crown4.png";
+        else if points >= 1900 && points < 2100
+          - var img = "crown5.png";
+        else if points >= 2100 && points < 2300
+          - var img = "crown6.png";
+        else if points >= 2300 && points < 2500
+          - var img = "crown7.png";
+        else if points >= 2500 && points < 2700
+          - var img = "crown8.png";
+        else if points >= 2700 && points < 2900
+          - var img = "crown9.png";
+        else
+          - var img = "crown10.png";
+        tr
+          td
+            | #{i+1}
+          td
+            a(href='https://mongot.com/user/' + highscores[i].username ) #{highscores[i].username}
+          td
+            img(src="/img/rankings/" + img)
+            |  #{highscores[i].points_general}
+          td
+            | #{highscores[i].games_won_general} / #{highscores[i].games_lost_general}
+
+

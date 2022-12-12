@@ -1,0 +1,36 @@
+extends base
+block head
+  - var title = 'mongot'
+  link(rel='stylesheet', type='text/css', href='/css/home.css?v=1.1')
+
+block body
+  div#logo_header.container.theme.padding
+    .center
+      h1.xxxlarge.animate-bottom mongot.com
+      h2 Bringing back the game nostalgia from blip.se
+      .padding-32
+
+  .row-padding.center.margin-top
+    a.half(href='https://general.mongot.com')
+      .card-2
+        img(src='/img/general.jpg', alt='Play General')
+        h4 General
+        br
+        p General is a clone of RISK like strategy game from blip, where you compete with your friends to conquer the world.
+        p General is a turn based game with each player starting with their own controllable army in an attempt to capture territories from opposing players and control the entire map.
+    a.half(href='https://blockwars.mongot.com')
+      .card-2
+        img(src='/img/blockwars.jpg', alt='Play Blockwars')
+        h4 Blockwars
+        br
+        p Blockwars is a clone of Blip's multiplayer tetris-inspired game similar to TetriNET.
+        p Collect special items by clearing lines and use those items to attack your opponents or defend yourself. The main goal is to stay alive for as long as possible and collect specials that will help you on the way.
+  
+  .row-padding.center.margin-top
+    .padding-top
+      p Back in the days I was addicted to a RISK-like game called General from a site called Blip.se.
+      p Blip.se was a site where you could play games, chat with friends, participate in tournaments and competitions, discuss in forums, form clans and much more. Blip.se was created in 2003 and closed at the end of 2010.
+      p The purpose of mongot is to recreate games from Blip.se over time, but with modern technology and possible changes in the games.
+      p A clone of General was created in 2016 and became the first game published on mongot. Blockwars was a popular tetris game from Blip.se that was recreated and published 2017 after requests from users.
+      p Feel free to play the games and have fun!
+    .padding-top

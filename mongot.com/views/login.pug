@@ -1,0 +1,18 @@
+extends base
+block head
+  - var title = 'Login'
+
+block body
+  form(method="post")
+    .form-block
+      h1 Login
+
+      input(type="hidden", name="_csrf", value=csrfToken)
+      input#email(type="text", name="email", required=true, placeholder='Email or Username')
+      input#password(type="password", name="password", required=true, placeholder='Password')
+      input(type="submit" id="login" value="login")
+      a.forgot-link(href='/forgot') Forgot Password?
+
+
+
+

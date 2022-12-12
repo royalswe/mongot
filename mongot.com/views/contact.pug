@@ -1,0 +1,18 @@
+extends base
+block head
+  - var title = 'Contact'
+
+block body
+  style.
+    .no-type{ display:none }
+  main#rules
+    .form-block
+      h1 Contact
+      p Feel free to contact us if you have any suggestions to make the site better.
+      form(method="post")
+        input(type="hidden", name="_csrf", value=csrfToken)
+        input#email(type='text', name="from", placeholder='Email (Not required)')
+        textarea.no-type(name="content", value='write here')
+        textarea#textarea(cols='40', rows='5', name="text", required=true, placeholder='Write your message here')
+        input.no-type(type='checkbox', name="agreement")
+        input(type="submit" id="send_email" value="Send Email")

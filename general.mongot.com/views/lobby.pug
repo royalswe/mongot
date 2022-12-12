@@ -1,0 +1,78 @@
+extends base
+block head
+  - var title = 'General Lobby'
+  style.
+    body{padding-bottom: 350px !important;background: #0c0c0c url('/img/bg_carbon.png')}
+
+block body
+  if user && user.god
+    #admin_panel
+      select(id='kick_out_room')
+        option(value='', disabled='disabled', selected='selected') Choose room
+      select(id='kick_out_player')
+        option(value='', disabled='disabled', selected='selected') Player
+      input#kick_out_btn(type="button", value="Kick Out Player")
+    button.admin-toggle God Mode
+  p.flash-message-ie
+  section#lobby
+    h1 General Lobby
+    #allrooms
+      table
+        thead
+          tr
+            th
+              | Game Name
+            th
+              | Players
+            th
+              | Status
+            th
+              | Join
+        tbody
+
+    #news_box
+      p.news-heading Browsers ordered by best game compability
+      img.browsers(src='/img/browsers.png', alt='Chrome works best in game', title='Chrome works best in game')
+      p.news-heading Help us grow
+      .fb-like(data-href='https://www.facebook.com/blipmini/', data-layout='button_count', data-action='like', data-size='large', data-show-faces='false', data-share='true')
+
+      p.news-heading Heads up
+      p.news-text
+        | You can be notified when users arrives if you click on the bell.
+        | Click again to turn notifications off.
+      input#toggle_notification(type='checkbox', onchange='toggleNotificationPermissions(this);')
+      label(for='toggle_notification')
+
+  section#lobby_chat
+    div#messages
+    div#chat_input
+      //input#message(type="text", autocomplete="off", placeholder='#{(user) ? "Enter your message here" : "Login to use the chat"}')
+      input#message(type="text", autocomplete="off", placeholder="Enter your message here")
+      input#send(type='submit', value='Send')
+  section#users_online
+
+  script
+    if user
+      | var user = !{JSON.stringify(user)}
+    else
+      | var user = 'guest';
+  script(src='/socket.io/socket.io.js')
+  script(src='/resources/jquery.min.js')
+  script(src='/resources/howler.min.js')
+  // script(src='/js/lobby.min.js')
+  script(src='/js/notifications.js')
+  
+  script(src='/js/storage.js')
+  script(src='/js/lobby.js')
+  script(src='/js/lobby.chat.js')
+  script.
+      document.addEventListener("DOMContentLoaded", function(event) { 
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) return;
+            js = d.createElement(s);
+            js.id = id;
+            js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.8&appId=396659270516324";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+      });

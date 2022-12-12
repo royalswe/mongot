@@ -1,0 +1,49 @@
+extends base
+
+block head
+  - var title = 'User'
+
+block body
+
+  - function crown(points){ if(points < 900) return "crown0.png"; else if(points >= 900 && points < 1300) return "crown1.png"; else if(points >= 1300 && points < 1500) return "crown2.png"; else if(points >= 1500 && points < 1700) return "crown3.png"; else if(points >= 1700 && points < 1900) return "crown4.png"; else if(points >= 1900 && points < 2100) return "crown5.png"; else if(points >= 2100 && points < 2300) return "crown6.png"; else if(points >= 2300 && points < 2500) return "crown7.png"; else if(points >= 2500 && points < 2700) return "crown8.png"; else if(points >= 2700 && points < 2900) return "crown9.png"; else return "crown10.png"; }
+  - function winRatio(win, lost) { if(win === 0 || isNaN(win/lost)) { return 0; } if(lost === 0){ return 100; } return (win/lost).toFixed(2); }
+  
+  .wrapper
+    section.left-profile
+      .top 
+        h4 !{friend.username}
+        label joined
+        span #{friend.joined.toGMTString().slice(0, -12)}
+        label activated account
+        span #{friend.active}
+      
+      .second
+        h4 Blockwars
+        label score
+        span
+          img(src='/img/rankings/' + crown(friend.points_bw))
+          | #{friend.points_bw}
+        label Won/Lost
+        span #{friend.games_won_bw}/#{friend.games_lost_bw} 
+        label Win Ratio 
+        span #{winRatio(friend.games_won_bw, friend.games_lost_bw)}
+        label Last visit
+        span #{friend.last_visit_bw.toGMTString().slice(0, -12)}
+
+      .third
+        h4 General
+        label score
+        span
+          img(src='/img/rankings/' + crown(friend.points_general))
+          | #{friend.points_general}
+        label Won/Lost
+        span #{friend.games_won_general}/#{friend.games_lost_general} 
+        label Win Ratio 
+        span #{winRatio(friend.games_won_general, friend.games_lost_general)}
+        label Last visit
+        span #{friend.last_visit_general.toGMTString().slice(0, -12)}
+
+    section.right-profile
+      #editor !{(friend.wysiwyg) ? friend.wysiwyg : "<h2>&nbsp; No presentation is created.</h2>" }
+
+  

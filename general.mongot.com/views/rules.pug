@@ -1,0 +1,158 @@
+extends base
+block head
+  - var title = 'How to play'
+  style.
+    body{background-color: #E0E0E0}
+
+block body
+  main#rules
+    ul.lang-menu
+      li.nav-parent
+        a.link(href='#english')
+          img(src='/img/uk-flag.png', alt='Rules in swedish')
+      li.nav-parent
+        a.link(href='#swedish')
+          img(src='/img/swedish-flag.png', alt='Rules in swedish')
+
+    #lang_content
+      #english.page
+        h1 How to play
+        img(src='/img/uk-flag.png', alt='Rules in swedish', class="center flags")
+
+        | General node is a real-time strategy game for 2 to 4 players. The game is a clone of General from blip.se and Wargames from tv2.dk. <br>
+        | When the game starts all countries will be devided by the players and each player receives a mission. If it is your turn and your mission is completed, you win the game. You can also win the game by wiping out all of the other players armies.
+        h4 Preparation
+        | In order to play you need to be a&nbsp;
+        a(href='https://mongot.com/register') registered
+        |  user. Navigate to the&nbsp;
+        a(href='/lobby') lobby
+        |  and join an existing games by clicking the "join" link on the room you want to join.
+        | When you are in the game room you choose which color you want to play with then wait for the remaining opponents.<br>
+        | <br>Each round of the game is divided in different steps shown below.
+        h4 Everyone deploy
+        | When all the players have arrived in the room the first step will begin and a&nbsp;
+        a(href='/sounds/notify-turn.mp3') sound
+        |  is played. The sounds indicate that it is your turn and will play every time it's your turn.<br>
+        | In this step each player must place their armies by clicking on the countries with the color of your choice. Each unit costs 3 gold and current gold you can bee seen in the upper right corner.
+        | When all players have placed their units or if the time has passed the next step beginns. Now you see where your opponents have placed their units
+        h4 Deploy
+        | A starting player is randomly selected the first time and will receive gold from the income as you can see in the upper right corner. Same as the previous phase you are going to deploy units to your countries.<br>
+        h4 Battle
+        | In this step you can attack your opponents. It's only possible to attack from a country that has more than one army and only bordering countries can be attacked.<br>
+        | If a country is succesfully conquered the remaining attacking armies will automatically be placed on the conquered country. Upon successful attack the occupied country will become gray and inactive which means that you can not continue to attack from the country.
+        | Attacking is done by clicking on one of your own country, then one of the opponents neighboring countries. <br>
+        | An object pops up which you decide how many armies to be used in the attack, this is done by - / +, X and V keys. <br>
+        | If you play on a mobile device a different object pops up bellow the map instead.<br>
+        | <b>TIP: You can type the number of armies and press Enter. You can also click on - immediately to select all armies.</b>
+        h4 Tactical move
+        | In the next and final phase, you can make a troop movement between two of your own nearby countries by clicking on one of your own countries and then on a bordering country. The range bar will appear and you can choose desired units to move.
+        | You can only make one troop movement and the round will be over when you have done one or click the "Next Turn" button to skip the phase.<br>
+        | The turn will now go over to the next player.
+        h4 Gold income
+        | Gold's income grows when countries captured. The amount of gold is based on its country value as you see when click on the button "Show Gold", you also receive gold bonus if you own whole continents.<br>
+        | The income that you see in the upper right corner is the gold you will get when your whole round is done. The gray countries are conquered gives an extra quantity of gold which can be seen after the "+" on the income.
+        h4 Missions
+        | There are three types of missions:
+        ul
+          li <b>Destroy opponents:</b> In order to fulfill this mission, you must destroy the specified player during your mission statement.
+          li <b>Conquer regions:</b> It can be both specific and optional regions (countries with the same color) to conquer. Conquer the regions specified in your mission statement to fulfill the mission.
+          li <b>Conquering countries:</b> Conquer the number of countries specified in your mission statement. Minimum numbers of armies needs to be placed on the countries if specified in the mission.
+        | You can see your mission by clicking on Show mission.
+        h4 Time limit
+        | You have a time limit in two minutes for each step. You can click on the "Next Turn" to proceed to the next step directly.
+        h4 Game Example
+        | The outcome of an attack is calculated, it is shown in this example:<br>
+        | Orange attacking Red with 7 armies. The attacked country defends with 3 army.<br>
+        | First is the attackers dice up. If there are more than 2 armies attacking then three dices is used otherwise there is the same number of dices as attackers. Then the defenders rolls the dice. If there are 2 or more armies defending then two dices is used otherwise only one dice is used.<br>
+        | The dice are thrown and then sorted with the highest first. The highest attackers dice compared with the highest defenders dice.<br>
+        | If the dice are equal or if the defenders die is higher, the defender wins and the attacker loses one army otherwise defender lose one army.<br>
+        | If both have a second die, these will be compared in the same manner. The scenario is repeated until only one country has won or that the attackers armies have been defeated.<br>
+        | <b>Tip: Start the dice log to see the logic behind the attacks. </b>
+        h4 Ranking symbols
+        p
+        img(src='/img/rankingsymbols.png', alt='Ranking symbols')
+        a(href='/img/map-rules-eng.png')
+          img(src='/img/map-rules-eng.png', alt='Game board with rules', class="center img-respponsive")
+
+      #swedish.page
+        h1 Hur man spelar
+        img(src='/img/swedish-flag.png', alt='Rules in swedish', class="center flags")
+
+        | General node är ett realtids strategispel för 2 till 4 spelare. Spelet är en klon av General från blip.se och Wargames från tv2.dk.<br>
+        | När spelet startar delas alla länder upp mellan spelarna och varje spelare får ett uppdrag. Om det är din tur och ditt uppdrag är fullbordat vinner du spelet. Du kan också vinna spelet genom att utplåna alla de andra spelarnas arméer. 
+        h4 Förberedelse
+        | För att kunna spela krävs det att man&nbsp;
+        a(href='https://mongot.com/register') registrerar
+        |  ett konto och sedan navigera till&nbsp;
+        a(href='/lobby') lobbyn.
+        |  För att gå med i ett spel klickar du på "Join Game" länken i listan på spelet du vill gå med i.<br>
+        | När du befinner dig i spel rummet väljer du vilken färg du vill spela som och därefter väntar du in resterande motståndare.<br>
+        | <br>Varje omgång av spelet är uppdelad i olika steg som visas nedan. 
+        h4 Everyone deploy:
+        | När samtliga spelare har anlänt till rummet börja första fasen "Everyone deploy" och ett&nbsp;
+        a(href='/sounds/notify-turn.mp3') ljud
+        |  spelas upp. Ljudet indikera att det är din tur och kommer spelas upp varje gång det är din tur igen.<br>
+        | I det här steget har spelet inte riktigt börjat än. Varje spelare måste placera ut sina arméer genom att klicka på de länder med färgen du valt. Varje enhet kostar 3 guld och nuvarande guld kan du se uppe i högra hörnet.<br>
+        | När samtliga spelare har placerat ut sina enheter eller om tiden har gått ut börja nästa fas och motståndarnas utplacerade armeér syns.
+        h4 Deploy
+        | I det här steget kan du köpa arméer genom att klicka på dina egna länder. Varje armé kostar 3 guld. Första omgången väljs en start spelare slumpmässigt.
+        h4 Battle
+        | I det här steget kan du anfalla dina motståndare. Det är bara möjligt att anfalla från ett land som har mer än en armé och bara gränsande länder kan anfallas.
+        | När ett land har erövrats flyttas resterande anfallande arméer automatiskt dit. Vid lyckat anfall blir det ockuperade landet grått och inaktivt vilket betyder att du inte kan fortsätta att attackera från landet.<br>
+        | Anfalla gör du genom att klicka på ett av dina egna länder sedan på ett av motståndarnas angränsande länder.
+        | Sist dyker ett objekt upp vilket du bestämmer hur många arméer som ska användas i anfallet, detta görs genom -/+, X och V knapparna.<br>
+        | Spelar du på en mobil eller platta visas ett annorlunda objekt under kartan istället.<br>
+        | <b>TIPS: det går att skriva in antal arméer sedan trycka på Enter/Retur. Det går även att klicka på - direkt för att ange samtliga arméer.</b>
+        h4 Tactical move
+        | När en spelare har avslutat sina anfall får han göra EN truppförflyttning.
+        | Han får flytta valfritt antal arméer från ett av sina områden till ett annat angränsande,
+        | förutsatt att det första området inte lämnas tomt. Endast en truppförflyttning får göras per tur.<br>
+        | Spelet fortsätter med näste spelare efter truppförflyttningen är gjord eller om spelaren väljer att klicka på "Next turn".
+        h4 Guld inkomst
+        | Guld får du genom länderna du äger, värdet på länderna kan du se genom att klicka på knappen "Show Gold". Du får även en bonus om du äger en hel kontinent som även detta visas under knappen "Show Gold".<br>
+        | Inkomsten som du ser uppe i högra hörnet är det guld du kommer få när din tur är på Tactical move.<br>
+        | Guld inkomsten ökar när du ockupera ett land och minskas när motståndaren ockupera dina länder. De gråa länderna som är erövrade ger en extra omgång guld vilket syns efter "+" på inkomsten.
+        h4 Uppdragen
+        | Det finns tre olika slags uppdrag:<br>
+        ul
+          li <b>Förinta motståndare:</b> För att fullgöra detta uppdrag måste du förinta den spelare specificerad under din uppdragsbeskrivning.<br>
+          li <b>Erövra kontinenter<i>(länder med samma färg)</i>:</b> Det kan både finnas specifika och valfria kontinenter att erövra. Erövra kontinenterna specificerade i din uppdragsbeskrivning för att fullgöra uppdraget.<br>
+          li <b>Erövra länder:</b> Erövra det antal länder specificerat i din uppdragsbeskrivning. Om specificerat måste minsta antalet arméer besättas i länderna också.
+            | <br>
+        | Du kan se ditt uppdrag genom att klicka på "Show mission". 
+        h4 Tidsgräns
+        | Du har 2 minuter på dig för varje steg, det går även att klicka på knappen "Next Turn" för att gå vidare till nästa steg direkt.<br>
+        h4 Spelexempel
+        | Utgången av ett anfall är beräknad, vilket visas i detta exempel:<br>
+        | Orange anfaller Röd med 7 arméer. Det anfallna landet försvarar med 3 arméer.<br>
+        | Först tas anfallarens tärningar fram. Om det är mer än 2 arméer som anfaller används 3 tärningar annars samma antal som anfallarens arméer. Sen tas försvararens tärningar fram. Om det finns mer än en armé som försvarar används 2 tärningar annars används en tärning.<br>
+        | Tärningarna kastas och sorteras med den högsta först. Den högsta anfallandes tärning jämförs med den högsta försvararens tärning.<br>
+        | Om tärningarna är lika eller om försvararens tärning är högre vinner försvararen och anfallaren förlorar 1 armé annars förlorar försvararen 1 armé.<br>
+        | Om båda har en andra tärning jämförs dessa på samma sätt. Scenariot upprepas tills att landet har erövrats eller att anfallarens arméer har blivit besegrade. <br>
+        | <b>TIPS: Starta tärningsloggen för att se logiken bakom attackerna.</b>
+        h4 Ranking symboler
+        p
+        img(src='/img/rankingsymbols.png', alt='Ranking symbols')
+
+        a(href='/img/map-rules-eng.png')
+          img(src='/img/map-rules-eng.png', alt='Game board with rules', class="center img-respponsive")
+
+  script(src='/resources/jquery.min.js')
+  script.
+    $(function() {
+      $('.page').hide();
+
+      var hash = document.location.hash;
+      if(hash === ''){ hash = '#english'; }
+
+      $(hash).show();
+      $('a[href$=\\'+hash+']').parent().addClass('active');
+
+      $(window).on('hashchange', function() {
+        $('.page').hide();
+        $('.nav-parent').removeClass('active');
+        var hash = document.location.hash;
+        $('a[href$=\\'+hash+']').parent().addClass('active');
+        $(hash).show("slow");
+      });
+    });

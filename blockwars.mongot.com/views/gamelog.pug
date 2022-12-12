@@ -1,0 +1,83 @@
+extends base
+block head
+  - var title = 'Game log'
+    style.
+      body {
+        background-color: #E0E0E0;
+      }
+      .costum-table-dark .table th {
+        padding: 15px 10px !important;
+        background-color: #212121;
+        color: #EC7149;
+        border-top: 0 !important;
+        border-bottom: 2px solid #505050 !important;
+      }
+      .costum-table-dark .table tr:hover {
+        background-color: #3A3A3A;
+      }
+      .costum-table-dark {
+        background: #434242;
+        color: #FFF;
+        width: 99%;
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 20px;
+      }
+      tr:nth-child(even) {
+        background: #666666;
+      }
+      td{
+        padding-left: 5px;
+      }
+      td a{
+        color: #ffffff;
+        text-decoration: none;
+      }
+      th {
+        border-top: 1px solid #505050;
+        text-align: left;
+        cursor: ns-resize;
+      }
+      h2{
+        text-align: center;
+      }
+
+  script(src='/resources/jquery-3.3.1.slim.min.js')
+  script(src='/resources/jquery.tablesorter-2.31.0.min.js')
+
+block body
+  
+  script.
+    $(function() {
+      $("table").tablesorter();
+    });
+  
+  h2 Sort by clicking the headings
+
+  .costum-table-dark
+    table.table
+      thead
+        tr
+          th(width='2%')
+            | No
+          th
+            | Game Time
+          th
+            | winner
+          th
+            | Players and points
+          th
+            | Date
+      - for (var i=0; i<logs.length; i++)
+
+        tr
+          td
+            | #{i+1}
+          td
+            | #{logs[i].game_time}
+          td
+            | #{logs[i].winner}
+          td
+            | #{logs[i].players.split('"').join(' ')}
+          td
+            | #{logs[i].createdAt.toJSON().substr(0, 16).split('T').join(' ')}

@@ -1,0 +1,39 @@
+{
+  "name": "general",
+  "version": "1.0.1",
+  "description": "Clone from blip.se general",
+  "main": "app.js",
+  "scripts": {
+    "gulp": "gulp",
+    "test": "mocha && mocha test --require blanket --reporter html-cov > coverage.html"
+  },
+  "author": "roYal",
+  "license": "ISC",
+  "dependencies": {
+    "socket.io": "^2.5.0",
+    "web-push": "^3.5.0"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.20.2",
+    "chai": "^4.1.1",
+    "gulp": "^4.0.2",
+    "gulp-babel": "^8.0.0",
+    "gulp-clean-css": "^4.3.0",
+    "gulp-concat": "^2.6.1",
+    "gulp-imagemin": "^7.1.0",
+    "gulp-uglify": "^3.0.2",
+    "mocha": "^3.5.0"
+  },
+  "config": {
+    "blanket": {
+      "pattern": [
+        "models.js",
+        "middleware.js",
+        "app.js",
+        "routes/auth.js",
+        "routes/main.js"
+      ],
+      "data-cover-never": "node_modules"
+    }
+  }
+}

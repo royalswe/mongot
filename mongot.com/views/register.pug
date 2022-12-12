@@ -1,0 +1,92 @@
+extends base
+block head
+  - var title = 'Register'
+  
+block body
+
+  form(method="post")
+    .form-block
+      h1 Register
+      p#register_error #{error}
+
+      input(type="hidden", name="_csrf", value=csrfToken)
+      input#g-recaptcha-response(type="hidden", name="g-recaptcha-response")
+      input(type="hidden", name="action", value=validate_captcha)
+      input#username(type='text', name="username", required=true, maxlength="16", minlength="2" placeholder='Username', value=username)
+      
+      //- .checkbox
+      //-   input(type="checkbox" name="email_toggle" checked)
+      //-   div
+      //-   label(for='login')
+      //-     span.on Enabled
+      //-     span.off Disabled
+      //-     | email
+      //-     span.off.disable-general-text you will not be able to play General
+      label(for='login') Email is not mandatory but is needed to play general
+      input#email(type="email", name="email", placeholder='Email', value=email)
+      input#password(type="password", name="password", minlength="4", required=true, placeholder='Password')
+      input#password-confirm(type="password", name="confirmpassword", required=true, placeholder='Confirm password')
+      input(type="submit" id="register" value="register")
+
+      div#result
+      div.flash-message.info Email is used to activate account and reset forgotten password only.<br> We will not share or spam your email
+
+  script(src='https://www.google.com/recaptcha/api.js?render=6LfhkTkdAAAAAKFz0uyxngYmmrMQeIYuspM610it')
+  script.
+    grecaptcha.ready(function() {
+        grecaptcha.execute('6LfhkTkdAAAAAKFz0uyxngYmmrMQeIYuspM610it', {action:'validate_captcha'})
+                  .then(function(token) {
+            // add token value to form
+            document.getElementById('g-recaptcha-response').value = token;
+        });
+    });
+
+  script.
+    var password = document.getElementsByName("password")[0];
+    var confirmPassword = document.getElementsByName("confirmpassword")[0];
+    var email = document.getElementsByName("email")[0];
+    var username = document.getElementsByName("username")[0];
+
+  
+    //- var email_toggle = document.getElementsByName("email_toggle")[0];
+
+    //- email_toggle.addEventListener('change', e => {
+    //-     if(!e.target.checked){
+    //-       email.disabled = true;
+    //-       email.hidden = true;
+    //-     }
+    //-     else{
+    //-       email.disabled = false;
+    //-       email.hidden = false;
+    //-     }
+    //- });
+
+
+    document.getElementById('register').onclick = function () {
+      var error = '';
+
+      if (password.value !== confirmPassword.value) {
+        error += "password doesn't match. </br>";
+      }
+      if(email.value && !email.value.match(/\S+@\S+\.\S+/)) {
+        error += "Email is not valid. </br>";
+      }
+      if (username.value.length < 2 || username.value.length > 16) {
+        error += "Username must be between 2 and 16 characters long.  </br>";
+      }
+      if (username.value && !username.value.match(/^[a-zA-Z0-9-_]+$/i)) {
+        error += "Username can only contain letters, numbers, underscore and hyphen.  </br>";
+      }
+      if (error !== '') {
+        document.getElementById("register_error").innerHTML = error;
+        return false;
+      }
+    };
+
+  //- style.
+  //-   .disable-general-text{padding-left:120px}.checkbox{font-family:"Roboto Mono",monospace;cursor:pointer;position:relative;width:228px}.checkbox>div,.checkbox>input,.checkbox>label{display:inline-block;vertical-align:top;color:#222}.checkbox>label>span.on{color:#40b754}.checkbox>label>span.off{color:#ee4f4f}.checkbox>div{width:50px;height:22px;border-radius:22px;transition:background-color .3s;position:relative;overflow:hidden;pointer-events:none;margin-bottom:2px}.checkbox input:checked~div{transition:background-color .3s}.checkbox input:not(:checked)~div{transition:background-color .3s .3s}.checkbox>div::after,.checkbox>div::before{content:"";position:absolute;top:0;width:22px;height:22px;background-color:#fff;border-radius:50%}.checkbox>div::before{left:0}.checkbox>div::after{right:0}.checkbox input:checked~div::before{transform:scale(.8) translateY(50px)}.checkbox input:checked~div::after{transform:scale(.8) translateY(0)}.checkbox input:not(:checked)~div::before{transform:scale(.8) translateY(0)}.checkbox input:not(:checked)~div::after{transform:scale(.8) translateY(-50px)}.checkbox input:not(:checked)~div{background-color:#d3d3d3}.checkbox input:checked~div{background-color:#40b754}.checkbox input:not(:checked)~div{background-color:#ee4f4f}.checkbox>input{opacity:0;width:100%;position:absolute;left:0;right:0;top:0;bottom:0;cursor:pointer;margin:0;height:100%;z-index:19}.checkbox>label{position:relative;padding-left:78px;transition:padding-left .3s;overflow:hidden;cursor:pointer;width:440px}.checkbox input:checked~label{padding-left:69px}.checkbox>label>span{position:absolute;left:5px;top:0}.checkbox>label>span.on{transform:translateY(0)}.checkbox>label>span.off{transform:translateY(20px)}.checkbox input:checked~div::after,.checkbox input:checked~div::before,.checkbox input:checked~label>span{transition:transform .3s 0s}.checkbox input:not(:checked)~div::after,.checkbox input:not(:checked)~div::before,.checkbox input:not(:checked)~label>span{transition:transform .3s .3s}.checkbox input:checked~label>span.on{transform:translateY(0)}.checkbox input:checked~label>span.off{transform:translateY(20px)}.checkbox input:not(:checked)~label>span.on{transform:translateY(-20px)}.checkbox input:not(:checked)~label>span.off{transform:translateY(0)}
+
+
+
+
+

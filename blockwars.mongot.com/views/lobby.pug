@@ -1,0 +1,85 @@
+extends base
+block head
+  - var title = 'Blockwars Lobby'
+
+block body
+
+  p.flash-message-ie
+  section#lobby
+    h1 Blockwar Lobby
+    #allrooms
+      table
+        thead
+          tr
+            th
+              | Game Name
+            th(title='Seated players/players in room')
+              | Players
+            th
+              | Status
+            th(title='Ranked games are only for registered players')
+              | Ranking
+            th
+              | Join
+        tbody
+
+    #news_box
+      h2.news-heading Blockwars online Tetris!
+      p.news-text
+      | It is possible to play without login but you won't be able to play in ranked rooms and gain points.
+      | Remember to look at the&nbsp;
+      a(href="/rules") how to play
+      |  section for game instruction. Check out&nbsp;
+      a(href="//docs.google.com/document/d/1sgS65SjF9h6Gpkhc5LqfL1bEemNMtN4iGt9C5IwXNvY", target='_blank') this
+      |  document if you have any feedback or bug to report.
+      p 
+        | Type 
+        mark Add bot
+        |  in game chat to play with bots.
+      p
+        | Type 
+        mark Lose bots
+        |  and bots will surrender.
+
+      p.news-heading Help us grow
+      .fb-like(data-href='https://www.facebook.com/blipmini/', data-layout='button_count', data-action='like', data-size='large', data-show-faces='false', data-share='true')
+
+      p.news-heading
+        | Be notified when new users arrive by clicking the bell.
+      input#toggle_notification(type='checkbox', onchange='NOTIFICATION.toggleNotificationPermissions(this);')
+      label(for='toggle_notification')
+
+  section#lobby_chat
+    div#messages
+    div#chat_input
+      //input#message(type='text', autocomplete="off", placeholder='#{(user) ? "Enter your message here" : "Login to use the chat"}')
+      input#message(type="text", autocomplete="off", placeholder="Enter your message here")
+      input#send(type='submit', value='Send')
+  section#users_online
+
+
+  script
+    if user
+      | var user = !{JSON.stringify(user)}
+    else
+      | var user = 'guest';
+  script(src='/resources/howler.min.js')
+
+  //- script(src='/js/service-worker.js')
+  //- script(src='/js/lobby.min.js')
+
+  script(src='/js/modules/utils.js')
+  script(src='/js/modules/notifications.js')
+  script(src='/js/lobby.js')
+  
+  script.
+    document.addEventListener("DOMContentLoaded", function(event) { 
+      (function (d, s, id) {
+          var js, fjs = d.getElementsByTagName(s)[0];
+          if (d.getElementById(id)) return;
+          js = d.createElement(s);
+          js.id = id;
+          js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.8&appId=396659270516324";
+          fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));
+    });

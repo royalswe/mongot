@@ -1,0 +1,242 @@
+doctype html
+html(lang='en')
+  head
+    meta(charset='UTF-8')
+    meta(name='viewport', content='width=device-width,user-scalable=no')
+    link(rel='shortcut icon', href='/img/favicon.ico', type='image/x-icon')
+    link(rel='stylesheet', href='/css/blockwar.css?v=1.1')
+    title Blockwars
+
+  body
+    section#top
+      .settings-wrapper
+        .settings-action.fa.icon-settings
+        .settings-container
+          li.settings-btn.fa.icon-help(title='How to play')
+          li.settings-btn.fa.icon-keyboard(title='Change controler settings')
+          input#toggle_sound(type='checkbox', checked='', onchange='toggleSound(this)')
+          label.settings-btn.fa(for='toggle_sound' title='Mute sound')
+          input#toggle_fullscreen(type='checkbox', checked='')
+          label.settings-btn.fa(for='toggle_fullscreen' title='Fullscreen')
+
+      .special-description
+        img(src='/img/game/special-description.png')
+      .top-left
+        h1 BLOCKWAR!
+        .game-description
+          ul#game_log
+            li Welcome to the game
+    section#tetris
+      #arena_container
+      template#player_template
+        .arena.open
+          canvas.tetris(width='240', height='464')
+          .client-name
+
+      template#local_template
+        .arena.local
+          canvas.next-block(width='120', height='200')
+          .special-tube
+            .specials
+            span.current-special-square
+          canvas.tetris(width='240', height='464')
+          span.current-special
+          .client-name
+          
+      a#join_game(href='javascript:void(0)', role='button') Join game!
+      a#player_ready(href='javascript:void(0)', role='button') Click when ready!
+    section#bottom
+      section#chat
+        div#messages
+        div#chat_input
+          input#message(type="text", autocomplete="off", placeholder="Chat (ctrl + c)")
+          input#send(type='submit', value='Send')
+
+      section.keyboard
+        div.keyboard-row
+          #49.keyboard-col 1
+          #50.keyboard-col 2
+          #51.keyboard-col 3
+          #52.keyboard-col 4
+          #53.keyboard-col 5
+        div.keyboard-row
+          #90.keyboard-col.key_z z
+          #38.keyboard-col.key_upp &uarr;
+        div.keyboard-row
+          #32.keyboard-col.key_space SPACE
+          #37.keyboard-col &larr;
+          #40.keyboard-col &darr;
+          #39.keyboard-col &rarr;
+
+    #rules_modal(style='display:none;')
+      .rules-popup
+        span.close-rules X
+        // One "tab" for each step in the form:
+        .tab
+          h2 How to play
+          .screenshot-holder.a
+          .screenshot-explanation.a
+            p
+              | Blockwar is a Tetris variant where the goal is to stay alive for as long as possible until the opponents fill their playing field before your own gets filled.
+            p
+              | To interact with the game use the keys that are shown on the image.
+              br
+              | If you use a device with touh screen then you can use the controll symbols at the bottom of the game to interact with the game.
+              br
+              | If the controls panel or the chat aren't visible then change the size of the game window to see them.
+        .tab
+          h2 Collect specials
+          .screenshot-holder.b
+          .screenshot-explanation.b
+            p
+              | For every 2 lines you clear at once, one special item will randomly appear in your field
+            p
+              | When you clear a line that has a special item, it will be transfered to your item queue on the right side of the field
+            p
+              | To use the first item in your item queue, press the players number.
+              br
+              |  The players numbers is shown bellow each player field and you are always number 3.
+        .tab
+          h2 Special description
+          ul.specials-list
+            li
+              span
+              | <b>Add row</b> - Add one line at the bottom with an hole
+            li
+              span
+              | <b>Remove row</b> - Removes the row at the bottom
+            li
+              span
+              | <b>Earthquake</b> - Scramble all lines horizontal
+            li
+              span
+              | <b>Clear specials</b> - Converts all special items to regular blocks
+            li
+              span
+              | <b>Shotgun</b> - Creates random holes in the field
+            li
+              span
+              | <b>Gravity</b> - Pushes blocks downwards, filling all gaps and clearing all whole rows
+            li
+              span
+              | <b>Clear arena</b> - Removes all blocks from the field
+            li
+              span
+              | <b>Switch arena</b> - Swap your field with the opponents
+            li
+              span
+              | <b>Monster</b> - Builds a monster with blocks
+            li
+              span
+              | <b>Mini bomb</b> - Change all specials to deadly mines
+            li
+              span
+              | <b>Mine</b> -You lose the game if you collect this
+            li
+              span
+              | <b>Milkshake</b> - Scramble all lines vertical
+
+        .rules-buttons
+          button#prevBtn(type='button') Previous
+          button#nextBtn(type='button') Next
+
+        .steps
+          span.step
+          span.step
+          span.step
+
+    #controler_settings
+      h2 Controls
+      p
+        | Click on the control you want to change, then press any key.
+      table#controls
+        tbody
+          tr
+            th Move Left:    
+            td#moveLeft
+              | ←
+          tr
+            th Move Right:   
+            td#moveRight
+              | →
+          tr
+            th Move Down:    
+            td#moveDown
+              | ↓
+          tr
+            th Hard Drop:    
+            td#hardDrop
+              | Space
+          tr
+            th Spin Right:   
+            td#rotRight
+              | ↑
+          tr
+            th Spin Left:    
+            td#rotLeft
+              | Z
+          tr
+            th Special 1
+            td#special1
+              | 1    
+          tr
+            th Special 2
+            td#special2
+              | 2  
+          tr
+            th Special 3
+            td#special3
+              | 3  
+          tr
+            th Special 4
+            td#special4
+              | 4  
+          tr
+            th Special 5
+            td#special5
+              | 5
+      table#DAS_ARR
+        tbody
+          tr
+            th DAS
+            td
+              .number-input
+                button(onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
+                input#DAS(min='0' max='30' name='DAS' value='0' type='number')
+                button.plus(onclick="this.parentNode.querySelector('input[type=number]').stepUp()") 
+            td         
+          tr
+            th ARR
+            td
+              .number-input
+                button(onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
+                input#ARR(min='0' max='30' name='ARR' value='10' type='number')
+                button.plus(onclick="this.parentNode.querySelector('input[type=number]').stepUp()")
+      p.explanation DAS is delayed auto shift (How long you have to hold down the button before a piece starts flying to the wall).<br>ARR is auto repeat rate (how quickly the pieces move from right to left.)<br>Set DAS to 0 to disable this functions.
+
+      div.close-controler-modal
+        a(href='javascript:void(0)', role='button') Done
+
+    script
+      if user
+        | var user = !{JSON.stringify(user)}
+      else
+        | var user = 'guest';
+    
+    script(src='/resources/howler.min.js')    
+    //- script(src='/js/blockwars.min.js')
+
+    script(src='/js/modules/utils.js')
+    script(src='/js/modules/tetris-utils.js')
+    script(src='/js/modules/screen-settings.js')
+    script(src='/js/connection-manager.js')
+    script(src='/js/tetris-manager.js')
+    script(src='/js/events.js')
+    script(src='/js/arena.js')
+    script(src='/js/block.js')
+    script(src='/js/special.js')
+    script(src='/js/tetris.js')
+    script(src='/js/chat.js')
+    script(src='/js/zmain.js')
+
+    script(src='/js/settings.js' defer)

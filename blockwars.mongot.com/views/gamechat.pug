@@ -1,0 +1,62 @@
+extends base
+block head
+  - var title = 'Game chat'
+    style.
+      section#chatroom {
+        height: 100%;
+        width: 100%;
+      }
+      #messages {
+        padding: 7px;
+        border: 5px ridge #B5B4B4;
+        background-color: #000;
+        color: #fff;
+        font-size: 11px
+      }
+      h2{ text-align: center; }
+      #messages div { margin-bottom: 5px }
+      #messages .name-red {  color: #e01313  }
+      #messages .name-blue {  color: #3d94f6  }
+      #messages .name-orange {  color: orange  }
+      #messages .name-green {  color: #05d005  }
+      #messages .name-purple {  color: #ce04ce  }
+      #messages .name-black {  color: #9C9C9C  }
+
+block body
+
+  section#chatroom
+    div#messages
+
+  script(src='/resources/jquery-3.3.1.slim.min.js')
+  script.
+    messages=(!{JSON.stringify(messages)})
+
+    function compare(a, b) {
+        if (a.room < b.room)
+            return -1;
+        if (a.room > b.room)
+            return 1;
+        return 0;
+    }
+
+    var userColor = {};
+
+    // messages.sort(compare);
+    var roomName = 'noname';
+    for (var i=0; i<messages.length; i++){
+        if (roomName !== messages[i].room) {
+            roomName = messages[i].room
+            $('#messages').append('<h2 class="">'+ messages[i].room +'</h2>');
+        }
+
+        var username = messages[i].username;
+        if(!(username in userColor)){
+          userColor[username] = "#"+((1<<24)*Math.random()|0).toString(16);
+        }
+
+        $('#messages').append(
+            '<div><span style="color: '+ userColor[username] +'" >' +
+            username + ':</span> ' +
+            messages[i].message + '</div>');
+    }
+

@@ -1,0 +1,1 @@
+"use strict";self.addEventListener("push",function(t){var i=t.data.json();self.registration.showNotification(i.title,{icon:"https://blockwars.mongot.com/img/pn-tetris-block.png"})});

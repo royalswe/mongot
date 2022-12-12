@@ -1,0 +1,30 @@
+{
+  "name": "blockwars",
+  "version": "1.0.1",
+  "description": "tetris clone from blip.se",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "gulp": "gulp"
+  },
+  "author": "roYal",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.11.0"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.20.2",
+    "gulp": "^4.0.2",
+    "gulp-babel": "^8.0.0",
+    "gulp-clean-css": "^4.3.0",
+    "gulp-concat": "^2.6.1",
+    "gulp-uglify": "^3.0.2",
+    "gulp-imagemin": "^7.1.0",
+    "merge-stream": "^2.0.0"
+  },
+  "babel": {
+    "presets": [
+      "@babel/preset-env"
+    ]
+  }
+}

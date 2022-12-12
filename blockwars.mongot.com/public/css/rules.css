@@ -1,0 +1,365 @@
+#rules_modal {
+    position: fixed;
+    z-index: 9999;
+    padding-top: 50px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: #000;
+    background-color: rgba(0, 0, 0, .4);
+  }
+  
+  .rules-popup {
+      position:absolute;
+      margin-left: 15%;
+      width: 70%;
+      height: 80%;
+      background-color:#111;
+      padding:5px;
+      border-radius:4px;
+      color:#FFF;
+      z-index: 999;
+      animation: mymove 0.5s;
+      font-size: 0.8em;
+  }
+  
+  @keyframes mymove {
+      from {margin-top: -100%;}
+      to {margin-top: 0}
+  }
+  
+  
+  #rules_modal h2{
+    text-align: center;
+    height: 10%;
+    margin: 0px;
+    padding-top: 1%;
+  }
+  
+  .close-rules {
+      border: 2px solid #c2c2c2;
+      position: relative;
+      float: right;
+      padding: 6px 8px;
+      top: -14px;
+      right: -13px;
+      background-color: #ff4646;
+      border-radius: 20px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      text-decoration: none;
+      cursor: pointer
+  }
+  
+  /* Hide all steps by default: */
+  .tab {
+    display: none;
+    height: 85%;
+    overflow: auto;
+  }
+  
+  .rules-buttons button {
+    background-color: #4CAF50;
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    margin-right: 0.5em;
+    /* font-size: 17px; */
+    cursor: pointer;
+  }
+  
+  .rules-buttons button:hover {
+    opacity: 0.8;
+  }
+  
+  #prevBtn {
+    background-color: #bbbbbb;
+  }
+  
+  /* Make circles that indicate the steps of the form: */
+  .step {
+    height: 15px;
+    width: 15px;
+    margin: 5px 2px;
+    background-color: #bbbbbb;
+    border: none;  
+    border-radius: 50%;
+    display: inline-block;
+    opacity: 0.5;
+  }
+  
+  .step.active {
+    opacity: 1;
+  }
+  
+  .screenshot-holder.a{
+    background: url(../img/blockwar-controls-white.png) no-repeat;
+    background-size: contain;
+    background-position: center center;
+    width: 50%;
+    height: 50%;
+    float: left;
+  
+  }
+  .screenshot-holder.b{
+    background: url(../img/rules-arena.png) no-repeat;
+    background-position: center center;
+    background-size: contain;
+    width: 50%;
+    height: 100%;
+    height: 84%;
+    float: left;
+  }
+  
+  .screenshot-holder img{
+    width: 100%;
+    background-color: #ccc;
+  }
+  .screenshot-explanation{
+    width: 48%;
+    float: left;
+    padding-left: 2%;
+  }
+  .rules-popup .specials-list{
+      list-style: none;
+  }
+  
+  .rules-popup .specials-list span {
+    display: inline-block;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    width: 1.8em;
+    height: 1.8em;
+    margin-right: 0.4em;
+    margin-bottom: 0.2em;
+    vertical-align: middle;
+  }
+  
+  .rules-popup .specials-list li:nth-child(1) span {
+    background: url(../img/game/specials/8.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  .rules-popup .specials-list li:nth-child(2) span {
+    background: url(../img/game/specials/9.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  .rules-popup .specials-list li:nth-child(3) span {
+    background: url(../img/game/specials/10.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  .rules-popup .specials-list li:nth-child(4) span {
+    background: url(../img/game/specials/12.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  .rules-popup .specials-list li:nth-child(5) span {
+    background: url(../img/game/specials/13.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  .rules-popup .specials-list li:nth-child(6) span {
+    background: url(../img/game/specials/14.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  .rules-popup .specials-list li:nth-child(7) span {
+    background: url(../img/game/specials/15.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  .rules-popup .specials-list li:nth-child(8) span {
+    background: url(../img/game/specials/16.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  .rules-popup .specials-list li:nth-child(9) span {
+    background: url(../img/game/specials/17.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  .rules-popup .specials-list li:nth-child(10) span {
+    background: url(../img/game/specials/18.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  .rules-popup .specials-list li:nth-child(11) span {
+    background: url(../img/game/specials/19.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  .rules-popup .specials-list li:nth-child(12) span {
+    background: url(../img/game/specials/11.gif) no-repeat;
+    background-size: 1.8em;
+  }
+  
+  .rules-buttons{
+    text-align:right;
+  }
+  .steps{
+    text-align: center;
+  }
+  @media screen and (max-width: 720px) {
+      .rules-popup {
+        margin-left: 3%;
+        width: 92%;
+      }
+  
+      .screenshot-holder.a{
+        width: 100%;
+        float: none;
+      }
+  
+      .screenshot-explanation.a{
+        width: 100%;
+        float: none;
+        padding: 0%;
+      }
+      
+  }
+  
+  /* #### Mobile Phones Portrait #### */
+  @media only screen and (max-device-width : 1024px) and (orientation : portrait) {
+    .rules-popup {
+      font-size: 1.4em;
+      margin-left: 3%;
+      width: 92%;
+    }
+  
+    .screenshot-holder.a{
+      width: 100%;
+      float: none;
+    }
+  
+    .screenshot-explanation.a{
+      width: 100%;
+      float: none;
+      padding: 0%;
+    }
+  
+  }
+  /*** Settings and game rules end ***/
+
+  /*** Control settings ***/
+   #controler_settings {
+    display: none;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: fixed;
+    background-color: #111;
+    top: 0;
+    left: 0;
+    animation: mymove 0.5s;
+  }
+
+  /* Controls */
+  #controls {
+    margin: 0 auto 1em;
+  }
+  #controls th {
+    font-weight: bold;
+    text-align: left;
+    line-height: 1.6;
+  }
+  #controls td {
+    font-weight: bold;
+    cursor: pointer;
+    display: block;
+    margin: 0.2em 0 0.2em 2em;
+    text-align: center;
+    width: 6em;
+    line-height: 1.6;
+    background: #111;
+    border-radius: 5px;
+  }
+  #controls td:hover {
+    background: #191919;
+  }
+
+  #controls td:active {
+    background: #1a1a1a;
+  }
+  div.close-controler-modal{
+    padding: 1em;
+  }
+  .close-controler-modal a {
+    cursor: pointer;
+    color: #68ce52;
+    text-decoration: none;
+    border: 1px solid;
+    padding: 5px;
+    border-radius: 5px;
+  }
+
+  .close-controler-modal a:hover {
+    color: #7cf361;
+  }
+
+/* Number input for DAS/ARR */
+
+#controler_settings, #DAS_ARR{
+  margin: 0 auto 1em;
+}
+
+input[type="number"] {
+  -webkit-appearance: textfield;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+.number-input {
+  border: 0;
+  display: inline-flex;
+}
+
+.number-input,
+.number-input * {
+  box-sizing: border-box;
+}
+
+.number-input button {
+  outline:none;
+  -webkit-appearance: none;
+  background-color: transparent;
+  border: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  cursor: pointer;
+  margin: 0;
+  position: relative;
+}
+
+.number-input button:before,
+.number-input button:after {
+  display: inline-block;
+  position: absolute;
+  content: '';
+  width: 1rem;
+  height: 2px;
+  background-color: #ffffff;
+  transform: translate(-50%, -50%);
+}
+.number-input button.plus:after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.number-input input[type=number] {
+    border: none;
+    font-size: 2vw;
+    height: 2rem;
+    width: 3rem;
+    font-weight: bold;
+    text-align: center;
+    color: #9be3df;
+    background-color: #111;
+}
+
+  /*** control settings end ***/
+  #controler_settings .explanation{
+    color: #9e9e9e;
+    font-size: 1rem;
+  }

@@ -1,0 +1,88 @@
+doctype html
+html
+  head
+    title Game
+    link(rel='shortcut icon', href='img/favicon.ico', type='image/x-icon')
+    meta(name='viewport', content='width=device-width, initial-scale=1')
+    style.
+      @font-face {
+        font-family: 'dice';
+        src: url("/img/game/dice.woff") format("woff");
+      }
+      ul{
+        padding: 0;
+      }
+      ul:nth-child(even) {background: #efefef}
+      li{
+        border-bottom: solid 1px #ccc;
+        padding: 8px 0;
+        list-style: none;
+      }
+      .dice {
+        font-family: dice;
+        font-size: 2rem;
+        letter-spacing: 5px;
+      }
+      .red{
+        color: #ff0000;
+        padding-bottom: 5px;
+      }
+      .blue{color: #0000ff}
+      #auto_scroll{
+
+      }
+      label {
+        position: fixed;
+        bottom: 1px;
+        right: 1px;
+        color: #5d5d5d;
+      }
+
+  body
+    label
+      input(type='checkbox', id='auto_scroll')
+      | Autoscroll
+    p Dice log started!
+    #dice_log
+
+  script(src='/socket.io/socket.io.js')
+  script(src='/resources/jquery.min.js')
+  script.
+    'use strict';
+    var gameInfra = io(location.host + '/game_infra', {
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+    });
+
+    var roomName = decodeURI((RegExp("room" + '=' + '(.+?)(&|$)').exec(location.search) || [, null])[1]);
+    if (roomName) {
+      document.title = roomName;
+      gameInfra.emit('dice_log_room', roomName);
+    }
+
+    gameInfra.on("dice_log", function (attackerDice, defenderDice) {
+      var diceRole = '<ul>';
+      diceRole += '<div>'+ new Date().toLocaleString() +'</div>';
+      for(var i = 0; i < attackerDice.length; i++){
+        attackerDice[i].sort().reverse();
+        defenderDice[i].sort().reverse();
+        diceRole += '<li><div class="dice red">';
+        for(var j = 0; j < attackerDice[i].length; j++){
+          diceRole += attackerDice[i][j];
+        }
+        diceRole +='</div><div class="dice blue">';
+
+        for(var j = 0; j < defenderDice[i].length; j++){
+          diceRole += defenderDice[i][j];
+        }
+        diceRole += '</div></li>';
+      }
+
+      diceRole += '</ul>';
+      $('#dice_log').append(diceRole);
+
+      if($('#auto_scroll').prop('checked')){
+          $("html, body").scrollTop($(document).height());
+      }
+
+    });

@@ -1,0 +1,33 @@
+extends base
+block head
+  - var title = 'Blockwars'
+  link(rel='stylesheet', type='text/css', href='/css/home.css?v=1.2')
+
+block body
+  div#myHeader.container.theme.padding
+    .center
+      h1.xxxlarge.animate-bottom Blockwars
+      h2 Multiplayer Tetris variant where you compete against others
+      .padding-32
+
+  .row-padding.center
+    a.third(href='/lobby')
+      .card-2.padding-top
+        h4 Lobby
+        br
+        i.fa.fa-globe.margin-bottom.text-theme
+        p Join games in lobby to compete with others and earn you ranking.
+        p Note that ranked games is only available for registered users.
+    a.third(href='/highscore')
+      .card-2.padding-top
+        h4 High Score
+        br
+        i.fa.fa-trophy.margin-bottom.text-theme
+        p See which players have the best rank in Blockwars.
+    a.third(href='/rules')
+      .card-2.padding-top
+        h4 How to play
+        br
+        i.fa.fa-leanpub.margin-bottom.text-theme
+        p First time playing? You can find the rules here.
+        p The rules are available in both Swedish and English.
