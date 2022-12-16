@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const async = require('async');
 const crypto = require('crypto');
-const config = require('../../config.json');
+const config = require('../config.json');
 const models = require('../../models');
 const app = require('../app');
 const router = express.Router();
@@ -125,7 +125,7 @@ router.post('/forgot', function (req, res) {
             const mailOptions = {
                 to: user.email,
                 from: config.EMAIL,
-                subject: 'mongot Password Reset',
+                subject: 'mongot.com Password Reset',
                 text: 'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
                     'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
                     'https://' + req.headers.host + '/reset/' + token + '\n\n' +

@@ -82,7 +82,7 @@ router.post('/contact', function (req, res) {
     const mailOptions = {
         from: req.body.from,
         to: config.EMAIL,
-        subject: 'Contact form mongot',
+        subject: 'Contact form mongot.com',
         text: req.body.text + ' Sent from: ' + req.body.from, // plaintext body
         html: req.body.text + '<br><b>Sent from: </b>'+ req.body.from +'<br><b>ip: </b>' + ip + '<b> user: </b>' + username// html body
     };

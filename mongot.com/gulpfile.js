@@ -12,7 +12,7 @@ function css() {
 
 function resources() {
   return src('public/resources/*')
-    .pipe(cleanCSS())
+    //.pipe(cleanCSS())
     .pipe(dest(prod + '/public/resources'));
 }
 
@@ -31,16 +31,10 @@ function img() {
 		.pipe(imagemin())
 		.pipe(dest(prod + '/public/img'))
 }
-
-function json() {
-  return src('package.json')
-    .pipe(dest(prod + '/'));
-}
   
 exports.css = css;
 exports.routes = routes;
 exports.views = views;
 exports.img = img;
 exports.resources = resources;
-exports.json = json;
-exports.default = parallel(css, routes, views, img, resources, json);
+exports.default = parallel(css, routes, views, img, resources);

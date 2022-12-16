@@ -13,7 +13,7 @@ const app = express();
 /**
  * Connect to mongoDB
  */
-mongoose.connect(config.DEV_DB)
+mongoose.connect(config.PROD_DB)
 .catch(err => console.log(err));
 //mongoose.connect(config.PROD_DB);
 
@@ -33,7 +33,7 @@ app.use(flash());
  */
 //app.locals.pretty = true;
 
-const port = process.env.PORT || 5090;
+const port = process.env.PORT || 5200;
 let server = http.createServer(app).listen(port);
 
 /**

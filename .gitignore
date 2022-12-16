@@ -1,10 +1,7 @@
 .idea/
 .idea
-config.json
-node_modules/
-node_modules
 /.DS_Store
 .vscode
-gameChat.json/
-gulpfile.js
-/gulpfile.js
+gameChat.json
+/.cache
+node_modules

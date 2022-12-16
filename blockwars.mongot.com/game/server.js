@@ -9,7 +9,7 @@ const sessions = new Map();
 const Lobby = new(require('./lobby'))();
 const Status = require('./status');
 const Bot = require('./ai/bot.js');
-let config = require('../../config.json');
+let config = require('../config.json');
 
 let BOT_COUNT = 0;
 
@@ -519,7 +519,7 @@ exports.initialize = (server) => {
     server.on('upgrade', function upgrade(request, socket, head) {
         const pathname = request.url;
         if(request?.headers?.origin !== config.DOMAIN){
-            return console.log(request?.headers?.origin); // connection coming from another domain
+            return console.log('wrong origin:',request?.headers?.origin); // connection coming from another domain
         }
         if (pathname === '/lobby') {
             wsLobby.handleUpgrade(request, socket, head, function done(ws) {

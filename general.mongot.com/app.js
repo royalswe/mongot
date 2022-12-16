@@ -16,7 +16,7 @@ const app = express();
 /**
  * Connect to mongoDB
  */
-mongoose.connect(config.DEV_DB)
+mongoose.connect(config.PROD_DB)
 .catch(err => console.log(err));
 //mongoose.connect(config.PROD_DB);
 
@@ -43,7 +43,7 @@ app.use(helmet({
  */
 //app.locals.pretty = true;
 
-const port = process.env.PORT || 5052;
+const port = process.env.PORT || 5100;
 var server = http.createServer(app).listen(port);
 
 /**
@@ -81,12 +81,12 @@ app.use(sessions({
     // ephemeral: true, // delete cookies when the browser is closed
     //secure: true, // only use cookies over https
     duration: 3600 * 1000 * 24 * 365, // cookie expires after one year
-    activeDuration: 3600 * 1000 * 24 * 30 // cookie expire after 30 days if user is not active
-    // cookie: {
-    //     maxAge: 3600 * 1000 * 24 * 365,
-    //     httpOnly: true,
-    //     domain: '.mongot.com'
-    // }
+    activeDuration: 3600 * 1000 * 24 * 30, // cookie expire after 30 days if user is not active
+    cookie: {
+        maxAge: 3600 * 1000 * 24 * 365,
+        httpOnly: true,
+        domain: '.mongot.com'
+    }
 }));
 
 app.use(csrf());

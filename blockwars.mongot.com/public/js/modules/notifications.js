@@ -23,8 +23,6 @@ var NOTIFICATION = (function () {
         applicationServerKey: urlBase64ToUint8Array("BEjK-T4xq910AGfKQ09xIF_hCgBUTebFj2ZPaHilzouo8ca3kjJAmX4WjgQp8n8Yg02Bu5hwp97MLu0a14OP4RY")
       }).then(function (subscription) {
         // Send Push Notification
-        //const username = (user === 'guest') ? 'guest' : user.username;
-
         fetch("/subscribe", {
           method: "POST",
           body: JSON.stringify({ subscription, username }),

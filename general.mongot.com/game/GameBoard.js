@@ -2,7 +2,7 @@
 let countryHandler = require('./countryHandler');
 let Mission = require('./Mission');
 let models = require('../../models');
-let config = require('../../config.json');
+let config = require('../config.json');
 let socketClass = require('../sockets');
 
 let GameBoard = function (sockets, io, room) {
