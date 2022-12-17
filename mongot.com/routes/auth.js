@@ -282,7 +282,8 @@ async function sendActivationToken(req, res, user) {
                 headers: { 'Content-Type': "application/json" },
                 body: JSON.stringify(mailOptions)
             })
-                .then(() => {
+                .then((res) => {
+                    console.log(res);
                     req.flash('success', `An activation token has been sent to ${user.email}. Check your junk folder if not been sent.`);
                     done('done')
                 }).catch((err) => {
