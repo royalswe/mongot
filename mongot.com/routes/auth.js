@@ -268,10 +268,12 @@ async function sendActivationToken(req, res, user) {
         },
         function (token, info, done) {
             const mailOptions = {
-                to: user.email,
-                from: mail.FROM,
+                api_key: mail.API_KEY,
+                to: [user.email],
+                sender: mail.FROM,
                 subject: 'Account activation',
-                text: `You are receiving this because you (or someone else) have created an account on mongot.com.
+                text_body:
+                    `You are receiving this because you (or someone else) have created an account on mongot.com.
                     Activate your account by clicking the link below, or paste this into your browser to complete the process:
                     https://${req.headers.host}/activation/${token}
                     If you did not request this, please ignore this email.\n`
@@ -282,8 +284,7 @@ async function sendActivationToken(req, res, user) {
                 headers: { 'Content-Type': "application/json" },
                 body: JSON.stringify(mailOptions)
             })
-                .then((res) => {
-                    console.log(res);
+                .then(() => {
                     req.flash('success', `An activation token has been sent to ${user.email}. Check your junk folder if not been sent.`);
                     done('done')
                 }).catch((err) => {
