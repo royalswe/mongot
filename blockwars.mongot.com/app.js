@@ -69,14 +69,14 @@ app.use(sessions({
     secret: '345gyu345g3785g785g578g563gf25673f56734f56723',// Random string as secret
     httpOnly: true, // not letting javascript access cookies
     // ephemeral: true, // delete cookies when the browser is closed
-    secure: true, // only use cookies over https
+    //secure: true, // only use cookies over https
     duration: 3600 * 1000 * 24 * 365, // cookie expires after one year
-    activeDuration: 3600 * 1000 * 24 * 30, // cookie expire after 30 days if user is not active
-    cookie: {
-        maxAge: 3600 * 1000 * 24 * 365,
-        httpOnly: true, 
-        domain: '.mongot.com'
-    }
+    activeDuration: 3600 * 1000 * 24 * 30 // cookie expire after 30 days if user is not active
+    // cookie: {
+    //     maxAge: 3600 * 1000 * 24 * 365,
+    //     httpOnly: true, 
+    //     domain: '.mongot.com'
+    // }
 }));
 
 app.use(csrf());

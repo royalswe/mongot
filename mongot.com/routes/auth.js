@@ -3,13 +3,14 @@ const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const async = require('async');
 const crypto = require('crypto');
-const config = require('../config.json');
+const mail = require('../mail.json');
 const models = require('../../models');
 const app = require('../app');
 const router = express.Router();
 
 router.get('/register', function (req, res) {
     res.render('register.pug', { csrfToken: req.csrfToken() });
+
     // let ip = req.headers['x-forwarded-for'] ||
     //     req.connection.remoteAddress ||
     //     req.socket.remoteAddress ||
@@ -49,7 +50,7 @@ router.post('/register', reCAPTCHA, function (req, res) {
                 }
                 else {
                     app.createUserSession(req, res, user);
-                    if(!user.email){
+                    if (!user.email) {
                         req.flash('success', `${user.username} successfully created, contact us to update email if desired`);
                         return res.redirect('/');
                     }
@@ -244,11 +245,12 @@ router.post('/reset/:token', function (req, res) {
     });
 });
 
-function sendActivationToken(req, res, user) {
+async function sendActivationToken(req, res, user) {
     if (!user.email) {
-        req.flash('info', 'No email specified');
+        req.flash('info', 'No email specified, you will not be able to play general');
         return res.redirect('back');
     }
+
     async.waterfall([
         function (done) {
             crypto.randomBytes(20, function (err, buf) {
@@ -265,30 +267,31 @@ function sendActivationToken(req, res, user) {
             });
         },
         function (token, info, done) {
-            const smtpTransport = nodemailer.createTransport({
-                service: 'Gmail',
-                auth: {
-                    user: config.EMAIL,
-                    pass: config.EMAIL_SECRET
-                }
-            });
             const mailOptions = {
                 to: user.email,
-                from: config.EMAIL,
+                from: mail.FROM,
                 subject: 'Account activation',
-                text: 'You are receiving this because you (or someone else) have created an account on mongot.com.\n\n' +
-                    'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-                    'https://' + req.headers.host + '/activation/' + token + '\n\n' +
-                    'If you did not request this, please ignore this email.\n'
+                text: `You are receiving this because you (or someone else) have created an account on mongot.com.
+                    Activate your account by clicking the link below, or paste this into your browser to complete the process:
+                    https://${req.headers.host}/activation/${token}
+                    If you did not request this, please ignore this email.\n`
             };
-            smtpTransport.sendMail(mailOptions, function (err) {
-                if (!err) req.flash('success', 'An activation token has been sent to ' + user.email + '. Check your junk folder if not been sent.');
-                done(err, 'done');
-            });
+
+            fetch(mail.URL, {
+                method: "POST",
+                headers: { 'Content-Type': "application/json" },
+                body: JSON.stringify(mailOptions)
+            })
+                .then(() => {
+                    req.flash('success', `An activation token has been sent to ${user.email}. Check your junk folder if not been sent.`);
+                    done('done')
+                }).catch((err) => {
+                    req.flash('error', err);
+                    done(err, 'done');
+                });
         }
     ], function (err) {
         if (err) {
-            req.flash('error', err);
             return res.render('register.pug', { csrfToken: req.csrfToken() });
         }
         res.redirect('back');
@@ -321,7 +324,7 @@ function reCAPTCHA(req, res, next) {
                 return res.render('register.pug', { csrfToken: req.csrfToken(), error: "Failed captcha verification" });
             }
             if (body.score < 0.5) {
-                return res.render('register.pug', { csrfToken: req.csrfToken(), error: "Are you a robot?" });
+                return res.render('register.pug', { csrfToken: req.csrfToken(), error: "captcha claims that you are a robot!" });
             }
             else {
                 next();
