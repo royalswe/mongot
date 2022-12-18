@@ -1,7 +1,5 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
-const async = require('async');
 const crypto = require('crypto');
 const mail = require('../mail.json');
 const models = require('../../models');
@@ -25,40 +23,42 @@ router.get('/register', function (req, res) {
 });
 
 router.post('/register', reCAPTCHA, function (req, res) {
-    models.User.findOne({ username: { '$regex': '^' + req.body.username + '$', $options: 'i' } }, function (err, user) {
-        if (user) {
+    models.User.findOne({ username: { '$regex': '^' + req.body.username + '$', $options: 'i' } }, function (err, doc) {
+        if (doc) {
             return res.render('register.pug', { csrfToken: req.csrfToken(), username: req.body.username, email: req.body.email, error: 'Username ' + req.body.username + ' already exists' });
         }
-        else {
-            const hashedPassword = bcrypt.hashSync(req.body.password, bcrypt.genSaltSync(10));
-            const user = new models.User({
-                username: req.body.username,
-                password: hashedPassword,
-                joined: new Date()
-            });
-            if (req.body.email) { // if user added email
-                user.email = req.body.email;
-            }
-            user.save(function (err) {
-                if (err) {
-                    let error = err;
-                    if (err.code === 11000) { // error 11000 means duplicate key error
-                        let errorfield = err.keyValue?.email;
-                        error = 'Sorry but ' + errorfield + ' already exists';
-                    }
-                    return res.render('register.pug', { csrfToken: req.csrfToken(), username: req.body.username, email: req.body.email, error: error });
-                }
-                else {
-                    app.createUserSession(req, res, user);
-                    if (!user.email) {
-                        req.flash('success', `${user.username} successfully created, contact us to update email if desired`);
-                        return res.redirect('/');
-                    }
-                    sendActivationToken(req, res, user);
-                }
-            });
-
+        const hashedPassword = bcrypt.hashSync(req.body.password, bcrypt.genSaltSync(10));
+        const user = new models.User({
+            username: req.body.username,
+            password: hashedPassword,
+            joined: new Date()
+        });
+        if (req.body.email) { // if user added email
+            user.email = req.body.email;
         }
+        user.save(async function (err) {
+            if (err) {
+                let error = err;
+                if (err.code === 11000) { // error 11000 means duplicate key error
+                    let errorfield = err.keyValue?.email;
+                    error = 'Sorry but ' + errorfield + ' already exists';
+                }
+                return res.render('register.pug', { csrfToken: req.csrfToken(), username: req.body.username, email: req.body.email, error: error });
+            }
+            app.createUserSession(req, res, user);
+            if (!user.email) {
+                req.flash('success', `${user.username} successfully created, contact us to update email if desired`);
+                return res.redirect('/');
+            }
+            const error = await sendActivationToken(req, res, user)
+            if (error) {
+                req.flash('error', error);
+                return res.render('register.pug', { csrfToken: req.csrfToken() });
+            }
+            req.flash('success', `An activation token has been sent to ${user.email}. Check your junk folder if not been sent.`);
+            res.redirect('back');
+        });
+
     });
 });
 
@@ -93,72 +93,72 @@ router.get('/forgot', function (req, res) {
     res.render('forgot.pug', { csrfToken: req.csrfToken() });
 });
 
-router.post('/forgot', function (req, res) {
-    async.waterfall([
-        function (done) {
-            crypto.randomBytes(20, function (err, buf) {
-                const token = buf.toString('hex');
-                done(err, token);
-            });
-        },
-        function (token, done) {
-            models.User.findOne({ email: req.body.email }, function (err, user) {
-                if (!user) {
-                    req.flash('error', 'No account with that email address exists.');
-                    return res.redirect('/forgot');
-                }
-                user.resetPasswordToken = token;
-                user.resetPasswordExpires = Date.now() + 86400000; // 24 hours
+router.post('/forgot', async function (req, res) {
+    const token = crypto.randomBytes(20).toString('hex');
 
-                user.save(function (err) {
-                    done(err, token, user);
-                });
-            });
-        },
-        function (token, user, done) {
-            const smtpTransport = nodemailer.createTransport({
-                service: 'Gmail',
-                auth: {
-                    user: config.EMAIL,
-                    pass: config.EMAIL_SECRET
-                }
-            });
+    const user = await models.User.findOne({ email: req.body.email }).then((doc) => {
+        if (!doc) {
+            req.flash('error', 'No account with that email address exists.');
+            return res.redirect('/forgot');
+        }
+        doc.resetPasswordToken = token;
+        doc.resetPasswordExpires = Date.now() + 86400000; // 24 hours
+
+        return doc.save();
+    })
+        .then((user) => {
             const mailOptions = {
-                to: user.email,
-                from: config.EMAIL,
+                api_key: mail.API_KEY,
+                to: [user.email],
+                sender: mail.FROM,
                 subject: 'mongot.com Password Reset',
-                text: 'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
+                text_body: 'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
                     'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
                     'https://' + req.headers.host + '/reset/' + token + '\n\n' +
                     'If you did not request this, please ignore this email and your password will remain unchanged.\n'
             };
-            smtpTransport.sendMail(mailOptions, function (err) {
-                if (!err) req.flash('info', 'An email has been sent to ' + user.email + ' with further instructions.');
-                done(err, 'done');
-            });
-        }
-    ], function (err) {
-        if (err) {
-            req.flash('error', err);
-            return res.render('forgot.pug', { csrfToken: req.csrfToken() });
-        }
-        res.redirect('/forgot');
-    });
+
+            fetch(mail.URL, {
+                method: "POST",
+                headers: { 'Content-Type': "application/json" },
+                body: JSON.stringify(mailOptions)
+            })
+                .then((res) => {
+                    if (res.status === 200) {
+                        req.flash('info', 'An email has been sent to ' + user.email + ' with further instructions.');
+                    }
+                    else {
+                        req.flash('error', res.status);
+                    }
+                }).catch((err) => {
+                    console.log('sending forgott password email', err);
+                    req.flash('error', err);
+                }).finally(() =>
+                    res.render('forgot.pug', { csrfToken: req.csrfToken() })
+                );
+        })
+        .catch((err) => console.log('Forgot route:', err));
 });
 
 router.get('/sendVerificationToken', requireLogin, function (req, res) {
-    models.User.findOne({ email: req.user.email }, function (err, user) {
+    models.User.findOne({ email: req.user.email }, async function (err, user) {
         if (!user) {
             req.flash('error', 'Could not find your account');
-            res.redirect('/');
+            return res.redirect('/');
         }
         else if (user.active) {
             req.flash('info', 'Your account is already activated');
-            res.redirect('/');
+            return res.redirect('/');
+        }
+        const error = await sendActivationToken(req, res, user);
+        if (error) {
+            req.flash('error', error);
         }
         else {
-            sendActivationToken(req, res, user);
+            req.flash('success', `An activation token has been sent to ${user.email}. Check your junk folder if not been sent.`);
         }
+        res.redirect('back');
+
     });
 });
 
@@ -198,106 +198,89 @@ router.get('/reset/:token', function (req, res) {
 });
 
 router.post('/reset/:token', function (req, res) {
-    async.waterfall([
-        function (done) {
-            models.User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } }, function (err, user) {
-                if (!user) {
-                    req.flash('error', 'Password reset token is invalid or has expired.');
-                    return res.redirect('back');
-                }
 
-                const hashedPassword = bcrypt.hashSync(req.body.password, bcrypt.genSaltSync(10));
-                user.password = hashedPassword;
-                user.resetPasswordToken = undefined;
-                user.resetPasswordExpires = undefined;
-
-                user.save(function (err) {
-                    if (err) {
-                        req.flash('error', 'Something wrong happened! could not update password.');
-                        return res.redirect('back');
-                    }
-                    done(err, user);
-                });
-            });
-        },
-        function (user, done) {
-            const smtpTransport = nodemailer.createTransport({
-                service: 'Gmail',
-                auth: {
-                    user: config.EMAIL,
-                    pass: config.EMAIL_SECRET
-                }
-            });
-            const mailOptions = {
-                to: user.email,
-                from: config.EMAIL,
-                subject: 'Your password has been changed',
-                text: 'Hello,\n\n' +
-                    'This is a confirmation that the password for your account ' + user.username + ' has just been changed at mongot.com.\n'
-            };
-            smtpTransport.sendMail(mailOptions, function (err) {
-                req.flash('success', 'Success! Your password has been changed.');
-                done(err);
-            });
+    models.User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } }).then((user) => {
+        if (!user) {
+            req.flash('error', 'Password reset token is invalid or has expired.');
+            return res.redirect('back');
         }
-    ], function () {
-        res.redirect('/login');
-    });
+
+        const hashedPassword = bcrypt.hashSync(req.body.password, bcrypt.genSaltSync(10));
+        user.password = hashedPassword;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+
+        return user.save();
+    }).then((user) => {
+        const mailOptions = {
+            api_key: mail.API_KEY,
+            to: [user.email],
+            sender: mail.FROM,
+            subject: 'Your password has been changed',
+            text_body: 'Hello,\n\n' +
+                'This is a confirmation that the password for your account ' + user.username + ' has just been changed at mongot.com.\n'
+        };
+
+        fetch(mail.URL, {
+            method: "POST",
+            headers: { 'Content-Type': "application/json" },
+            body: JSON.stringify(mailOptions)
+        })
+            .then((res) => {
+                if (res.status === 200) {
+                    return req.flash('success', 'Success! Your password has been changed.');
+                }
+                req.flash('error', err);
+            }).catch((err) => {
+                req.flash('error', err);
+                console.log('reset/token route:', err);
+            }).finally(() => res.redirect('/login'));
+    })
 });
 
 async function sendActivationToken(req, res, user) {
     if (!user.email) {
-        req.flash('info', 'No email specified, you will not be able to play general');
+        req.flash('info', 'No email specified');
         return res.redirect('back');
     }
 
-    async.waterfall([
-        function (done) {
-            crypto.randomBytes(20, function (err, buf) {
-                const token = buf.toString('hex');
-                done(err, token);
-            });
-        },
-        function (token, done) {
-            user.activationToken = token;
-            user.activationTokenExpires = Date.now() + 86400000; // 24 hour
+    const token = crypto.randomBytes(20).toString('hex');
 
-            user.save(function (err) {
-                done(err, token, user);
-            });
-        },
-        function (token, info, done) {
-            const mailOptions = {
-                api_key: mail.API_KEY,
-                to: [user.email],
-                sender: mail.FROM,
-                subject: 'Account activation',
-                text_body:
-                    `You are receiving this because you (or someone else) have created an account on mongot.com.
-                    Activate your account by clicking the link below, or paste this into your browser to complete the process:
-                    https://${req.headers.host}/activation/${token}
-                    If you did not request this, please ignore this email.\n`
-            };
+    user.activationToken = token;
+    user.activationTokenExpires = Date.now() + 86400000; // 24 hour
 
-            fetch(mail.URL, {
-                method: "POST",
-                headers: { 'Content-Type': "application/json" },
-                body: JSON.stringify(mailOptions)
-            })
-                .then(() => {
-                    req.flash('success', `An activation token has been sent to ${user.email}. Check your junk folder if not been sent.`);
-                    done('done')
-                }).catch((err) => {
-                    req.flash('error', err);
-                    done(err, 'done');
-                });
-        }
-    ], function (err) {
-        if (err) {
-            return res.render('register.pug', { csrfToken: req.csrfToken() });
-        }
-        res.redirect('back');
+    await user.save(function (err) {
+        return Error(err)
     });
+
+    const mailOptions = {
+        api_key: mail.API_KEY,
+        to: [user.email],
+        sender: mail.FROM,
+        subject: 'Account activation',
+        text_body:
+            `You are receiving this because you (or someone else) have created an account on mongot.com.
+            Activate your account by clicking the link below, or paste this into your browser to complete the process:
+            https://${req.headers.host}/activation/${token}
+            If you did not request this, please ignore this email.\n`
+    };
+
+    const response = await fetch(mail.URL, {
+        method: "POST",
+        headers: { 'Content-Type': "application/json" },
+        body: JSON.stringify(mailOptions)
+    })
+        .then((res) => {
+            if (res.status !== 200) {
+                return res.status
+            }
+            return
+        }).catch((err) => {
+            return Error(err)
+        });
+
+    return response
+
 }
 
 function requireLogin(req, res, next) {
