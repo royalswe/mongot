@@ -10,7 +10,7 @@
   "author": "roYal",
   "license": "ISC",
   "dependencies": {
-    "ws": "^8.11.0"
+    "ws": "^8.12.1"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.20.2",
