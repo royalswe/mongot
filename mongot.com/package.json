@@ -10,7 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "csurf": "^1.11.0"
   },
   "devDependencies": {
     "gulp-clean-css": "^4.3.0",
