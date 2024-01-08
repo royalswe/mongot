@@ -54,7 +54,7 @@ app.use(bodyParser.json());
 app.use(
   sessions({
       cookieName: "session",
-      secret: "345gyu345g3785g785g578g563gf25673f56734f56723", // Random string as secret
+      secret: process.env.COOKIE_SECRET, // Random string as secret
       httpOnly: true, // not letting javascript access cookies
       // ephemeral: true, // delete cookies when the browser is closed
       //secure: true, // only use cookies over https

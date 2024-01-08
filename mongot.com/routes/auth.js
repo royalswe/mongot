@@ -296,7 +296,7 @@ function reCAPTCHA(req, res, next) {
     if (req.body['g-recaptcha-response'] === undefined || req.body['g-recaptcha-response'] === '' || req.body['g-recaptcha-response'] === null) {
         return res.render('register.pug', { csrfToken: req.csrfToken(), error: "Something went wrong with reCAPTCHA" });
     }
-    const secretKey = "6LfhkTkdAAAAAD9bg9-ogPXrw2qon1gJh3zXU1ls";
+    const secretKey = process.env.RECAPTCHA;
 
     const verificationURL = "https://www.google.com/recaptcha/api/siteverify?secret=" + secretKey + "&response=" + req.body['g-recaptcha-response'];
 
