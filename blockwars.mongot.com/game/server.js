@@ -3,19 +3,19 @@ const WebSocket = require('ws');
 const Session = require('./session');
 const Client = require('./client');
 const fs = require('fs');
-let gameChat = require('../gameChat.json');
+const gameChat = require('../gameChat.json');
 const lobbyChat = require('../blockwarChat.json');
 const sessions = new Map();
 const Lobby = new(require('./lobby'))();
 const Status = require('./status');
 const Bot = require('./ai/bot.js');
-let config = require('../config.json');
+const config = require('../config.json');
 
 let BOT_COUNT = 0;
 
 function createId() {
+    const chars = 'abcdefghjkmnopqrstxz0123456789';
     let len = 6;
-    let chars = 'abcdefghjkmnopqrstxz0123456789';
     let id = '';
     while (len--) {
         id += chars[Math.random() * chars.length | 0];
@@ -39,7 +39,7 @@ function createSession({name, ranking}) {
 }
 
 function getClient(session, clientId) {
-    for (let client of session.clients) {
+    for (const client of session.clients) {
         if (client.id === clientId) {
             return client;
         }
@@ -61,7 +61,7 @@ function canClientJoin(client) {
     const session = client.session;
 
     let countPlayers = 0;
-    for (let client of session.clients) {
+    for (const client of session.clients) {
         if (client.status !== null) {
             countPlayers++;
         }
@@ -76,7 +76,7 @@ function canClientJoin(client) {
 function updateRooms() {
     let openRankedGames = 0;
     let openUnRankedGames = 0;
-    for (let session of sessions) { // loop trough rooms to see if more rooms needed
+    for (const session of sessions) { // loop trough rooms to see if more rooms needed
         if (session[1].status === Status.session.waiting) {
             if (session[1].ranking === "yes") {
                 openRankedGames++;
@@ -98,10 +98,10 @@ function updateRooms() {
         });
     }
     const rooms = [];
-    for (let session of sessions) {
+    for (const session of sessions) {
         const clients = [];
         const activeClients = [];
-        for (let client of session[1].clients) {
+        for (const client of session[1].clients) {
             clients.push({name: client.id, points: client.points});
             if (client.state !== null) {
                 activeClients.push(client.id);
@@ -151,7 +151,7 @@ exports.initialize = (server) => {
 
         socket.isAlive = true;
         socket.on('pong', () => { socket.isAlive = true; });
-      
+
         socket.on('message', msg => {
             const data = JSON.parse(msg);
             if (data.type === "init_lobby") {
@@ -357,7 +357,7 @@ exports.initialize = (server) => {
                 let playersJoined = 0;
                 const startingPlayers = [];
 
-                for (let client of session.clients) {
+                for (const client of session.clients) {
                     if (client.status === Status.client.ready) {
                         playersReady++;
                         startingPlayers.push(client);
@@ -423,12 +423,12 @@ exports.initialize = (server) => {
                         }
                     }
                     
-                    for (let bot of _players) {
+                    for (const bot of _players) {
                         bot.onlyBots = true;
                     }
                 }
                 else if (_message === "#bye bots"){
-                    for (let bot of client.session.clients) {
+                    for (const bot of client.session.clients) {
                         bot.stop = true;
                         bot.lost = true;
                         delete bot.socket;
@@ -475,7 +475,7 @@ exports.initialize = (server) => {
                         }
                         if (--iterations <= 0) // only bots in the room
                         {
-                            for (let bot of session.clients) {
+                            for (const bot of session.clients) {
                                 bot.stop = true;
                                 delete bot.socket;
                                 session.leave(bot);

@@ -1,4 +1,5 @@
 const models = require('../../models');
+const Status = require('./status');
 
 "use strict";
 const Client = function(conn, id) {
@@ -22,6 +23,9 @@ Client.prototype.compareSpecials = function(special) {
 };
 
 Client.prototype.clientLost = function(data) {
+    if (this.status !== Status.client.ready) {
+        return;
+    }
     this.lost = true;
 
     if(this.points){

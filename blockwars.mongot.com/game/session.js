@@ -140,7 +140,7 @@ Session.prototype.broadcastSession = function (){
 Session.prototype.isGameOver = function(data){
     //const allPlayers = this.playingClients;
     const remainingPlayers = this.playingClients.filter(c => c.lost === false);
-
+    
     if (remainingPlayers.length <= 1 && this.status === Status.session.running) {
         this.status = Status.session.waiting;
 
@@ -181,7 +181,7 @@ Session.prototype.isGameOver = function(data){
             }
 
             client.send(data);
-         });
+        });
     }
 };
 
@@ -233,7 +233,7 @@ Session.prototype.collectPoints = function(winner){
 
     winner.points += sumPointsLost; // update players score
     nameAndIncPoints.players.push({name: winner.id, pointsWon: sumPointsLost, newPoints: winner.points});
-    for (let client of this.clients) {
+    for (const client of this.clients) {
         client.send(nameAndIncPoints);
     }
 

@@ -1,5 +1,5 @@
 "use strict";
-let Tetris = function() {
+const Tetris = function() {
     this.blocks = "";
 };
 
@@ -9,7 +9,7 @@ Tetris.prototype.start = function() {
 
 Tetris.prototype.createBlocks = function() {
     let text = "";
-    let possible = "ILJOTSZ";
+    const possible = "ILJOTSZ";
 
     for(let i = 0; i < 100; i++) {
         text += possible.charAt(Math.floor(Math.random() * possible.length));
