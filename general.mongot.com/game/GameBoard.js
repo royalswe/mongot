@@ -74,6 +74,20 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
                     Game.prototype.everyoneDeploy(i);
                 }
                 else {
+                    if (ap === i) {
+                        Game.prototype.nextTurnButton();
+                        switch (phase) {
+                            case Game.Phase.deploy:
+                                Game.prototype.deploy();
+                                break;
+                            case Game.Phase.battle:
+                                Game.prototype.battle();
+                                break;
+                            case Game.Phase.tacticalMove:
+                                Game.prototype.tacticalMove();
+                                break;
+                        }
+                    }
                     socket.send({
                         type: 'current_player',
                         bool: false,
@@ -420,14 +434,15 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
     };
 
     Game.prototype.botDeploy = function (id, eventName) {
+        const bot = getController(id);
         setTimeout(() => {
-            if (gameOver) { return; }
+            if (gameOver || getController(id) !== bot) { return; }
 
             if (eventName === 'everyone_deploy') {
-                while (!gameOver && PlayerList[id] && PlayerList[id].gold >= config.ARMY_COST) {
+                while (!gameOver && getController(id) === bot && PlayerList[id] && PlayerList[id].gold >= config.ARMY_COST) {
                     const country = botStrategy.deploymentTarget(PlayerList, id, continents);
                     if (!country) { break; }
-                    getController(id).serverAction(eventName, country.id, id);
+                    bot.serverAction(eventName, country.id, id);
                     if (phase !== Game.Phase.everyoneDeploy) { break; }
                 }
                 return;

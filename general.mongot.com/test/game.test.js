@@ -242,6 +242,31 @@ test('a player who reconnects within the grace period gets their seat back', (t)
     assert(returning.sent.some((message) => message.type === 'phase' && /Welcome back Player1/.test(message.phaseMsg)));
 });
 
+test('an active player who reconnects can act in the current turn phase', (t) => {
+    const {table, attacker} = startTurn(t);
+    const reconnect = () => {
+        const socket = fakeSocket(attacker);
+        table.board.returningPlayer(socket);
+        return socket;
+    };
+
+    let socket = reconnect();
+    assert(socket.can('deploy'));
+    assert(socket.can('next_turn'));
+
+    socket.act('next_turn');
+    socket = reconnect();
+    assert.equal(table.phase(), 'Battle');
+    assert(socket.can('battle'));
+    assert(socket.can('next_turn'));
+
+    socket.act('next_turn');
+    socket = reconnect();
+    assert.equal(table.phase(), 'Tactical move');
+    assert(socket.can('tactical_move'));
+    assert(socket.can('next_turn'));
+});
+
 test('an admin can kick a player out of the game', (t) => {
     const {table} = startTurn(t);
     table.board.kickoutPlayer('Player1');
