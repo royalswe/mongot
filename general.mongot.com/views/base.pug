@@ -13,8 +13,10 @@ html
     link(rel='shortcut icon', href='/img/favicon.ico', type='image/x-icon')
     meta(http-equiv='Content-Type', content='text/html; charset=UTF-8')
     meta(name='viewport', content='width=device-width, initial-scale=1')
-    link(rel='stylesheet', type='text/css', href='/css/style.css?v=1.2')
     link(rel='stylesheet', type='text/css', href='/resources/font-awesome.min.css')
+    link(rel='stylesheet', type='text/css', href='/css/retro.css?v=1.0')
+    link(rel='stylesheet', type='text/css', href='/css/site.css?v=2.0')
+    block styles
 
   body
     header
@@ -41,7 +43,8 @@ html
 
     if messages.info
       .flash-message.info
-        span= messages.info
+        span
+        | !{messages.info}
     else if messages.success
       .flash-message.success
         span= messages.success

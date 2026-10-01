@@ -3,6 +3,7 @@ var lobbyChat = io(location.host + '/lobby_com', {
     reconnection: true,
     reconnectionAttempts: Infinity,
     forceNew: true,
+    auth: user === 'guest' ? {guestId: getGuestId()} : {},
     transports: ['websocket', 'polling']
 });
 
@@ -22,31 +23,10 @@ lobbyChat.on('users_online', function (users, guests) {
       }
       else if(users[i].activated === false) {
         img += "guest.png";
-        title = "inactivated player";
+        title = "email not verified (unranked)";
       }
       else{
-        if (points < 900)
-            img += "crown0.png";
-        else if(points >= 900 && points < 1300)
-            img += "crown1.png";
-        else if(points >= 1300 && points < 1500)
-            img += "crown2.png";
-        else if(points >= 1500 && points < 1700)
-            img += "crown3.png";
-        else if(points >= 1700 && points < 1900)
-            img += "crown4.png";
-        else if(points >= 1900 && points < 2100)
-            img += "crown5.png";
-        else if(points >= 2100 && points < 2300)
-            img += "crown6.png";
-        else if(points >= 2300 && points < 2500)
-            img += "crown7.png";
-        else if(points >= 2500 && points < 2700)
-            img += "crown8.png";
-        else if(points >= 2700 && points < 2900)
-            img += "crown9.png";
-        else
-            img += "crown10.png";
+        img += rankIcon(points);
       }
 
       if(points === null) {
@@ -93,64 +73,41 @@ function getNotificationPermissions() {
     }
 }
 
+function escapeHtml(value) {
+    return $('<div>').text(String(value == null ? '' : value)).html();
+}
 
 
-lobbyChat.on('message', function (message) {
-    var message = JSON.parse(message);
-
-    var localDate = new Date(message.timeStamp);
-    var timeStamp = localDate.getDate()+'/'
-        + (localDate.getMonth()+1)+' '
-        + ('0' + localDate.getHours()).slice(-2)+ ':'
-        + ('0' + localDate.getMinutes()).slice(-2);
-
-    var newMessage = '<div class="new-message ' +
-        message.type + '">' +
+function chatMessageHtml(message, removeId) {
+    var date = new Date(message.timeStamp);
+    var timeStamp = date.getDate() + '/' + (date.getMonth() + 1) + ' ' +
+        ('0' + date.getHours()).slice(-2) + ':' + ('0' + date.getMinutes()).slice(-2);
+    var html = '<div class="new-message ' + message.type + '">' +
         '<span class="chat-timeStamp">' + timeStamp + '</span> ' +
-        '<span class="name">' + message.username + ':</span> ' +
-        '<span class="chat-message">' + message.message + '</span> ';
-    if(user.god){
-        newMessage += '<span class="remove-message" id="'+ message.index +'">Remove</span>';
+        '<span class="name">' + escapeHtml(message.username) + ':</span> ' +
+        '<span class="chat-message">' + escapeHtml(message.message) + '</span> ';
+    if (user.god) {
+        html += '<span class="remove-message" id="' + removeId + '">Remove</span>';
     }
-    newMessage += '</div>';
-    $('#messages').append(newMessage);
-    // Scroll down chatt automaticly
+    return html + '</div>';
+}
+
+function scrollChatToBottom() {
     $('#messages').scrollTop($('#messages')[0].scrollHeight);
+}
+
+lobbyChat.on('message', function (json) {
+    var message = JSON.parse(json);
+    $('#messages').append(chatMessageHtml(message, message.index));
+    scrollChatToBottom();
 });
 
 lobbyChat.on('render_messages', function (messages) {
-    $('#messages').empty();
-    for (var i = 0; i < messages.length; i++) {
-        var localDate = new Date(messages[i].timeStamp);
-        var timeStamp = localDate.getDate()+'/'
-            + (localDate.getMonth()+1)+' '
-            + ('0' + localDate.getHours()).slice(-2)+ ':'
-            + ('0' + localDate.getMinutes()).slice(-2);
-
-        var newMessage = '<div class="new-message ' +
-            messages[i].type + '">' +
-            '<span class="chat-timeStamp">' + timeStamp + '</span> ' +
-            '<span class="name">' + messages[i].username + ':</span> ' +
-            '<span class="chat-message">' + messages[i].message + '</span> ';
-        if(user.god){
-            newMessage += '<span class="remove-message" id="'+ i +'">Remove</span>';
-        }
-        newMessage += '</div>';
-        $('#messages').append(newMessage);
-    }
-
-    $('#messages').scrollTop($('#messages')[0].scrollHeight);
+    $('#messages').html(messages.map(chatMessageHtml).join(''));
+    scrollChatToBottom();
 });
 
-lobbyChat.on('serverMessage', function (message) {
-    $('#messages').append('<div class="new-message server-message">' + message + '</div>');
-});
-
-lobbyChat.on('serverMessage', function (message) {
-    $('#messages').append('<div class="new-message server-message">' + message + '</div>');
-});
-
-lobbyChat.emit('player_joined', {user:user});
+lobbyChat.emit('player_joined');
 
 var timeStamp = Date.now();
 $('#send').click(function () {
@@ -186,7 +143,7 @@ $('#send').click(function () {
         if(timeStamp < Date.now()){
             timeStamp = Date.now()+2000;
             var data = { message: cleanMessage, type: 'userMessage' };
-            lobbyChat.send(JSON.stringify(data), user);
+            lobbyChat.send(JSON.stringify(data));
             $('#message').val('');
         }
         else{
@@ -227,7 +184,7 @@ $(function(){
     $('#messages').on('click', '.remove-message', function (e) {
         var removeMsg = confirm('Do you want to remove this message?');
         if(removeMsg){
-            lobbyChat.emit('remove_message', e.target.id, user);
+            lobbyChat.emit('remove_message', parseInt(e.target.id, 10));
         }
     });
 });

@@ -293,6 +293,10 @@ function requireLogin(req, res, next) {
 }
 
 function reCAPTCHA(req, res, next) {
+    // Without a secret Google always rejects the token, so dev setups can't register users.
+    if (!process.env.RECAPTCHA) {
+        return next();
+    }
     if (req.body['g-recaptcha-response'] === undefined || req.body['g-recaptcha-response'] === '' || req.body['g-recaptcha-response'] === null) {
         return res.render('register.pug', { csrfToken: req.csrfToken(), error: "Something went wrong with reCAPTCHA" });
     }

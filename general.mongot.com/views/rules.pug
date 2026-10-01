@@ -1,23 +1,25 @@
 extends base
 block head
   - var title = 'How to play'
-  style.
-    body{background-color: #E0E0E0}
+
+block styles
+  link(rel='stylesheet', type='text/css', href='/css/rules.css?v=2.0')
 
 block body
   main#rules
     ul.lang-menu
       li.nav-parent
         a.link(href='#english')
-          img(src='/img/uk-flag.png', alt='Rules in swedish')
+          img(src='/img/uk-flag.png', alt='')
+          |  English
       li.nav-parent
         a.link(href='#swedish')
-          img(src='/img/swedish-flag.png', alt='Rules in swedish')
+          img(src='/img/swedish-flag.png', alt='')
+          |  Svenska
 
     #lang_content
       #english.page
         h1 How to play
-        img(src='/img/uk-flag.png', alt='Rules in swedish', class="center flags")
 
         | General node is a real-time strategy game for 2 to 4 players. The game is a clone of General from blip.se and Wargames from tv2.dk. <br>
         | When the game starts all countries will be devided by the players and each player receives a mission. If it is your turn and your mission is completed, you win the game. You can also win the game by wiping out all of the other players armies.
@@ -76,7 +78,6 @@ block body
 
       #swedish.page
         h1 Hur man spelar
-        img(src='/img/swedish-flag.png', alt='Rules in swedish', class="center flags")
 
         | General node är ett realtids strategispel för 2 till 4 spelare. Spelet är en klon av General från blip.se och Wargames från tv2.dk.<br>
         | När spelet startar delas alla länder upp mellan spelarna och varje spelare får ett uppdrag. Om det är din tur och ditt uppdrag är fullbordat vinner du spelet. Du kan också vinna spelet genom att utplåna alla de andra spelarnas arméer. 

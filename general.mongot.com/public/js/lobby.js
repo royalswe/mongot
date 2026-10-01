@@ -9,7 +9,7 @@ gameInfra.on("connect", function(){
 });
 var playersArr;
 gameInfra.on("rooms_list", function(rooms, players){
-    var roomsTable;
+    var roomsTable = '';
     playersArr = players;
     $('#kick_out_room').children('option:not(:first)').remove();
 
@@ -22,8 +22,9 @@ gameInfra.on("rooms_list", function(rooms, players){
                .text(value.name));
        }
 
-        if(value.status === 'game in progress' || user === 'guest'){
-            var btnText = 'watch game';
+        var tableIsOpen = value.status === 'open' || value.status === 'waiting for players';
+        if(!tableIsOpen){
+            var btnText = value.status === 'rematch' ? 'watch / rematch' : 'watch game';
             var btnClass = 'watch-btn';
         }
         else{
@@ -32,7 +33,8 @@ gameInfra.on("rooms_list", function(rooms, players){
         }
         roomsTable +='<tr><td>'
             + value.name + '</td><td>'
-            + value.players + '/'+ value.startingPlayers +'</td>><td>'
+            + value.players + '/'+ value.startingPlayers +'</td><td>'
+            + ({ original: 'Original Map', archipelago: 'Archipelago', frontier: 'The Marches', world: 'World', quick: 'Quick Test' }[value.mapId] || 'Original Map') + '</td><td>'
             + value.status +'</td><td>'
             + '<a id="'+ value.name +'" class="join-room '+ btnClass +'">' + btnText +'</a></td></tr>';
     });
@@ -51,7 +53,7 @@ $('#allrooms tbody').on("click", ".join-room", function(e){
 });
 
 $('#kick_out_btn').click(function () {
-    gameInfra.emit("god_mode", {type: 'kick_player', room: $('#kick_out_room').val(), player: $('#kick_out_player').val(), user: user});
+    gameInfra.emit("god_mode", {type: 'kick_player', room: $('#kick_out_room').val(), player: $('#kick_out_player').val()});
 });
 // change players selection after room name
 $('#kick_out_room').on('change', function() {

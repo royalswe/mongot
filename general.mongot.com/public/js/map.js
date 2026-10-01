@@ -1,6 +1,166 @@
 'use strict';
 var circles = [];
 var disabledCountries = [];
+var countriesGold = [];
+var mapContinents = [];
+var mapData;
+
+gameInfra.on('map_info', function (map) {
+    mapData = map;
+    countriesGold = map.countries.map(function (country) {
+        return { id: country.id, gold: country.gold };
+    });
+    mapContinents = map.continents;
+
+    var svg = document.querySelector('.svg-content');
+    svg.dataset.mapId = map.id;
+    $('#map_title').text(map.name);
+    svg.classList.remove('map-archipelago', 'map-frontier', 'map-world', 'map-quick');
+    ensureTerritoryMarkers(map.countries.length);
+    if (map.positions) {
+        svg.classList.add('map-' + map.theme);
+        svg.style.backgroundImage = 'none';
+        applyMapPositions(map);
+        drawConnections(map);
+    }
+    else {
+        svg.style.backgroundImage = '';
+        document.querySelectorAll('.map-connection, .map-connection-casing').forEach(function (line) { line.remove(); });
+    }
+
+    if (circles.length === 0) {
+        drawGold();
+    }
+});
+
+function territoryGroups() {
+    return Array.prototype.filter.call(document.querySelectorAll('.svg-content > g'), function (group) {
+        if (group.querySelector('circle') && group.querySelector('text')) {
+            group.classList.add('territory-marker');
+            return true;
+        }
+        return false;
+    });
+}
+
+function ensureTerritoryMarkers(count) {
+    var svg = document.querySelector('.svg-content');
+    var groups = territoryGroups();
+    var insertBefore = svg.querySelector(':scope > filter, :scope > defs');
+    while (groups.length < count) {
+        var group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        group.classList.add('territory-marker');
+        circle.setAttribute('r', 20);
+        text.setAttribute('text-anchor', 'middle');
+        group.appendChild(circle);
+        group.appendChild(text);
+        svg.insertBefore(group, insertBefore);
+        groups.push(group);
+    }
+    groups.forEach(function (group, id) {
+        group.style.display = id < count ? '' : 'none';
+        group.classList.remove('route-selected');
+    });
+}
+
+function applyMapPositions(map) {
+    var groups = territoryGroups();
+    map.positions.forEach(function (position, id) {
+        var group = groups[id];
+        if (!group) { return; }
+        var circle = group.querySelector('circle');
+        var text = group.querySelector('text');
+        circle.style.transition = 'none'; // otherwise cx/cy slide in from the original layout
+        circle.setAttribute('cx', position.x);
+        circle.setAttribute('cy', position.y);
+        circle.getBoundingClientRect();
+        circle.style.transition = '';
+        text.setAttribute('x', position.x);
+        text.setAttribute('y', position.y + 7);
+        group.id = id;
+        var title = group.querySelector('title') || document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = map.countries[id].name || 'Territory ' + (id + 1);
+        if (!title.parentNode) { group.insertBefore(title, group.firstChild); }
+    });
+}
+
+function drawConnections(map) {
+    document.querySelectorAll('.map-connection, .map-connection-casing').forEach(function (line) { line.remove(); });
+    var svg = document.querySelector('.svg-content');
+    var routeKey = function (link) { return Math.min(link[0], link[1]) + '-' + Math.max(link[0], link[1]); };
+    var seaRoutes = (map.seaLinks || []).map(routeKey);
+    var wrapRoutes = (map.wrapLinks || []).map(routeKey);
+    var boardWidth = svg.viewBox.baseVal.width;
+    var casings = document.createDocumentFragment();
+    var routes = document.createDocumentFragment();
+
+    map.countries.forEach(function (country) {
+        country.neighbour.forEach(function (neighborId) {
+            if (neighborId <= country.id) { return; }
+            var from = map.positions[country.id];
+            var to = map.positions[neighborId];
+            var key = country.id + '-' + neighborId;
+            var isSea = seaRoutes.indexOf(key) > -1;
+            var segments = [[from, to]];
+            if (wrapRoutes.indexOf(key) > -1) {
+                // Drawn as two stubs leaving opposite board edges, as if the map wrapped around.
+                var shift = from.x < to.x ? boardWidth : -boardWidth;
+                segments = [[from, {x: to.x - shift, y: to.y}], [to, {x: from.x + shift, y: from.y}]];
+                isSea = true;
+            }
+            segments.forEach(function (segment) {
+                [['map-connection-casing', casings], ['map-connection' + (isSea ? ' map-sea' : ''), routes]].forEach(function (style) {
+                    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('class', style[0]);
+                    line.dataset.a = country.id;
+                    line.dataset.b = neighborId;
+                    line.setAttribute('x1', segment[0].x);
+                    line.setAttribute('y1', segment[0].y);
+                    line.setAttribute('x2', segment[1].x);
+                    line.setAttribute('y2', segment[1].y);
+                    style[1].appendChild(line);
+                });
+            });
+        });
+    });
+    svg.insertBefore(routes, svg.firstChild);
+    svg.insertBefore(casings, svg.firstChild);
+}
+
+// Hovering a territory shows where it connects and which neighbours are enemies (red) or friends (green).
+function clearRouteHighlight() {
+    document.querySelector('.svg-content').classList.remove('route-focus');
+    document.querySelectorAll('.map-connection.active, .map-connection-casing.active').forEach(function (line) { line.classList.remove('active'); });
+    document.querySelectorAll('.map-reach-ring').forEach(function (ring) { ring.remove(); });
+}
+
+function highlightRoutes(id) {
+    clearRouteHighlight();
+    if (!mapData || !mapData.positions || !mapData.countries[id]) { return; }
+    var svg = document.querySelector('.svg-content');
+    var hovered = getCountry(id);
+    svg.classList.add('route-focus');
+    document.querySelectorAll('.map-connection, .map-connection-casing').forEach(function (line) {
+        if (Number(line.dataset.a) === id || Number(line.dataset.b) === id) { line.classList.add('active'); }
+    });
+    mapData.countries[id].neighbour.forEach(function (neighborId) {
+        var neighbor = getCountry(neighborId);
+        var position = mapData.positions[neighborId];
+        var ring = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+        var relation = !hovered || !neighbor ? '' : (hovered.owner === neighbor.owner ? ' friendly' : ' enemy');
+        ring.setAttribute('class', 'map-reach-ring' + relation);
+        ring.setAttribute('cx', position.x);
+        ring.setAttribute('cy', position.y);
+        ring.setAttribute('rx', 27);
+        ring.setAttribute('ry', 27);
+        svg.appendChild(ring);
+    });
+}
+
+$(document).on('mouseenter', '.svg-content > g.territory-marker', function () { highlightRoutes(parseInt(this.id, 10)); });
+$(document).on('mouseleave', '.svg-content > g.territory-marker', clearRouteHighlight);
 /**
  * Add nuke effect when attack
  */
@@ -34,71 +194,31 @@ gameInfra.on('bounce_country', function (id) {
     }, 300);
 });
 
-gameInfra.on('render_map', function (data) {
-    circles = [];
-    /**
-     * update map information to circle array
-     */
-    for (var category in data) {
-        if (data.hasOwnProperty(category)) {
+// Flattens the server's per-player territory lists into one marker list.
+function collectCircles(players, oneUnitEach) {
+    var list = [];
+    Object.keys(players).forEach(function (key) {
+        var player = players[key];
+        player.countries.forEach(function (country) {
+            if (oneUnitEach) { country.units = 1; }
+            list.push({country: country, color: player.color, owner: player.id});
+        });
+    });
+    return list;
+}
 
-            for (var x = 0, j = data[category].countries.length; x < j; x++) {
-                circles.push({
-                    country: data[category].countries[x],
-                    color: data[category].color,
-                    owner: data[category].id
-                });
-            }
-        }
-    }
+gameInfra.on('render_map', function (data) {
+    circles = collectCircles(data, false);
     drawMap();
 });
 
 gameInfra.on('render_no_army_map', function (data) {
-    circles = [];
-    for (var category in data) {
-        if (data.hasOwnProperty(category)) {
-
-            for (var x = 0, j = data[category].countries.length; x < j; x++) {
-                data[category].countries[x].units = 1;
-                circles.push({
-                    country: data[category].countries[x],
-                    color: data[category].color,
-                    owner: data[category].id
-                });
-            }
-        }
-    }
+    circles = collectCircles(data, true);
 });
 
+// Enemies first with one unit each, then your own real numbers; show gold relies on this order.
 gameInfra.on('render_map_everyone_deploy', function (data, playersData) {
-    circles = [];
-    /**
-     * Render enemys starting values and then players values. Needed because show gold wont work otherwise.
-     */
-    for (var category in data) {
-        if (data.hasOwnProperty(category)) {
-            for (var x = 0, j = data[category].countries.length; x < j; x++) {
-                data[category].countries[x].units = 1;
-                circles.push({
-                    country: data[category].countries[x],
-                    color: data[category].color,
-                    owner: data[category].id
-                });
-            }
-        }
-    }
-    for (var category in playersData) {
-        if (playersData.hasOwnProperty(category)) {
-            for (var x = 0, j = playersData[category].countries.length; x < j; x++) {
-                circles.push({
-                    country: playersData[category].countries[x],
-                    color: playersData[category].color,
-                    owner: playersData[category].id
-                });
-            }
-        }
-    }
+    circles = collectCircles(data, true).concat(collectCircles(playersData, false));
     drawMap();
 });
 
@@ -121,7 +241,7 @@ function drawMap() {
         var circle = document.getElementsByTagName('circle')[circles[i].country.id];
         var text = document.getElementsByTagName('text')[circles[i].country.id];
         circle.setAttribute('fill', 'url(#radial_'+ circles[i].color +')');
-        circle.style['stroke-width'] = "0";
+        circle.classList.remove('disabled-country', 'marker-from', 'marker-to');
         text.textContent = circles[i].country.units
         text.setAttribute('fill', 'white');
         g.id = circles[i].country.id;
@@ -132,9 +252,8 @@ function drawMap() {
             var g = document.getElementsByTagName('g')[circles[i].country.id];
             var circle = document.getElementsByTagName('circle')[disabledCountries[i].id];
             var text = document.getElementsByTagName('text')[disabledCountries[i].id];
-            circle.setAttribute('fill', 'grey');
-            circle.style['stroke-width'] = "0.5";
-            circle.style.stroke = "white";
+            circle.setAttribute('fill', '#a39a8b');
+            circle.classList.add('disabled-country');
             text.textContent = disabledCountries[i].units;
             text.setAttribute('fill', 'white');
             g.id = circles[i].country.id;
@@ -146,8 +265,8 @@ function drawGold() {
     for (var i = 0; i < countriesGold.length; i++) {
         var circle = document.getElementsByTagName('circle')[countriesGold[i].id];
         var text = document.getElementsByTagName('text')[countriesGold[i].id];
-        circle.setAttribute('fill', 'gold');
-        text.setAttribute('fill', 'black');
+        circle.setAttribute('fill', '#e8a820');
+        text.setAttribute('fill', '#231d17');
         text.textContent = countriesGold[i].gold;
     }
 }
@@ -167,30 +286,20 @@ $(function(){
             drawGold();
             $(this).addClass('clicked-btn');
             $('.phase-info').empty();
-            $('.phase-message').html('<div class=show-gold>'+
-                '<p>Europe: 10 gold </p>' +
-                '<p>East europe: 10 gold </p>' +
-                '<p>Asia: 8 gold </p>' +
-                '<p>Middle east: 4 gold </p>' +
-                '<p>Africa: 6 gold </p></div>');
+            var regionIncome = mapContinents.map(function (region) {
+                return '<p>' + region.continent + ': ' + region.gold + ' gold</p>';
+            }).join('');
+            $('.phase-message').html('<div class="show-gold">' + regionIncome + '</div>');
         }
     });
 });
 
-var countriesGold = [
-    { id: 0, gold: 2 }, { id: 1, gold: 2 }, { id: 2, gold: 2 }, { id: 3, gold: 2 }, { id: 4, gold: 2 }, { id: 5, gold: 1 },
-    { id: 6, gold: 2 }, { id: 7, gold: 5 }, { id: 8, gold: 2 }, { id: 9, gold: 1 }, { id: 10, gold: 2 }, { id: 11, gold: 2 },
-    { id: 12, gold: 2 }, { id: 13, gold: 2 }, { id: 14, gold: 2 }, { id: 15, gold: 5 }, { id: 16, gold: 2 }, { id: 17, gold: 2 },
-    { id: 18, gold: 2 }, { id: 19, gold: 2 }, { id: 20, gold: 5 }, { id: 21, gold: 2 }, { id: 22, gold: 2 }, { id: 23, gold: 2 },
-    { id: 24, gold: 5 }, { id: 25, gold: 2 }, { id: 26, gold: 2 }, { id: 27, gold: 2 }, { id: 28, gold: 2 }, { id: 29, gold: 2 },
-    { id: 30, gold: 5 }, { id: 31, gold: 2 }, { id: 32, gold: 1 }
-];
-drawGold(); // Show gold when waiting
+drawGold();
 
 // Resize map
 function resizeImage(){
     var mobileBool = (isMobile ? 32 : 0) // Mobile or not
-    var winHeight = $(window).height() - $('#game_header').height() - mobileBool;
+    var winHeight = $(window).height() - $('#game_header').outerHeight() - mobileBool;
     var winWidth = $(window).width();
     if($('#chatroom').css('display') !== 'none') {
         winWidth -= $('#chatroom').width();

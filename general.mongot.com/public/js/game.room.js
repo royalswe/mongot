@@ -2,6 +2,7 @@
 var gameInfra = io(location.host + '/game_infra', {
     reconnection: true,
     reconnectionAttempts: Infinity,
+    auth: user === 'guest' ? {guestId: getGuestId()} : {},
     transports: ['websocket', 'polling']
 });
 
@@ -11,13 +12,22 @@ var gameInfra = io(location.host + '/game_infra', {
  * @type {string}
  */
 var roomName = decodeURI((RegExp("room" + '=' + '(.+?)(&|$)').exec(location.search) || [, null])[1]);
-if (roomName) {
-    document.title = roomName;
-
-    gameInfra.emit("player_ready", user);
+function enterRoom() {
+    gameInfra.emit("player_ready");
     gameInfra.emit('join_room', (roomName));
     gameInfra.emit('visitor', roomName);
 }
+
+if (roomName) {
+    document.title = roomName;
+    enterRoom();
+}
+
+// Socket.IO reconnects with a brand-new server socket, so identity and room must be sent again.
+gameInfra.io.on('reconnect', function () {
+    $('.disconnect-popup').closest('.modal-overlay').remove();
+    if (roomName) { enterRoom(); }
+});
 
 gameInfra.on('disconnect', function() {
     disconnectedSound.play();
@@ -31,20 +41,32 @@ gameInfra.on('disconnect', function() {
     $(".modal-overlay").css("display","block");
 });
 
-gameInfra.on('not_activated', function() {
-    var element = '<div class="modal-overlay"><div class="disconnect-popup"><span class="close-popup">X</span>';
-    element += "<h1>Activate your account &#x2639;</h1><p>Please check your email for activation link to be able to play.<br>" +
-        "<a href='https://mongot.com/sendVerificationToken'>Send new activation link</a></p></div></div>";
-    $('body').append(element);
-
-    $(".modal-overlay").css("display","block");
+gameInfra.on('bot_takeover', function (msg) {
+    var reason = msg.reason === 'surrender' ? 'surrendered' : 'did not return';
+    $('#messages').append('<div class="server-message">' + msg.username + ' ' + reason + '. A bot now controls that faction.</div>');
 });
+
+// Guests and unverified accounts can play, but their matches are unranked.
+// The server decides who you are; this starts from the page and is corrected by its 'identity' message.
+var identityKind = user === 'guest' ? 'guest' : (user.active ? 'verified' : 'unverified');
+
+function rankNotice() {
+    if (identityKind === 'guest') {
+        return '<strong>Playing as a guest.</strong> Your games are unranked. <a href="https://mongot.com/login" target="_blank" rel="noopener">Log in</a> to earn rank.';
+    }
+    if (identityKind === 'unverified') {
+        return '<strong>Email not verified.</strong> Your games are unranked. <a href="https://mongot.com/sendVerificationToken" target="_blank" rel="noopener">Send a new verification link</a> to earn rank.';
+    }
+    return '<strong>Ranked play.</strong> Your rating changes with the result when every player at the table is verified.';
+}
 
 var mission;
 var phase = 'Waiting for players';
 var phaseMessage;
 var activePlayer;
 var playerEnabled;
+var gameUsername = user === 'guest' ? null : user.username;
+var canRematch = false;
 
 var disconnectedSound = new Howl({src: ['sounds/disconnected.mp3']});
 var yourTurnSound = new Howl({src: ['sounds/notify-turn.mp3']});
@@ -66,12 +88,23 @@ gameInfra.on('message', function (msg) {
                 $('.phase-info').html(phaseMessage);
             }
             var image = $("#phase_img");
+            var phaseIcon = {
+                'Everyone deploy': 'everyone-deploy',
+                'Deploy': 'deploy',
+                'Battle': 'battle',
+                'Tactical move': 'tactical-move',
+                'Game over': 'game-over'
+            }[phase] || 'waiting';
             image.fadeOut(50, function () {
-                image.attr("src", "img/game/phases/" + phase + ".png");
+                image.attr("src", "img/game/icons/" + phaseIcon + ".svg");
                 image.fadeIn(50);
             });
             $(".remove_unit_bar").remove(); // if player didn't fulfill the attack or movement
             drawMap();
+            break;
+        case "identity":
+            gameUsername = msg.username;
+            identityKind = msg.isGuest ? 'guest' : (msg.isUnverified ? 'unverified' : 'verified');
             break;
         case "attack":
             if($(".show-phase").is(':visible')) {
@@ -93,27 +126,50 @@ gameInfra.on('message', function (msg) {
             break;
         case "start_game":
             clearInterval(countInterval); // if countdown is active then disable it
+            $('#start_bots').hide();
+            canRematch = true;
             window.onbeforeunload = function () { return "Dude, are you sure you want to leave?"; }
             yourTurnSound.play(); // Notify player turn
             mission = msg.mission;
             break;
         case "player_rejoin":
+            canRematch = true;
             window.onbeforeunload = function () { return "Dude, are you sure you want to leave?"; }
             joinGameSound.play(); // Notify player turn
             mission = msg.mission;
+            break;
+        case "room_settings":
+            var tableIsWaiting = msg.status === 'open' || msg.status === 'waiting for players';
+            $('#start_bots').toggle(tableIsWaiting && msg.host === gameUsername && msg.allowBots);
             break;
         case "game_over":
             $('#messages').append('<div class="server-message">' + msg.message + '</div>');
             window.onbeforeunload = function () { }; // Dont prompt if user leaves
             gameOverSound.play();
-            break;
-        case "disconnect_player":
-            gameInfra.emit("player_left", msg.id);
+            if (canRematch && $('#rematch-panel').length === 0) {
+                $('.svg-container').append('<div id="rematch-panel"><div><strong>Match complete</strong><span id="rematch-status">Ready for another round?</span></div><button id="rematch-button" type="button">Rematch</button></div>');
+            }
             break;
         default:
             console.log('SWITCH ERROR');
             break;
     }
+});
+
+gameInfra.on('rematch_status', function (status) {
+    $('#rematch-status').text('Rematch ready: ' + status.votes + ' of ' + status.required);
+    var hasVoted = status.voters.indexOf(gameUsername) !== -1;
+    $('#rematch-button').prop('disabled', hasVoted).text(hasVoted ? 'Waiting' : 'Rematch');
+});
+
+gameInfra.on('rematch_started', function () {
+    $('#rematch-panel').remove();
+    $('#messages').empty();
+    canRematch = true;
+    mission = null;
+    phase = 'Waiting for players';
+    $('.phase-message').text(phase);
+    $('.phase-info').text('The next match is starting.');
 });
 
 gameInfra.on("start_countdown", function () {
@@ -176,7 +232,7 @@ function showActivePlayer(msg) {
     activePlayer = msg.player;
     var circle = document.getElementById('user_color');
     var text = document.getElementById('username_turn');
-    circle.setAttribute('fill', msg.color);
+    circle.setAttribute('fill', 'url(#radial_' + msg.color + ')');
     text.textContent = msg.username;
 }
 
@@ -225,7 +281,8 @@ gameInfra.on("list_of_players", function (playerList) {
     $('#player_list').empty();
 
     $.each(playerList, function (key, value) {
-        var points = value.points;
+        var isUnranked = value.isGuest || value.isUnverified;
+        var points = isUnranked ? 'Unranked' : value.points;
 
         var ipCounter = 0;
         for(var i = 0; i<playerList.length; i+=1){
@@ -234,52 +291,52 @@ gameInfra.on("list_of_players", function (playerList) {
             }
         }
 
-        if(ipCounter > 1){
-            var imgInfo = '<img src="img/ip-icon.png" alt="duplicate IP address" title="duplicate IP address"/>';
+        if (value.isGuest) {
+            var imgInfo = '<img src="img/users-icon.png" alt="guest" title="Guest (unranked)"/>';
+        }
+        else if (value.isUnverified) {
+            imgInfo = '<img src="img/users-icon.png" alt="unverified player" title="Email not verified (unranked)"/>';
+        }
+        else if(ipCounter > 1){
+            imgInfo = '<img src="img/ip-icon.png" alt="duplicate IP address" title="duplicate IP address"/>';
         }
         else {
-            var imgInfo = '<img src="img/users-icon.png" alt="normal user" title="normal user"/>';
+            imgInfo = '<img src="img/users-icon.png" alt="normal user" title="normal user"/>';
         }
-        if(MODS.indexOf(value.username) > -1){
+        if (value.isBot) {
+            imgInfo = '<span class="bot-badge" title="Computer-controlled player">BOT</span>';
+        }
+        else if(MODS.indexOf(value.username) > -1){
             imgInfo = '<img src="img/moderator.png" alt="moderator" title="moderator"/>';
         }
-        
-        if (points < 900)
-            var img = "crown0.png";
-        else if(points >= 900 && points < 1300)
-            var img = "crown1.png";
-        else if(points >= 1300 && points < 1500)
-            var img = "crown2.png";
-        else if(points >= 1500 && points < 1700)
-            var img = "crown3.png";
-        else if(points >= 1700 && points < 1900)
-            var img = "crown4.png";
-        else if(points >= 1900 && points < 2100)
-            var img = "crown5.png";
-        else if(points >= 2100 && points < 2300)
-            var img = "crown6.png";
-        else if(points >= 2300 && points < 2500)
-            var img = "crown7.png";
-        else if(points >= 2500 && points < 2700)
-            var img = "crown8.png";
-        else if(points >= 2700 && points < 2900)
-            var img = "crown9.png";
-        else
-            var img = "crown10.png";
 
-        var roomDiv = '<li class="player-name" style="color: '+ value.color +' ">'+ imgInfo +'<span class="player-username">' + value.username + '</span>' +
-            '<span class="player-points">' + points + '<img src="img/rankings/'+ img +'"/></span></li>';
+        var rankImage = isUnranked ? '' : '<img src="img/rankings/' + rankIcon(points) + '"/>';
+        var roomDiv = '<li class="player-name player-color-' + value.color + '">'+ imgInfo +'<span class="player-username">' + value.username + '</span>' +
+            '<span class="player-points">' + points + rankImage + '</span></li>';
         $('#player_list').append(roomDiv);
     });
+
+    // The server decides this from everyone seated for the match, including players who have since left.
+    var matchIsUnranked = playerList.length > 0 && playerList[0].matchRanked === false;
+    $('#match_rank')
+        .text(playerList.length === 0 ? '' : (matchIsUnranked ? 'Unranked match' : 'Ranked match'))
+        .toggleClass('unranked', matchIsUnranked)
+        .attr('title', matchIsUnranked ? 'A guest or an unverified player is or was seated, so nobody\'s rating changes.' : 'Ratings change with the result.');
 });
 
 // choose color
-gameInfra.on("choose_color", function (usedColors, colors) {
+gameInfra.on("choose_color", function (usedColors, colors, roomSettings) {
     $('.popup').remove();
 
     var popup = '<div class="modal-overlay"></div><div class="popup">'+
-        '  <span class="close-popup">X</span>' +
-        '  <div class="pophead">Please choose a color to play with</div>'+
+        '  <span class="close-popup" aria-label="Close">&#215;</span>' +
+        '  <div class="pophead">Choose your side</div>'+
+        '  <p class="setup-description">Select a color for your territories.</p>'+
+        '  <p class="rank-notice' + (identityKind === 'verified' ? '' : ' unranked') + '">' + rankNotice() + '</p>'+
+        (roomSettings.isHost ? '<div class="host-settings"><label for="map_choice">Map</label><select id="map_choice"></select>'+
+            '<label class="bot-choice"><input id="allow_bots" type="checkbox" ' + (roomSettings.allowBots ? 'checked' : '') + '> Allow bot opponents</label></div>' :
+            '<p class="room-map-choice">Map: <strong class="room-map-name"></strong>' + (roomSettings.allowBots ? ' · Bots allowed' : ' · Human players only') + '</p>')+
+        '  <div class="color-prompt">Choose a color</div>'+
         '  <div class="popbody">'+
         '    <ul>';
     for (var i = 0; i < colors.length; i += 1) {
@@ -296,6 +353,15 @@ gameInfra.on("choose_color", function (usedColors, colors) {
     $.each(usedColors, function (key, value) {
         $('#'+value.color).remove();
     });
+    if (roomSettings.isHost) {
+        $.each(roomSettings.maps, function (key, map) {
+            $('#map_choice').append($('<option></option>').attr('value', map.id).text(map.name));
+        });
+        $('#map_choice').val(roomSettings.mapId);
+    }
+    else {
+        $('.room-map-name').text((roomSettings.maps.find(function(map) { return map.id === roomSettings.mapId; }) || {}).name || 'Original Map');
+    }
 });
 // if player choosed color remove it
 gameInfra.on("remove_color_popup", function (usedColors) {
@@ -319,28 +385,30 @@ gameInfra.on("display_flag", function () {
     $(".surrender-flag").css("display","block");
 });
 
-// Change window sise
-var resizeViewPort = function(width, height) {
-    if (window.outerWidth) {
-        window.resizeTo(
-            width + (window.outerWidth - window.innerWidth),
-            height + (window.outerHeight - window.innerHeight)
-        );
-    }
-};
-
-resizeViewPort(835, 523);
-
 $(function(){
     $('#next_turn').click(function () {
         gameInfra.emit("next_turn");
         false;
     });
 
+    $('#start_bots').click(function () {
+        gameInfra.emit('start_with_bots', roomName);
+        $(this).prop('disabled', true).text('Starting');
+    });
+
+    $('#game_board').on('click', '#rematch-button', function () {
+        gameInfra.emit('rematch', roomName);
+        $(this).prop('disabled', true).text('Waiting');
+    });
+
     $('#game_board').on('click', 'label', function(e) {
         var x = $(this).parent();
         if (x.is('.player-check')) { // check if label has correct parent
-            gameInfra.emit("join_game",roomName, e.target.id);
+            var mapSettings = {
+                mapId: $('#map_choice').val() || (mapData && mapData.id) || 'original',
+                allowBots: $('#allow_bots').is(':checked')
+            };
+            gameInfra.emit("join_game", roomName, e.target.id, mapSettings);
             $('.popup').remove();
             $(".modal-overlay").css("display","none");
         }

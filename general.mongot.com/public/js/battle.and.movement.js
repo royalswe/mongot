@@ -1,4 +1,18 @@
 'use strict';
+
+// Highlights a marker as the origin ('from') or destination ('to') of an attack or move; drawMap clears it.
+function markSelected(thisCountry, role) {
+    thisCountry.find('circle').addClass('marker-' + role);
+}
+
+function sendUnitsOnSubmit(eventName, fromId, toId, toOwner) {
+    $('#unit_bar').submit(function () {
+        gameInfra.emit(eventName, parseInt(fromId), parseInt(toId), parseInt(toOwner), parseInt($('#unit_output').val()));
+        $(".remove_unit_bar").remove();
+        return false;
+    });
+}
+
 /**
  * Battle
  */
@@ -15,27 +29,18 @@ function battle(latestClickedCountry, thisCountry) {
         // Check that countries are neighbours and more than one unit
         if(country.country.neighbour.indexOf(attackersCountry.country.id) > -1 && attackersCountry.country.units > 1){
             showUnitBar(attackersCountry.country.units, latestClickedCountry);
-            thisCountry.find("circle").css({"stroke-width": "2.5", "stroke": "lime"}); // Highlight clicked circle
+            markSelected(thisCountry, 'to');
         }
         else { drawMap(); } // Remove highlights
 
         attackFrom = null; // makes it possible to make a new country choise
-
-        $('#unit_bar').submit(function () {
-            gameInfra.emit('battle',
-                parseInt(attackersCountry.country.id),
-                parseInt(latestClickedCountry),
-                parseInt(country.owner),
-                parseInt($('#unit_output').val())); // number of attacking units
-            $(".remove_unit_bar").remove();
-            return false;
-        });
+        sendUnitsOnSubmit('battle', attackersCountry.country.id, latestClickedCountry, country.owner);
     }
 
     if (country && country.owner === activePlayer)  {
         drawMap(); // Remove current highlight from circle
         $(".remove_unit_bar").remove();
-        thisCountry.find("circle").css({"stroke-width": "2.5", "stroke": "white"}); // Highlight clicked circle
+        markSelected(thisCountry, 'from');
         attackFrom = latestClickedCountry;
     }
 }
@@ -51,7 +56,7 @@ function tacticalMove(latestClickedCountry, thisCountry) {
     if (country.owner === activePlayer && countryFrom == null)  {
         drawMap(); // Remove current highlight from circle
         $(".remove_unit_bar").remove();
-        thisCountry.find("circle").css({"stroke-width": "2.5", "stroke": "white"}); // Highlight clicked circle
+        markSelected(thisCountry, 'from');
         countryFrom = latestClickedCountry;
     }
 
@@ -62,20 +67,12 @@ function tacticalMove(latestClickedCountry, thisCountry) {
         //Check that countries are neighbours and more than one unit
         if(country.country.neighbour.indexOf(fromCountry.country.id) > -1 && fromCountry.country.units > 1){
             showUnitBar(fromCountry.country.units, latestClickedCountry);
-            thisCountry.find("circle").css({"stroke-width": "2.5", "stroke": "lime"}); // Highlight clicked circle
+            markSelected(thisCountry, 'to');
         }
         else { drawMap(); } // Remove highlights
 
         countryFrom = null; // makes it possible to make a new country choise
-        $('#unit_bar').submit(function () {
-            gameInfra.emit('tactical_move',
-                parseInt(fromCountry.country.id),
-                parseInt(latestClickedCountry),
-                parseInt(country.owner),
-                parseInt($('#unit_output').val())); // number of moving units
-            $(".remove_unit_bar").remove();
-            return false;
-        });
+        sendUnitsOnSubmit('tactical_move', fromCountry.country.id, latestClickedCountry, country.owner);
     }
 }
 

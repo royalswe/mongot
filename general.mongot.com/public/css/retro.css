@@ -1,0 +1,23 @@
+@font-face {
+    font-family: Retro;
+    font-display: swap;
+    font-weight: 500;
+    src: url(../fonts/BarlowCondensed-500.woff2) format('woff2');
+}
+@font-face {
+    font-family: Retro;
+    font-display: swap;
+    font-weight: 700;
+    src: url(../fonts/BarlowCondensed-700.woff2) format('woff2');
+}
+
+/* 80s board-game print: cream paper, dark ink outlines, flat spot colours, no gradients. */
+:root {
+    --ink: #231d17;
+    --paper: #f4ead3;
+    --paper-light: #fbf5e6;
+    --red: #c8372d;
+    --mustard: #e8a820;
+    --green: #3e8b3c;
+    --blue: #2d5fa8;
+}

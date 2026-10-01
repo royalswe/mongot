@@ -30,11 +30,11 @@ router.get('/lobby', checkIfBanned, function (req, res) {
             }
         });
         if(!req.user.active) {
-            req.flash('error', 'Your account is not activated. <a href="https://mongot.com/sendVerificationToken">Send new activation link if needed</a>');
+            req.flash('info', 'Your email is not verified: you can play, but your games are unranked. <a href="https://mongot.com/sendVerificationToken">Send a new verification link</a> to play ranked matches.');
         }
     }
     else {
-        req.flash('error', ' <a href="https://mongot.com/register">Register</a> new account or  <a href="https://mongot.com/login">login</a> to play! Otherwise you can only watch games.');
+        req.flash('info', 'You are playing as a guest: you can play, but your games are unranked. <a href="https://mongot.com/register">Register</a> or <a href="https://mongot.com/login">log in</a> to play ranked matches.');
     }
     res.render('lobby.pug');
 });
@@ -46,12 +46,6 @@ router.get('/rules', function (req, res) {
 router.get('/highscore', function (req, res) {
     models.User.find().limit(30).sort({points_general: -1}).exec(function(err, docs){
         res.render('highscore.pug', {highscores: docs});
-    });
-});
-
-router.get('/userlist', requireAdmin, function (req, res) {
-    models.User.find().sort({joined: -1}).exec(function(err, docs){
-        res.render('userlist.pug', {users: docs});
     });
 });
 
@@ -100,6 +94,10 @@ function requireAdmin(req, res, next) {
 }
 
 function checkIfBanned(req, res, next) {
+    if (process.env.NODE_ENV === 'test') {
+        return next();
+    }
+
     const ip = req.headers['x-forwarded-for'] ||
         req.connection.remoteAddress ||
         req.socket.remoteAddress ||

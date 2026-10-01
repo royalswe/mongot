@@ -1,15 +1,25 @@
 'use strict';
 let countryHandler = require('./countryHandler');
 let Mission = require('./Mission');
+let BotPlayer = require('./BotPlayer');
+let botStrategy = require('./botStrategy');
+let dice = require('./dice');
 let models = require('../../models');
 let config = require('../config.json');
-let socketClass = require('../sockets');
+let rating = require('./rating');
 
-let GameBoard = function (sockets, io, room) {
+const TURN_EVENTS = ['deploy', 'next_turn', 'battle', 'tactical_move'];
+
+// sockets.js passes its lobby updates in, so this module does not depend on it.
+const noLobby = {returnRoom() {}, updatePlayerList() {}};
+
+let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby) {
 
     let PlayerList = {};
-    let countries = countryHandler.countries();
-    let continents = countryHandler.continents();
+    let botControllers = {};
+    let map = countryHandler.getMap(mapId);
+    let countries = countryHandler.countries(map.id);
+    let continents = countryHandler.continents(map.id);
     let Missions;
     let disabledCountries = [];
     let ap; //ap stands for active player and decides whos turn it is
@@ -24,20 +34,22 @@ let GameBoard = function (sockets, io, room) {
 
     function Game() {
         nextPhase = Game.Phase.everyoneDeploy;
-        Missions = new Mission.Mission(sockets);
+        Missions = new Mission.Mission(sockets, map.id);
         GameStart = new Date().getTime();
         this.initGame();
-        this.leaveGame();
         this.surrender();
         this.nextTurn();
     }
 
     this.returningPlayer = function (socket) {
         for(let i = 0; i<sockets.length; i += 1){
-            if(PlayerList[i].username === socket.username && !PlayerList[i].surrender){
+            // After a bot takeover PlayerList holds the bot's name, so match on the original socket.
+            if((PlayerList[i].username === socket.username || sockets[i].username === socket.username) && !PlayerList[i].surrender){
                 if (PlayerList[i].countries.length <= 0 || PlayerList[i].lost === 'surrender') { return; }
-                socket.id = i;
-                socketClass.returnRoom(room, socket, PlayerList[i].color); // Update lobby and join room
+                delete botControllers[i];
+                PlayerList[i].username = socket.username;
+                PlayerList[i].botControlled = false;
+                lobby.returnRoom(room, socket, PlayerList[i].color); // Update lobby and join room
                 sockets.splice(i, 1, socket);
                 PlayerList[i].lost = false;
                 socket.send({type: 'player_rejoin', mission: PlayerList[i].mission}); // Show players mission
@@ -45,6 +57,9 @@ let GameBoard = function (sockets, io, room) {
                 let gold = updateGoldIncome(i);
                 socket.send({type: 'update_gold_income', goldIncome: gold});
                 socket.send({type: 'phase', message: phase, phaseMsg: '<span style="color:#4bff00">Welcome back '+ PlayerList[i].username +'!</span>'});
+                if (gameOver) {
+                    socket.send({type: 'game_over', message: 'Match complete. The table is available for a rematch.'});
+                }
                 if (phase === Game.Phase.everyoneDeploy) {
                     Game.prototype.everyoneDeploy(i);
                 }
@@ -57,7 +72,6 @@ let GameBoard = function (sockets, io, room) {
                         color: PlayerList[ap].color
                     });
                 }
-                Game.prototype.leaveGame(i);
                 Game.prototype.surrender(i);
 
                 break;
@@ -66,7 +80,66 @@ let GameBoard = function (sockets, io, room) {
     };
 
     this.getGameInfo = function () {
-        return {playerList: PlayerList, ap: ap, phase: phase, disabledCountries: disabledCountries};
+        return {playerList: PlayerList, ap: ap, phase: phase, disabledCountries: disabledCountries, mapId: map.id};
+    };
+
+    this.getMapInfo = function () {
+        return countryHandler.getMap(map.id);
+    };
+
+    // Called by the server when a seated player's socket closes, so nothing depends on what other browsers report.
+    this.playerDisconnected = function (socket) {
+        const id = sockets.indexOf(socket);
+        if (id !== -1) { Game.prototype.leaveGame(id); }
+    };
+
+    this.getRematchPlayers = function (connectedPlayers) {
+        return sockets.map((socket, id) => {
+            if (connectedPlayers.indexOf(socket) !== -1) {
+                delete botControllers[id];
+                return socket;
+            }
+            let controller = getController(id);
+            if (!controller.isBot) {
+                takeOverWithBot(id, 'disconnect', this);
+                controller = getController(id);
+            }
+            controller.handlers = Object.create(null);
+            return controller;
+        });
+    };
+
+    this.getRoomPlayers = function () {
+        return sockets.map((socket, id) => {
+            const participant = getController(id);
+            return {
+                username: participant.username,
+                points: participant.points,
+                color: participant.color,
+                ip: participant.ip,
+                isBot: Boolean(participant.isBot),
+                isGuest: Boolean(participant.isGuest),
+                isUnverified: Boolean(participant.isUnverified),
+                matchRanked: matchIsRanked()
+            };
+        });
+    };
+
+    this.isRankedMatch = function () {
+        return matchIsRanked();
+    };
+
+    this.getPlayerCount = function () {
+        return sockets.length;
+    };
+
+    this.isOver = function () {
+        return gameOver;
+    };
+
+    this.destroy = function () {
+        gameOver = true;
+        clearTimeout(timer);
     };
 
     this.kickoutPlayer = function (player) {
@@ -89,8 +162,6 @@ let GameBoard = function (sockets, io, room) {
     Game.prototype.initGame = function () {
         // Add all players in new PlayerList objects
         for(let i = 0; i<sockets.length; i += 1){
-            sockets[i].id = i;
-
             let player = this.Player(i);
             PlayerList[i] = player;
         }
@@ -158,16 +229,16 @@ let GameBoard = function (sockets, io, room) {
         else if(phase === Game.Phase.everyoneDeploy){ phaseMessage = "Click on your countries to buy troops. One unit cost "+ config.ARMY_COST +" gold"}
 
         if(ap !== undefined && !gameOver) {
-            gameInfra.in(room).send({type: 'phase', message: phase, phaseMsg: "Waiting for " + PlayerList[ap].username});
+            gameInfra.in(room).emit('message', {type: 'phase', message: phase, phaseMsg: "Waiting for " + PlayerList[ap].username});
             sockets[ap].send({type: 'phase', message: phase, phaseMsg: phaseMessage});
         }
         else{
-            gameInfra.in(room).send({type: 'phase', message: phase, phaseMsg: phaseMessage});
+            gameInfra.in(room).emit('message', {type: 'phase', message: phase, phaseMsg: phaseMessage});
         }
     };
 
     Game.prototype.nextTurnButton = function () {
-        sockets[ap].on('next_turn', () => {
+            getController(ap).on('next_turn', () => {
             this.nextTurn();
         });
     };
@@ -212,7 +283,7 @@ let GameBoard = function (sockets, io, room) {
      * Tell the players whos turn it is and enable the player to interact
      */
     Game.prototype.playerTurn = function () {
-        gameInfra.in(room).send({
+        gameInfra.in(room).emit('message', {
             type: 'current_player',
             bool: false,
             player: ap,
@@ -244,10 +315,10 @@ let GameBoard = function (sockets, io, room) {
 
         for (let i = 0; i < Object.keys(PlayerList).length; i++) {
             // If there is any event listeners then remove them
-            sockets[ap].removeAllListeners('deploy');
-            sockets[ap].removeAllListeners('next_turn');
-            sockets[ap].removeAllListeners('battle');
-            sockets[ap].removeAllListeners('tactical_move');
+            removeListeners(getController(ap), TURN_EVENTS);
+            if (getController(ap) !== sockets[ap]) {
+                removeListeners(sockets[ap], TURN_EVENTS);
+            }
 
             ap = ap >= Object.keys(PlayerList).length - 1 ? 0 : ap + 1; // change active player
             if (PlayerList[ap].lost === false) { return; }
@@ -255,7 +326,7 @@ let GameBoard = function (sockets, io, room) {
     };
 
     Game.prototype.deploy = function () {
-        sockets[ap].on('deploy', (country, owner) => {
+        getController(ap).on('deploy', (country, owner) => {
             try{
                 if(PlayerList[ap].gold < config.ARMY_COST) { return; } // jump over phase bugg: prevent running when money is bellow 5 gold
                 this.buyUnit(ap, country, owner);
@@ -267,6 +338,7 @@ let GameBoard = function (sockets, io, room) {
                 return gameInfra.in(room).emit("error", ex.message);
             }
         });
+        if (getController(ap).isBot) { this.botDeploy(ap, 'deploy'); }
     };
     /**
      * Only runs the first turn when all players deploy their units
@@ -303,11 +375,12 @@ let GameBoard = function (sockets, io, room) {
             delete np[index];
             sockets[index].emit('render_map_everyone_deploy', np, [PlayerList[index]]);
 
-            socket.on('everyone_deploy', (country, owner) => {
+            getController(index).on('everyone_deploy', (country, owner) => {
                 try{
-                    if (owner === index && PlayerList[index].gold >= config.ARMY_COST) {
+                    const target = PlayerList[index].countries.find(x=> x.id === country);
+                    if (owner === index && target && PlayerList[index].gold >= config.ARMY_COST) {
                         PlayerList[index].gold -= config.ARMY_COST; // withdraw unit cost
-                        PlayerList[index].countries.find(x=> x.id === country).units += 1; // increment units by one
+                        target.units += 1;
                         sockets[index].emit('render_map_everyone_deploy', np, [PlayerList[index]]);
                         sockets[index].emit('bounce_country', country); // give deployed unit bounce effect
                         this.updateGold(index);
@@ -332,13 +405,29 @@ let GameBoard = function (sockets, io, room) {
                     return gameInfra.in(room).emit("error", ex.message);
                 }
             });
+            if (getController(index).isBot) { this.botDeploy(index, 'everyone_deploy'); }
         });
     };
 
+    Game.prototype.botDeploy = function (id, eventName) {
+        setTimeout(() => {
+            while (!gameOver && PlayerList[id].gold >= config.ARMY_COST) {
+                let country = botStrategy.deploymentTarget(PlayerList, id);
+                if (!country) { break; }
+                getController(id).serverAction(eventName, country.id, id);
+                if (eventName === 'everyone_deploy' && phase !== Game.Phase.everyoneDeploy) { break; }
+            }
+            if (eventName === 'deploy' && phase === Game.Phase.deploy && ap === id && !gameOver) {
+                this.nextTurn();
+            }
+        }, 120);
+    };
+
     Game.prototype.buyUnit = function (id, country, owner) {
-        if (owner === id && PlayerList[id].gold >= config.ARMY_COST) {
-            PlayerList[id].gold -= config.ARMY_COST; // unit cost 5 gold
-            PlayerList[id].countries.find(x=> x.id === country).units += 1; // increment units by one
+        const target = PlayerList[id].countries.find(x=> x.id === country);
+        if (owner === id && target && PlayerList[id].gold >= config.ARMY_COST) {
+            PlayerList[id].gold -= config.ARMY_COST;
+            target.units += 1;
             this.renderGame();
             gameInfra.in(room).emit('bounce_country', country); // give deployed unit bounce effect
             this.updateGold(id);
@@ -347,32 +436,24 @@ let GameBoard = function (sockets, io, room) {
 
     Game.prototype.tacticalMove = function () {
         if(disabledCountries.length > 0) {
-            for (let i = 0; i < disabledCountries.length; i += 1) { // Remove disabled countries
-                PlayerList[ap].countries.push(disabledCountries[i]);
-            }
-            disabledCountries = [];
-
+            returnConqueredCountries(ap);
             this.refreshGoldIncome(); // Remove gold bonus
         }
         this.renderGame();
 
         setTimeout(() => { // to prevent bugg if user attacks when the time is out.
             if(disabledCountries.length > 0) {
-                for (let i = 0; i < disabledCountries.length; i += 1) { // Remove disabled countries
-                    PlayerList[ap].countries.push(disabledCountries[i]);
-                }
-                disabledCountries = [];
-                console.log('testar');
-
+                returnConqueredCountries(ap);
                 this.renderGame();
             }
         }, 100);
 
-        sockets[ap].on('tactical_move', (moveFromCountry, moveToCountry, owner, units) => {
+        getController(ap).on('tactical_move', (moveFromCountry, moveToCountry, owner, units) => {
             if (!checkIfInteger([moveFromCountry, moveToCountry, owner, units])){ return; }
 
             try{
                 if (!checkIfNeighbour(moveFromCountry, moveToCountry)) { return; } // Prevent neighbour cheat
+                if (!PlayerList[ap].countries.some(x=> x.id === moveToCountry)) { return; } // only into own territory
                 // Remove units from leaving country
                 let moveFromCountryUnits = getCountryUnits(ap, moveFromCountry);
                 if(units >= moveFromCountryUnits){ return; } // Prevent units cheat
@@ -390,77 +471,38 @@ let GameBoard = function (sockets, io, room) {
                 return gameInfra.in(room).emit("error", ex.message);
             }
         });
+        if (getController(ap).isBot) { this.botTacticalMove(ap); }
+    };
+
+    Game.prototype.botTacticalMove = function (id) {
+        setTimeout(() => {
+            const move = botStrategy.chooseMove(PlayerList, id);
+            if (move) {
+                getController(id).serverAction('tactical_move', move.from, move.to, id, 1);
+            }
+            else if (!gameOver && phase === Game.Phase.tacticalMove && ap === id) {
+                this.nextTurn();
+            }
+        }, 180);
     };
 
     Game.prototype.battle = function () {
-        sockets[ap].on('battle', (attackCountry, defendCountry, defender, unitsSent) => {
+        getController(ap).on('battle', (attackCountry, defendCountry, defender, unitsSent) => {
             if (!checkIfInteger([attackCountry, defendCountry, defender, unitsSent])){ return; }
             try {
                 if (!checkIfNeighbour(attackCountry, defendCountry)) { return; } // Prevent neighbour cheat
+                // The browser names the defender, so check it really holds the target before anything changes.
+                if (defender === ap || !PlayerList[defender] || !PlayerList[defender].countries.some(x=> x.id === defendCountry)) { return; }
                 let unitsInAttackCountry = getCountryUnits(ap, attackCountry);
                 if(unitsSent >= unitsInAttackCountry){ return; } // Prevent units cheat
                 setCountryUnits(ap, attackCountry, unitsInAttackCountry - unitsSent); // Remove sent units from attackCountry
 
                 let attackerUnits = unitsSent; // calculate attackers lost
                 let getDefenderUnits = getCountryUnits(defender, defendCountry);
-                let defenderUnits = getDefenderUnits; // calculate defenders lost
-                // Fight until one of the players army is defeated
-                let attackerDiceLog = [];
-                let defenderDiceLog = [];
-                let streak = 0;
-                while (unitsSent > 0 && defenderUnits > 0) {
-                    let attackDice = [];
-                    let defendDice = [];
-
-                    for (let i = 1; i <= unitsSent; i += 1) {
-                        if(streak < -5){
-                            attackDice.push(6);
-                        }
-                        else {
-                            attackDice.push(Math.floor((Math.random() * 6) + 1));
-                        }
-
-                        if (i === 3) { break; }
-                    }
-                    for (let i = 1; i <= defenderUnits; i += 1) {
-                        if(streak > 6){
-                            defendDice.push(6);
-                        }
-                        else {
-                            defendDice.push(Math.floor((Math.random() * 6) + 1));
-                        }
-
-                        if (i === 2) { break; }
-                    }
-                    if(streak > 6 || streak < -5){ streak = 0; }
-
-                    attackerDiceLog.push(JSON.parse(JSON.stringify(attackDice)));
-                    defenderDiceLog.push(JSON.parse(JSON.stringify(defendDice)));
-
-                    for (let i = 0; i <= attackDice.length; i += 1) {
-                        let attMax = Math.max.apply(Math, attackDice);
-                        let defMax = Math.max.apply(Math, defendDice);
-
-                        if (defMax >= attMax) {
-                            unitsSent -= 1;
-                            streak -=1;
-                        }
-                        else {
-                            defenderUnits -= 1;
-                            streak += 1;
-                        }
-
-                        let attIndex = attackDice.indexOf(attMax);
-                        let defIndex = defendDice.indexOf(defMax);
-                        attackDice.splice(attIndex, 1);
-                        defendDice.splice(defIndex, 1);
-
-                        if (defendDice.length <= 0 || attackDice.length <= 0) {
-                            break;
-                        }
-                    }
-                }
-                gameInfra.in('log-'+room).emit('dice_log', attackerDiceLog, defenderDiceLog);
+                const result = dice.fight(unitsSent, getDefenderUnits);
+                unitsSent = result.attackers;
+                let defenderUnits = result.defenders;
+                gameInfra.in('log-'+room).emit('dice_log', result.attackerRolls, result.defenderRolls);
 
                 if (defenderUnits <= 0) { // successful attack if 0
                     conquerCountry(defender, defendCountry, unitsSent);
@@ -481,7 +523,7 @@ let GameBoard = function (sockets, io, room) {
                 let attackerLost = attackerUnits - unitsSent;
                 let defenderLost = getDefenderUnits - defenderUnits;
 
-                gameInfra.in(room).send({
+                gameInfra.in(room).emit('message', {
                     type: 'attack',
                     message: "Attacker lost " + attackerLost + " troops<br>Defender lost " + defenderLost + " troops"
                 });
@@ -504,6 +546,20 @@ let GameBoard = function (sockets, io, room) {
                 return gameInfra.in(room).emit("error", ex.message); // if error occur log it out on client side
             }
         });
+        if (getController(ap).isBot) { this.botBattle(ap); }
+    };
+
+    Game.prototype.botBattle = function (id) {
+        setTimeout(() => {
+            // A relief bot controls a human's seat, so its aggression lives on the controller, not on sockets[id].
+            const attack = botStrategy.chooseAttack(PlayerList, id, getController(id).aggression);
+            if (attack) {
+                getController(id).serverAction('battle', attack.from, attack.to, attack.defender, attack.units);
+            }
+            if (!gameOver && phase === Game.Phase.battle && ap === id) {
+                this.nextTurn();
+            }
+        }, 180);
     };
 
     Game.prototype.determineVictor = function () {
@@ -541,51 +597,68 @@ let GameBoard = function (sockets, io, room) {
         if (gameOver === true) { return; } // prevent this function runs more than once
         gameOver = true;
 
-        let losers = [];
         let nameAndIncPoints = [];
-        let winnerPoints = sockets[winner.id].points;
-
-        for (let i = 0; i < sockets.length; i += 1) {
-            if (sockets[i].id === winner.id) {
-                continue; // The winner
+        const rankedMatch = matchIsRanked();
+        const ratedPlayers = [];
+        sockets.forEach((socket, id) => {
+            const controller = getController(id);
+            const place = id === winner.id ? 1 : 2;
+            ratedPlayers.push({id: 'seat-' + id, rating: Number(controller.points) || 850, place: place, socket: controller});
+            if (controller !== socket) {
+                ratedPlayers.push({id: 'forfeit-' + id, rating: Number(socket.points) || 1600, place: 2, socket: socket});
             }
-            let loser = sockets[i].points;
-            const decreaseValue = loser - winnerPoints;
-            let losePoints = 25 + (decreaseValue / loser) * 50;
+        });
+        const updatedRatings = rating.calculate(ratedPlayers);
 
-            losePoints = Math.round(losePoints);
-
-            if (losePoints < 6) {
-                losePoints = 5;
+        updatedRatings.forEach((result) => {
+            const socket = result.socket;
+            const isWinner = result.place === 1;
+            if (rankedMatch) {
+                socket.points = result.rating;
             }
-            else if (losePoints > 50) {
-                losePoints = 50;
+            if (socket.isBot) {
+                if (rankedMatch && process.env.NODE_ENV !== 'test') {
+                    models.Bot.updateOne({key: socket.botKey}, {
+                        $inc: {
+                            points_general: result.change,
+                            games_won_general: isWinner ? 1 : 0,
+                            games_lost_general: isWinner ? 0 : 1
+                        }
+                    }, {upsert: true}, function (err) { if (err) { console.log(err); } });
+                }
             }
-            losers.push(losePoints);
-            nameAndIncPoints.push(sockets[i].username);
+            else if (!socket.isGuest) {
+                const increments = {
+                    games_won_general: isWinner ? 1 : 0,
+                    games_lost_general: isWinner ? 0 : 1
+                };
+                if (rankedMatch) {
+                    increments.points_general = result.change;
+                }
+                if (process.env.NODE_ENV !== 'test') {
+                    models.User.updateOne({username: socket.username}, {
+                        $inc: increments
+                    }, function (err) { if (err) { console.log(err); } });
+                }
+                nameAndIncPoints.push(socket.username);
+            }
 
-            models.User.updateOne({username: sockets[i].username}, { $inc: { points_general: -losePoints, games_lost_general: 1 }}, function (err) { if(err){console.log(err);} });
-            gameInfra.in(room).send({ type: 'game_over', message: '<span style="color:#ffffff">&#9760;</span> ' + sockets[i].username + ' lost ' + losePoints + ' points.' });
-        }
+            const outcome = isWinner ? 'won' : 'lost';
+            const points = result.change > 0 ? '+' + result.change : result.change;
+            gameInfra.in(room).emit('message', {
+                type: 'game_over',
+                message: '<span style="color:' + (isWinner ? '#ffd700' : '#ffffff') + '">' + socket.username + ' ' + outcome + (rankedMatch ? ' (' + points + ' rating).' : ' (unranked).') + '</span>'
+            });
+        });
 
-        // Winner claims the price of all losers points points
-        try {
-            var losersPoints = losers.reduce(function (a, b) {
-                return a + b;
+        if (!rankedMatch) {
+            sockets.forEach((socket) => {
+                if (socket.isBot) { return; }
+                socket.send({type: 'game_over', message: rating.unrankedNotice(socket)});
             });
         }
-        catch (ex){
-            var losersPoints = 0;
-            gameInfra.in(room).emit("error", "losersPoints: " + ex.message); // if error occur log it out on client side
-        }
 
-        nameAndIncPoints.push(winner.username);
-        gameInfra.in(room).send({ type: 'game_over', message: '<span style="color:#ffd700">&#9813;</span> ' + winner.username + ' won ' + losersPoints + ' points.' });
-        models.User.updateOne({username: winner.username}, { $inc: { points_general: losersPoints, games_won_general: 1 }}, function (err) { if(err){console.log(err);} });
-
-        setTimeout(function(){
-            socketClass.updatePlayerList(room, nameAndIncPoints);
-        }, 400);
+        lobby.updatePlayerList(room, nameAndIncPoints);
         
         // Show the game time
         let GameEnd = new Date().getTime();
@@ -595,24 +668,27 @@ let GameBoard = function (sockets, io, room) {
         let minutes = timeDiff / 60 / 1000; //in minutes
         let gameTime = hours + 'h:' + Math.floor(minutes - 60 * hours) + 'm';
 
-        gameInfra.in(room).send({ type: 'game_over', message: '<span>&#128337;</span> Game time: ' + gameTime });
+        gameInfra.in(room).emit('message', { type: 'game_over', message: '<span>&#128337;</span> Game time: ' + gameTime });
 
         // log the game
         let logId = new Date().getTime();
         let logDate = new Date();
-        for (let i = 0; i < sockets.length; i += 1) {
-            var logGame = new models.Games({
-                id: logId,
-                username: sockets[i].username,
-                userAgent: sockets[i].request.headers['user-agent'],
-                gameTime: gameTime,
-                points: sockets[i].points,
-                players: sockets.length,
-                ip: sockets[i].ip,
-                won: sockets[i].id === winner.id,
-                date: logDate
+        if (process.env.NODE_ENV !== 'test') {
+            updatedRatings.forEach((result) => {
+                const participant = result.socket;
+                let logGame = new models.Games({
+                    id: logId,
+                    username: participant.username,
+                    userAgent: participant.request.headers['user-agent'],
+                    gameTime: gameTime,
+                    points: participant.points,
+                    players: updatedRatings.length,
+                    ip: participant.ip,
+                    won: result.place === 1,
+                    date: logDate
+                });
+                logGame.save();
             });
-            logGame.save();
         }
 
         phaseMessage = winner.username +' won with mission: '+ winner.mission.message;
@@ -624,7 +700,7 @@ let GameBoard = function (sockets, io, room) {
         let newPlayer = {
             id: id,
             countries: [],
-            gold: config.GOLD/sockets.length,
+            gold: map.startingGold || config.GOLD/sockets.length,
             color: sockets[id].color,
             lost: false,
             surrender: false,
@@ -645,18 +721,13 @@ let GameBoard = function (sockets, io, room) {
                 }
                 if (playersInGame < 2 || gameOver || PlayerList[id].lost){ return; }
 
-                PlayerList[id].lost = true;
+                const quitter = sockets[id].username;
                 PlayerList[id].surrender = true;
-                gameInfra.in(room).send({ type: 'serverMessage', message: '<span style="color: #ffffff">&#9873;</span> ' + PlayerList[id].username + ' did surrender' });
-                this.determineVictor();
+                takeOverWithBot(id, 'surrender', this);
+                gameInfra.in(room).emit('message', { type: 'serverMessage', message: '<span style="color: #ffffff">&#9873;</span> ' + quitter + ' surrendered. A bot has taken over.' });
 
                 if (ap === id && !gameOver) { // If active player surrending
-                    if(disabledCountries.length > 0) { // If player has occupied countries before left.
-                        for (let i = 0; i < disabledCountries.length; i += 1) {
-                            PlayerList[id].countries.push(disabledCountries[i]);
-                        }
-                        disabledCountries = [];
-                    }
+                    returnConqueredCountries(id);
                     nextPhase = Game.Phase.deploy;
                     this.nextTurn();
                 }
@@ -664,42 +735,26 @@ let GameBoard = function (sockets, io, room) {
         });
     };
 
-    Game.prototype.leaveGame = function (player = 'all') {
-        sockets.forEach((socket, index) => {
-            if(player !== 'all' && player !== index){ return; } // So returning player runs once only
-            socket.on('player_left', (id) => {
-                if (PlayerList[id] == null || PlayerList[id].lost === true || gameOver ) { return; }// Don't want surrenders to run this code OR if the game is over
+    Game.prototype.leaveGame = function (id) {
+        if (PlayerList[id] == null || PlayerList[id].lost === true || PlayerList[id].lost === null || gameOver ) { return; }// Don't want surrenders to run this code OR if the game is over
 
-                PlayerList[id].lost = null;
-                let playersLeft = 0;
-                for (let p in PlayerList) {
-                    if (PlayerList[p].lost === false) {
-                        playersLeft += 1;
-                    }
-                }
-                if(playersLeft < 2){
-                    socket.send({ type: 'serverMessage', message: PlayerList[id].username + ' have 30 seconds to return before lose' });
-                }
-                if (ap === id) { // If active player leaving then end his round
-                    if(phase !== Game.Phase.tacticalMove){
-                        this.collectGoldIncome(id);
-                    }
-                    if(disabledCountries.length > 0) { // If player has occupied countries before left.
-                        for (let i = 0; i < disabledCountries.length; i += 1) {
-                            PlayerList[id].countries.push(disabledCountries[i]);
-                        }
-                        disabledCountries = [];
-                    }
-                    nextPhase = Game.Phase.deploy;
-                    this.nextTurn();
-                }
-                setTimeout(() => {
-                    if(PlayerList[id].lost === null){ PlayerList[id].lost = true; }
-                    this.determineVictor();
-                }, 30000);
-
-            });
-        });
+        PlayerList[id].lost = null;
+        gameInfra.in(room).emit('message', { type: 'serverMessage', message: PlayerList[id].username + ' lost connection and has 30 seconds to return before a bot takes over.' });
+        if (ap === id) { // If active player leaving then end his round
+            if(phase !== Game.Phase.tacticalMove){
+                this.collectGoldIncome(id);
+            }
+            returnConqueredCountries(id);
+            nextPhase = Game.Phase.deploy;
+            this.nextTurn();
+        }
+        setTimeout(() => {
+            if (PlayerList[id].lost === null && !gameOver) {
+                PlayerList[id].lost = false;
+                takeOverWithBot(id, 'disconnect', this);
+                this.determineVictor();
+            }
+        }, 30000);
     };
 
     function checkIfNeighbour(fromCountry, toCountry) {
@@ -708,6 +763,52 @@ let GameBoard = function (sockets, io, room) {
             return true;
         }
         return false;
+    }
+
+    // Territories conquered this turn wait in disabledCountries until the attacker's turn ends.
+    function returnConqueredCountries(id) {
+        PlayerList[id].countries.push(...disabledCountries);
+        disabledCountries = [];
+    }
+
+    function removeListeners(controller, eventNames) {
+        eventNames.forEach((eventName) => controller.removeAllListeners(eventName));
+    }
+
+    function getController(id) {
+        return botControllers[id] || sockets[id];
+    }
+
+    // Everyone seated when the match started counts, including players who have since dropped out.
+    function matchIsRanked() {
+        return rating.isRankedMatch(sockets);
+    }
+
+    function takeOverWithBot(id, reason, gameInstance) {
+        if (botControllers[id] || sockets[id].isBot) { return; }
+        const player = PlayerList[id];
+        const humanSocket = sockets[id];
+        const bot = new BotPlayer({
+            key: 'takeover-' + room + '-' + id,
+            username: 'Relief-' + room + '-' + (id + 1),
+            points_general: 850,
+            aggression: 0.5
+        }, id, player.color);
+
+        botControllers[id] = bot;
+        player.botControlled = true;
+        player.conceded = reason === 'surrender';
+        player.username = bot.username;
+        if (process.env.NODE_ENV !== 'test') {
+            models.Bot.updateOne({key: bot.botKey}, {
+                $setOnInsert: {username: bot.username, points_general: bot.points}
+            }, {upsert: true, setDefaultsOnInsert: false}, function (err) { if (err) { console.log(err); } });
+        }
+        removeListeners(humanSocket, TURN_EVENTS.concat(['everyone_deploy', 'surrender']));
+        gameInfra.in(room).emit('bot_takeover', {id: id, username: bot.username, reason: reason});
+        if (phase === Game.Phase.everyoneDeploy) {
+            gameInstance.everyoneDeploy(id);
+        }
     }
 
     function checkIfInteger(integers) {
@@ -759,22 +860,11 @@ let GameBoard = function (sockets, io, room) {
         }
         // collect gold from continents
         for (let i = 0; i < continents.length; i += 1) {
-            if (compareCountriesWithContinent(continents[i].countries, playersCountries)) {
+            if (countryHandler.ownsContinent(continents[i].countries, playersCountries)) {
                 gold += continents[i].gold;
             }
         }
         return gold;
-    }
-
-    function compareCountriesWithContinent(continent, playersCountries) {
-        let filteredCountries = playersCountries.filter(function (a) {
-            return ~this.indexOf(a);
-        }, continent);
-
-        if (continent.sort().join(',') === filteredCountries.sort().join(',')) {
-            return true;
-        }
-        return false;
     }
 
     new Game();

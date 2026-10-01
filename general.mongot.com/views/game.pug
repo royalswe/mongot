@@ -4,33 +4,37 @@ html
     title General
     link(rel='shortcut icon', href='img/favicon.ico', type='image/x-icon')
     meta(name='viewport', content='width=device-width, initial-scale=1')
-    link(rel='stylesheet', type='text/css', href='/css/game.board.css?v=1.1')
+    link(rel='preload', href='/fonts/BarlowCondensed-700.woff2', as='font', type='font/woff2', crossorigin)
+    link(rel='stylesheet', type='text/css', href='/css/retro.css?v=1.0')
+    link(rel='stylesheet', type='text/css', href='/css/game.board.css?v=2.0')
 
     section#chatroom
       ul#player_list
 
       div#messages
       input#message(type='text', autocomplete="off", placeholder='Enter your message here')
-      img#send(src='/img/send-chat.png' alt="send chat message")
+      img#send(src='/img/game/icons/send.svg' alt="send chat message")
 
     section#game_board
       div#game_header
-        img#phase_img(src='/img/game/phases/hourglass.gif')
+        img#phase_img(src='/img/game/icons/waiting.svg' alt='')
         div#header_buttons
           button#next_turn Next turn
           button#show_gold Show gold
           button#mission Show mission
         div#game_info
+          p#map_title Original Map
           p.phase-message Waiting for players
-          p.phase-info #{(user) ? "The game starts when all players have joined." : "Login to join the game"}
+          p.phase-info #{!user ? "Choose a color to join. Guests play unranked." : (user.active ? "The game starts when all players have joined." : "Choose a color to join. Verify your email to earn rank.")}
         div#stats
           p.user-gold Gold: 0
           p.user-goldIncome Income: 0
+          p#match_rank
           label(for='countdown') &#128337;
           span#countdown
 
       .svg-container
-        img.slide-toggle(src='/img/game/toggle-chat.svg', alt="hide and show chat")
+        img.slide-toggle(src='/img/game/icons/chat-toggle.svg', alt="hide and show chat")
         svg.svg-content(version='2.0', viewbox='0 0 1147.148 859.25')
           // Europe
           g
@@ -145,30 +149,25 @@ html
 
           defs
             radialgradient#radial_blue
-              stop(offset='0%', stop-color='#6666ff')
-              stop(offset='100%', stop-color='#0000ff')
+              stop(offset='0%', stop-color='#2d5fa8')
             radialgradient#radial_red
-              stop(offset='0%', stop-color='rgb(255, 110, 150)')
-              stop(offset='100%', stop-color='rgb(255, 0, 0)')
+              stop(offset='0%', stop-color='#d33a2c')
             radialgradient#radial_orange
-              stop(offset='0%', stop-color='#ffa500')
-              stop(offset='100%', stop-color='#ffa500')
+              stop(offset='0%', stop-color='#ee9a1c')
             radialgradient#radial_green
-              stop(offset='0%', stop-color='#4ca64c')
-              stop(offset='100%', stop-color='#008000')
+              stop(offset='0%', stop-color='#3e8b3c')
             radialgradient#radial_purple
-              stop(offset='0%', stop-color='#a64ca6')
-              stop(offset='100%', stop-color='#800080')
+              stop(offset='0%', stop-color='#7c4b9e')
             radialgradient#radial_black
-              stop(offset='0%', stop-color='#4c4c4c')
-              stop(offset='100%', stop-color='#000000')
+              stop(offset='0%', stop-color='#3b3632')
 
-          text.player-round(x='943', y='29') Round
-          circle#user_color(cx='1000', cy='20', r='15')
-          text#username_turn.player-round(x='1022', y='29')
+          text.player-round(x='903', y='29') Round
+          circle#user_color(cx='958', cy='20', r='14')
+          text#username_turn.player-round(x='980', y='29')
 
-        img(class="dice-log" src="/img/game/two_dice.svg" title="start dice log" alt="dice log")
-        img(class="surrender-flag" src="/img/game/surrender_flag.png" title="surrender" alt="surrender")
+        img(class="dice-log" src="/img/game/icons/dice.svg" title="start dice log" alt="dice log")
+        img(class="surrender-flag" src="/img/game/icons/flag.svg" title="surrender" alt="surrender")
+        button#start_bots(type='button' style='display:none') Start with bots
     script
       if user
         | var user = !{JSON.stringify(user)}
@@ -178,12 +177,14 @@ html
     script(src='/resources/jquery.min.js')
     script(src='/resources/howler.min.js')
 
-    //- script(src='/js/compress.js')
-
-    script(src='/js/storage.js')
-    script(src='/js/chat.js')
-    script(src='/js/game.room.js')
-    script(src='/js/map.js')
-    script(src='/js/battle.and.movement.js')
+    if useBundles
+      script(src='/js/compress.js?v=2.0')
+    else
+      script(src='/js/storage.js')
+      script(src='/js/ranks.js')
+      script(src='/js/chat.js')
+      script(src='/js/game.room.js')
+      script(src='/js/map.js')
+      script(src='/js/battle.and.movement.js')
 
 

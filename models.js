@@ -55,6 +55,14 @@ module.exports.Games = mongoose.model('Games', new Schema({
     date: Date
 }));
 
+module.exports.Bot = mongoose.model('Bot', new Schema({
+    key: { type: String, unique: true },
+    username: { type: String, unique: true },
+    points_general: { type: Number, default: 850 },
+    games_won_general: { type: Number, default: 0 },
+    games_lost_general: { type: Number, default: 0 }
+}, { timestamps: true }));
+
 module.exports.BwNotification = mongoose.model('BwNotification', new Schema({
     username: String,
     subscription: String,
