@@ -252,7 +252,7 @@ input#message {
     font-family: inherit;
     font-size: 15px;
     height: 30px;
-    padding: 0 8px;
+    padding: 0 5px;
     box-sizing: border-box;
     outline: 0
 }
@@ -264,7 +264,7 @@ input#message:focus {
 
 img#send {
     width: 26px;
-    margin-top: 8px;
+    margin-top: -3px;
     margin-left: 4px;
     cursor: pointer;
 }
@@ -419,9 +419,15 @@ circle.disabled-country {
 }
 
 .svg-content circle.marker-to {
-    stroke: #7fdc5a;
     stroke-width: 5
 }
+
+.svg-content circle.marker-to.marker-color-red { stroke: #d33a2c }
+.svg-content circle.marker-to.marker-color-blue { stroke: #2d5fa8 }
+.svg-content circle.marker-to.marker-color-orange { stroke: #ee9a1c }
+.svg-content circle.marker-to.marker-color-green { stroke: #3e8b3c }
+.svg-content circle.marker-to.marker-color-purple { stroke: #7c4b9e }
+.svg-content circle.marker-to.marker-color-black { stroke: #3b3632 }
 
 text {
     font-size: 22px;

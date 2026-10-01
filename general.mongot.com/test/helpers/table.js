@@ -64,24 +64,42 @@ function installClock() {
     };
 }
 
-function installRandom() {
+function installRandom(options = {}) {
     const original = Math.random;
     const queue = [];
-    Math.random = () => (queue.length ? queue.shift() : 0);
+    if (options.seed !== undefined && options.seed !== null) {
+        let s = options.seed >>> 0;
+        Math.random = () => {
+            if (queue.length) { return queue.shift(); }
+            s = (s + 0x6D2B79F5) | 0;
+            let t = Math.imul(s ^ (s >>> 15), 1 | s);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    } else if (options.realRandom) {
+        Math.random = () => (queue.length ? queue.shift() : original());
+    } else {
+        Math.random = () => (queue.length ? queue.shift() : 0);
+    }
     return {
         dice(values) { values.forEach((value) => queue.push((value - 1) / 6 + 0.01)); },
         restore() { Math.random = original; }
     };
 }
 
-function createTable({seats = [{}, {}], mapId = 'original', room = 'test-room'} = {}) {
+function createTable({seats = [{}, {}], mapId = 'original', room = 'test-room', seed = null, realRandom = false} = {}) {
     const clock = installClock();
-    const random = installRandom();
+    const random = installRandom({seed, realRandom});
     const broadcasts = [];
     const roomChannel = {emit(eventName, ...args) { broadcasts.push({event: eventName, args: args}); }};
     const io = {of() { return {in() { return roomChannel; }}; }};
     const sockets = seats.map((seat, id) => seat.bot ?
-        new BotPlayer({key: 'bot-' + id, username: 'Bot' + id, points_general: 1000, aggression: seat.bot.aggression}, id, COLORS[id]) :
+        new BotPlayer({
+            key: seat.bot.key || 'bot-' + id,
+            username: seat.bot.username || 'Bot' + id,
+            points_general: seat.bot.points_general || 1000,
+            aggression: seat.bot.aggression !== undefined ? seat.bot.aggression : 0.5
+        }, id, COLORS[id]) :
         fakeSocket(id, seat));
     const board = new GameBoard(sockets, io, room, mapId);
     const map = countryHandler.getMap(mapId);

@@ -1,8 +1,15 @@
 'use strict';
 
 // Highlights a marker as the origin ('from') or destination ('to') of an attack or move; drawMap clears it.
-function markSelected(thisCountry, role) {
-    thisCountry.find('circle').addClass('marker-' + role);
+function markSelected(thisCountry, role, color) {
+    var circle = thisCountry.find('circle');
+    circle.addClass('marker-' + role);
+    if (role === 'to' && color) {
+        circle.addClass('marker-color-' + color);
+        if (typeof getPlayerColorHex === 'function') {
+            circle.css('--marker-to-color', getPlayerColorHex(color));
+        }
+    }
 }
 
 function sendUnitsOnSubmit(eventName, fromId, toId, toOwner) {
@@ -29,7 +36,7 @@ function battle(latestClickedCountry, thisCountry) {
         // Check that countries are neighbours and more than one unit
         if(country.country.neighbour.indexOf(attackersCountry.country.id) > -1 && attackersCountry.country.units > 1){
             showUnitBar(attackersCountry.country.units, latestClickedCountry);
-            markSelected(thisCountry, 'to');
+            markSelected(thisCountry, 'to', country.color);
         }
         else { drawMap(); } // Remove highlights
 

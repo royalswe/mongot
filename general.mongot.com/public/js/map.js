@@ -222,13 +222,27 @@ gameInfra.on('render_map_everyone_deploy', function (data, playersData) {
     drawMap();
 });
 
+var PLAYER_COLOR_HEX = {
+    red: '#d33a2c',
+    blue: '#2d5fa8',
+    orange: '#ee9a1c',
+    green: '#3e8b3c',
+    purple: '#7c4b9e',
+    black: '#3b3632'
+};
+
+function getPlayerColorHex(color) {
+    return PLAYER_COLOR_HEX[color] || color || '#7fdc5a';
+}
+
 gameInfra.on('render_disabled_countries', function (countries) {
     disabledCountries = [];
 
     for (var i = 0; i < countries.length; i++) {
         disabledCountries.push({
             id: countries[i].id,
-            units: countries[i].units
+            units: countries[i].units,
+            defeatedColor: countries[i].defeatedColor
         });
     }
 });
@@ -241,8 +255,11 @@ function drawMap() {
         var circle = document.getElementsByTagName('circle')[circles[i].country.id];
         var text = document.getElementsByTagName('text')[circles[i].country.id];
         circle.setAttribute('fill', 'url(#radial_'+ circles[i].color +')');
-        circle.classList.remove('disabled-country', 'marker-from', 'marker-to');
-        text.textContent = circles[i].country.units
+        circle.classList.remove('disabled-country', 'marker-from', 'marker-to',
+            'marker-color-red', 'marker-color-blue', 'marker-color-orange',
+            'marker-color-green', 'marker-color-purple', 'marker-color-black');
+        circle.style.removeProperty('--marker-to-color');
+        text.textContent = circles[i].country.units;
         text.setAttribute('fill', 'white');
         g.id = circles[i].country.id;
     }
@@ -254,6 +271,10 @@ function drawMap() {
             var text = document.getElementsByTagName('text')[disabledCountries[i].id];
             circle.setAttribute('fill', '#a39a8b');
             circle.classList.add('disabled-country');
+            if (disabledCountries[i].defeatedColor) {
+                circle.classList.add('marker-to', 'marker-color-' + disabledCountries[i].defeatedColor);
+                circle.style.setProperty('--marker-to-color', getPlayerColorHex(disabledCountries[i].defeatedColor));
+            }
             text.textContent = disabledCountries[i].units;
             text.setAttribute('fill', 'white');
             g.id = circles[i].country.id;

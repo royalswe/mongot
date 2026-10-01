@@ -9,6 +9,16 @@ let config = require('../config.json');
 let rating = require('./rating');
 
 const TURN_EVENTS = ['deploy', 'next_turn', 'battle', 'tactical_move'];
+const BOT_DELAYS = {
+    deployInitial: 120,     // Initial delay for deployment (maintains test compatibility)
+    deployStep: 400,        // Delay between placing individual units during regular deploy phase
+    deployEnd: 450,         // Pause after deploying before ending deploy phase
+    battleInitial: 600,     // Pause when entering battle phase before first attack
+    battleStep: 850,        // Delay between attacks so animations & dice rolls are visible
+    battleEnd: 500,         // Pause after last attack before ending battle phase
+    tacticalInitial: 500,   // Pause when entering tactical move phase
+    tacticalEnd: 400        // Pause before ending turn
+};
 
 // sockets.js passes its lobby updates in, so this module does not depend on it.
 const noLobby = {returnRoom() {}, updatePlayerList() {}};
@@ -411,16 +421,43 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
 
     Game.prototype.botDeploy = function (id, eventName) {
         setTimeout(() => {
-            while (!gameOver && PlayerList[id].gold >= config.ARMY_COST) {
-                let country = botStrategy.deploymentTarget(PlayerList, id);
-                if (!country) { break; }
-                getController(id).serverAction(eventName, country.id, id);
-                if (eventName === 'everyone_deploy' && phase !== Game.Phase.everyoneDeploy) { break; }
+            if (gameOver) { return; }
+
+            if (eventName === 'everyone_deploy') {
+                while (!gameOver && PlayerList[id] && PlayerList[id].gold >= config.ARMY_COST) {
+                    const country = botStrategy.deploymentTarget(PlayerList, id, continents);
+                    if (!country) { break; }
+                    getController(id).serverAction(eventName, country.id, id);
+                    if (phase !== Game.Phase.everyoneDeploy) { break; }
+                }
+                return;
             }
-            if (eventName === 'deploy' && phase === Game.Phase.deploy && ap === id && !gameOver) {
-                this.nextTurn();
-            }
-        }, 120);
+
+            const deployStep = () => {
+                if (gameOver || phase !== Game.Phase.deploy || ap !== id) { return; }
+
+                if (PlayerList[id] && PlayerList[id].gold >= config.ARMY_COST) {
+                    const country = botStrategy.deploymentTarget(PlayerList, id, continents);
+                    if (country) {
+                        getController(id).serverAction('deploy', country.id, id);
+                        if (PlayerList[id] && PlayerList[id].gold >= config.ARMY_COST) {
+                            setTimeout(deployStep, BOT_DELAYS.deployStep);
+                            return;
+                        }
+                    }
+                }
+
+                if (!gameOver && phase === Game.Phase.deploy && ap === id) {
+                    setTimeout(() => {
+                        if (!gameOver && phase === Game.Phase.deploy && ap === id) {
+                            this.nextTurn();
+                        }
+                    }, BOT_DELAYS.deployEnd);
+                }
+            };
+
+            deployStep();
+        }, BOT_DELAYS.deployInitial);
     };
 
     Game.prototype.buyUnit = function (id, country, owner) {
@@ -476,14 +513,26 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
 
     Game.prototype.botTacticalMove = function (id) {
         setTimeout(() => {
+            if (gameOver || phase !== Game.Phase.tacticalMove || ap !== id) { return; }
+
             const move = botStrategy.chooseMove(PlayerList, id);
             if (move) {
-                getController(id).serverAction('tactical_move', move.from, move.to, id, 1);
+                const available = getCountryUnits(id, move.from);
+                const moveUnits = Math.min(available - 1, move.units || Math.max(1, available - 1));
+                if (moveUnits > 0) {
+                    getController(id).serverAction('tactical_move', move.from, move.to, id, moveUnits);
+                    return;
+                }
             }
-            else if (!gameOver && phase === Game.Phase.tacticalMove && ap === id) {
-                this.nextTurn();
+
+            if (!gameOver && phase === Game.Phase.tacticalMove && ap === id) {
+                setTimeout(() => {
+                    if (!gameOver && phase === Game.Phase.tacticalMove && ap === id) {
+                        this.nextTurn();
+                    }
+                }, BOT_DELAYS.tacticalEnd);
             }
-        }, 180);
+        }, BOT_DELAYS.tacticalInitial);
     };
 
     Game.prototype.battle = function () {
@@ -550,16 +599,39 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
     };
 
     Game.prototype.botBattle = function (id) {
-        setTimeout(() => {
-            // A relief bot controls a human's seat, so its aggression lives on the controller, not on sockets[id].
-            const attack = botStrategy.chooseAttack(PlayerList, id, getController(id).aggression);
-            if (attack) {
-                getController(id).serverAction('battle', attack.from, attack.to, attack.defender, attack.units);
+        let attempts = 0;
+        const maxAttempts = (PlayerList[id] && PlayerList[id].countries ? PlayerList[id].countries.length : 10) * 3;
+
+        const battleStep = () => {
+            if (gameOver || phase !== Game.Phase.battle || ap !== id) { return; }
+
+            if (attempts < maxAttempts) {
+                attempts += 1;
+                const attack = botStrategy.chooseAttack(PlayerList, id, getController(id).aggression, continents);
+                if (attack) {
+                    const beforeUnits = getCountryUnits(id, attack.from);
+                    getController(id).serverAction('battle', attack.from, attack.to, attack.defender, attack.units);
+                    const afterUnits = PlayerList[id] && PlayerList[id].countries.some((c) => c.id === attack.from)
+                        ? getCountryUnits(id, attack.from)
+                        : 0;
+
+                    if (beforeUnits !== afterUnits && !gameOver && phase === Game.Phase.battle && ap === id) {
+                        setTimeout(battleStep, BOT_DELAYS.battleStep);
+                        return;
+                    }
+                }
             }
+
             if (!gameOver && phase === Game.Phase.battle && ap === id) {
-                this.nextTurn();
+                setTimeout(() => {
+                    if (!gameOver && phase === Game.Phase.battle && ap === id) {
+                        this.nextTurn();
+                    }
+                }, BOT_DELAYS.battleEnd);
             }
-        }, 180);
+        };
+
+        setTimeout(battleStep, BOT_DELAYS.battleInitial);
     };
 
     Game.prototype.determineVictor = function () {
