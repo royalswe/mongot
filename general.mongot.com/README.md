@@ -18,5 +18,4 @@ COOKIE_SECRET=hello node app.js # start app
 Before deploying, remember:
 
 Run production with NODE_ENV=production.
-Update socket.io in mongot_prod/package.json and run npm install there.
 Copy reserved-names.js and models.js to the root of mongot_prod.

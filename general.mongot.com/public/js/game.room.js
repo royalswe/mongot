@@ -329,9 +329,8 @@ gameInfra.on("choose_color", function (usedColors, colors, roomSettings) {
     $('.popup').remove();
 
     var popup = '<div class="modal-overlay"></div><div class="popup">'+
-        '  <span class="close-popup" aria-label="Close">&#215;</span>' +
+        '  <span class="close-popup" aria-label="Close">X</span>' +
         '  <div class="pophead">Choose your side</div>'+
-        '  <p class="setup-description">Select a color for your territories.</p>'+
         '  <p class="rank-notice' + (identityKind === 'verified' ? '' : ' unranked') + '">' + rankNotice() + '</p>'+
         (roomSettings.isHost ? '<div class="host-settings"><label for="map_choice">Map</label><select id="map_choice"></select>'+
             '<label class="bot-choice"><input id="allow_bots" type="checkbox" ' + (roomSettings.allowBots ? 'checked' : '') + '> Allow bot opponents</label></div>' :

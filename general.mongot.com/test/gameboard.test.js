@@ -46,7 +46,7 @@ test('a disconnected player gets a grace period, then a bot keeps the faction ac
         assert.equal(board.getGameInfo().playerList[0].lost, null);
 
         scheduled.find((timer) => timer.delay === 30000).callback();
-        assert.equal(board.getGameInfo().playerList[0].username, 'Relief-unit-test-1');
+        assert.equal(board.getGameInfo().playerList[0].username, 'Ranger');
         assert.equal(board.getGameInfo().playerList[0].lost, false);
         scheduled.filter((timer) => timer.delay === 120).forEach((timer) => timer.callback());
         assert(board.getGameInfo().playerList[0].countries.reduce((total, territory) => total + territory.units, 0) > initialUnits);

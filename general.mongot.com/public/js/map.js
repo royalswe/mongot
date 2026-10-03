@@ -14,7 +14,6 @@ gameInfra.on('map_info', function (map) {
 
     var svg = document.querySelector('.svg-content');
     svg.dataset.mapId = map.id;
-    $('#map_title').text(map.name);
     svg.classList.remove('map-archipelago', 'map-frontier', 'map-world', 'map-quick');
     ensureTerritoryMarkers(map.countries.length);
     if (map.positions) {

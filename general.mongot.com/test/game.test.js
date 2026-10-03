@@ -90,6 +90,8 @@ test('a won battle takes the territory, which stays inactive until the attacker\
     assert.equal(table.territory(from).units, 1);
     assert.equal(table.ownerOf(to), -1, 'conquered land belongs to nobody until the turn ends');
     assert.deepEqual(table.info().disabledCountries.map((country) => [country.id, country.units]), [[to, 3]]);
+    assert.equal(table.info().disabledCountries[0].defeatedColor, table.player(defender).color);
+    assert.equal(table.broadcasts.filter((entry) => entry.event === 'render_disabled_countries').pop().args[0][0].defeatedColor, table.player(defender).color);
     assert.deepEqual(table.broadcasts.filter((entry) => entry.event === 'dice_log').pop().args, [[[6, 6, 6]], [[1]]]);
     assert.equal(table.messages('attack').pop().message, 'Attacker lost 0 troops<br>Defender lost 1 troops');
     const income = table.sockets[attacker].sent.filter((message) => message.type === 'update_gold_income').pop();
@@ -220,10 +222,18 @@ test('surrendering hands the faction to a bot', (t) => {
     table.sockets[1].act('surrender');
 
     assert.equal(table.player(1).surrender, true);
-    assert.equal(table.player(1).username, 'Relief-test-room-2');
+    assert.equal(table.player(1).username, 'Sentinel');
     assert.equal(table.sockets[1].can('surrender'), false);
     assert(table.broadcasts.some((entry) => entry.event === 'bot_takeover' && entry.args[0].reason === 'surrender'));
     assert.match(table.messages('serverMessage').pop().message, /Player1 surrendered/);
+});
+
+test('takeover bot names get a suffix when already used in the room', (t) => {
+    const {table} = startTurn(t);
+    table.player(0).username = 'Sentinel';
+    table.sockets[1].act('surrender');
+
+    assert.equal(table.player(1).username, 'Sentinel-2');
 });
 
 test('a player who reconnects within the grace period gets their seat back', (t) => {

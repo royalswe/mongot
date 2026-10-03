@@ -30,7 +30,7 @@ function jsLobby(){
 
 // Config and chat history (config.json, *Chat.json) stay as they are on the server.
 function moveServerJs(){
-    return src(['app.js', 'sockets.js', 'serviceworker.js', 'routes/*.js', 'game/*.js'], {base: '.'})
+    return src(['package.json', 'app.js', 'sockets.js', 'serviceworker.js', 'routes/*.js', 'game/*.js', 'public/js/ranks.js'], {base: '.'})
     .pipe(dest(PROD))
 };
 

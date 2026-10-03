@@ -130,7 +130,6 @@ test('first seated player can choose an alternate map and allow bots', async ({p
     await page.locator('#allow_bots').check();
     await page.locator('label#red').click();
 
-    await expect(page.locator('#map_title')).toHaveText('Archipelago');
     await expect(page.locator('#start_bots')).toBeVisible();
     const botButtonIsClickable = await page.evaluate(() => {
         const button = document.querySelector('#start_bots');
@@ -161,7 +160,6 @@ test('the world map renders all 42 classic territories', async ({page}) => {
     await page.locator('#map_choice').selectOption('world');
     await page.locator('label#red').click();
 
-    await expect(page.locator('#map_title')).toHaveText('World (42 territories)');
     await expect(page.locator('.territory-marker')).toHaveCount(42);
     const backgroundImage = await page.locator('.svg-content').evaluate((element) => getComputedStyle(element).backgroundImage);
     expect(backgroundImage).toContain('world.svg');
@@ -179,7 +177,6 @@ test('quick-test starts with four territories, low gold, and a conquest mission'
     await page.locator('#start_bots').click();
 
     await expect(page.locator('.phase-message')).toContainText('Everyone deploy', {timeout: 12000});
-    await expect(page.locator('#map_title')).toHaveText('Quick Test (4 territories)');
     await expect(page.locator('.territory-marker:visible')).toHaveCount(4);
     await expect(page.locator('.user-gold')).toContainText('15');
     await expect.poll(() => page.evaluate(() => window.mission && window.mission.mission)).toBe('conquer_player');

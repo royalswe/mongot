@@ -8,6 +8,7 @@ let models = require('../../models');
 let config = require('../config.json');
 let rating = require('./rating');
 
+const BOT_NAMES = ['Ranger', 'Sentinel', 'Guardian', 'Warden'];
 const TURN_EVENTS = ['deploy', 'next_turn', 'battle', 'tactical_move'];
 const BOT_DELAYS = {
     deployInitial: 120,     // Initial delay for deployment (maintains test compatibility)
@@ -875,9 +876,16 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
         if (botControllers[id] || sockets[id].isBot) { return; }
         const player = PlayerList[id];
         const humanSocket = sockets[id];
+
+        let username = BOT_NAMES[id % BOT_NAMES.length];
+        let suffix = 2;
+        while (Object.keys(PlayerList).some((playerId) => PlayerList[playerId].username === username)) {
+            username = username + '-' + suffix;
+            suffix += 1;
+        }
         const bot = new BotPlayer({
             key: 'takeover-' + room + '-' + id,
-            username: 'Relief-' + room + '-' + (id + 1),
+            username: username,
             points_general: 850,
             aggression: 0.5
         }, id, player.color);
@@ -922,8 +930,9 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
             if (PlayerList[id].countries[i].id === country) {
                 let gold = PlayerList[id].countries[i].gold;
                 let neighbour = PlayerList[id].countries[i].neighbour;
+                let defeatedColor = PlayerList[id].color;
                 PlayerList[id].countries.splice(i, 1);
-                disabledCountries.push({id: country, gold: gold, units: units, neighbour: neighbour}); // add the country to disabled countries array
+                disabledCountries.push({id: country, gold: gold, units: units, neighbour: neighbour, defeatedColor: defeatedColor}); // add the country to disabled countries array
                 break;
             }
         }

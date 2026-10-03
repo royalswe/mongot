@@ -13,7 +13,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const sessions = require('client-sessions');
 const identity = require('../game/identity');
-const isReservedName = require('../../reserved-names');
+const isReservedName = require('../game/reserved-names');
 const botProfiles = require('../game/botProfiles');
 
 function cookieFor(email, options = {}) {

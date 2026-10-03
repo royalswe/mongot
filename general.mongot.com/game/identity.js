@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const sessions = require('client-sessions');
 const mongoose = require('mongoose');
 const models = require('../../models');
-const isReservedName = require('../../reserved-names');
+const isReservedName = require('./reserved-names');
 
 const fallbackGuestKey = crypto.randomBytes(32);
 
