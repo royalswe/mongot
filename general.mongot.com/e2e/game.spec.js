@@ -164,6 +164,15 @@ test('the world map renders all 42 classic territories', async ({page}) => {
     const backgroundImage = await page.locator('.svg-content').evaluate((element) => getComputedStyle(element).backgroundImage);
     expect(backgroundImage).toContain('world.svg');
     await expect(page.locator('.territory-marker title').first()).toHaveText('Alaska');
+
+    await page.evaluate(() => {
+        window.__clickedTerritories = [];
+        window.playerEnabled = true;
+        window.phase = 'Battle';
+        window.battle = (id) => window.__clickedTerritories.push(id);
+    });
+    await page.locator('.territory-marker[id="34"]').click();
+    await expect.poll(() => page.evaluate(() => window.__clickedTerritories)).toEqual(['34']);
 });
 
 test('quick-test starts with four territories, low gold, and a conquest mission', async ({page}) => {

@@ -243,7 +243,7 @@ $('g').mouseenter(function () { // change cursor if it is players turn
         $(this).css('cursor', 'default');
 });
 
-$('g').mousedown(function () {
+$(document).on('mousedown', '.svg-content > g.territory-marker', function () {
     if (playerEnabled) {
         var country = getCountry(this.id);
         var click = this.id;
