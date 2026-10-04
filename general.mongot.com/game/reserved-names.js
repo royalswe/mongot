@@ -1,7 +1,7 @@
 'use strict';
 
 // Names that real accounts must not use because the game hands them to guests and bots.
-const BOT_NAMES = ['scout', 'raider', 'warden'];
+const BOT_NAMES = ['scout', 'raider', 'warden', 'ranger', 'sentinel', 'guardian', 'keeper'];
 
 module.exports = function isReservedName(name) {
     const lower = String(name || '').toLowerCase();

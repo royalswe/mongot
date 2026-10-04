@@ -8,7 +8,8 @@ let models = require('../../models');
 let config = require('../config.json');
 let rating = require('./rating');
 
-const BOT_NAMES = ['Ranger', 'Sentinel', 'Guardian', 'Warden'];
+// Must not overlap botProfiles usernames: bots.username is unique.
+const BOT_NAMES = ['Ranger', 'Sentinel', 'Guardian', 'Keeper'];
 const TURN_EVENTS = ['deploy', 'next_turn', 'battle', 'tactical_move'];
 const BOT_DELAYS = {
     deployInitial: 120,     // Initial delay for deployment (maintains test compatibility)
@@ -884,7 +885,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
             suffix += 1;
         }
         const bot = new BotPlayer({
-            key: 'takeover-' + room + '-' + id,
+            key: 'takeover-' + username.toLowerCase(),
             username: username,
             points_general: 850,
             aggression: 0.5
@@ -895,8 +896,10 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
         player.conceded = reason === 'surrender';
         player.username = bot.username;
         if (process.env.NODE_ENV !== 'test') {
-            models.Bot.updateOne({key: bot.botKey}, {
-                $setOnInsert: {username: bot.username, points_general: bot.points}
+            // Match on username so older per-room takeover records are adopted instead of colliding.
+            models.Bot.updateOne({username: bot.username}, {
+                $set: {key: bot.botKey},
+                $setOnInsert: {points_general: bot.points}
             }, {upsert: true, setDefaultsOnInsert: false}, function (err) { if (err) { console.log(err); } });
         }
         removeListeners(humanSocket, TURN_EVENTS.concat(['everyone_deploy', 'surrender']));
