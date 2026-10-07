@@ -7,6 +7,11 @@ router.get('/', function (req, res) {
     res.render('index.pug');
 });
 
+router.get('/dev/multiplayer', function (req, res, next) {
+    if (process.env.NODE_ENV === 'production') { return next(); }
+    res.render('dev-multiplayer.pug');
+});
+
 router.get('/game', checkIfBanned, function (req, res) {
     res.render('game.pug');
 });

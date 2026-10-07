@@ -4,6 +4,7 @@
   "description": "Clone from blip.se general",
   "main": "app.js",
   "scripts": {
+    "dev": "COOKIE_SECRET=secret node app.js",
     "gulp": "gulp",
     "test": "node --test test/*.test.js",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=game/** --test-coverage-include=public/js/ranks.js test/*.test.js",

@@ -7,74 +7,67 @@ var chatCom = io(location.host + '/chat_com', {
 
 chatCom.on('message', function (message) {
     var message = JSON.parse(message);
-    $('#messages').append('<div class="' +
+    var messages = document.getElementById('messages');
+    messages.insertAdjacentHTML('beforeend', '<div class="' +
         message.type + '"><span class="name-'+message.color+'" >' +
         message.username + ':</span> ' +
         message.message + '</div>');
     chatNotifier();
 
     // Scroll down chatt automaticly
-    $('#messages').scrollTop($('#messages')[0].scrollHeight);
+    messages.scrollTop = messages.scrollHeight;
 });
 
 chatCom.on('player_left', function (username) {
-    $('#messages').append('<div class="server-message">' + username + ' left the room</div>'); 
+    document.getElementById('messages').insertAdjacentHTML('beforeend', '<div class="server-message">' + username + ' left the room</div>');
 });
 
-$(function(){
+document.addEventListener('DOMContentLoaded', function () {
     var timeStamp = Date.now();
 
-    $('#send').click(function () {
+    document.getElementById('send').addEventListener('click', function (event) {
+        event.preventDefault();
         if(timeStamp < Date.now()) {
             timeStamp = Date.now() + 1000;
-            var message = $('#message').val();
+            var message = document.getElementById('message').value;
             var cleanMessage = message.replace(/(<([^>]+)>)/ig,""); // remove scripts
 
             if (cleanMessage !== '') { // Prevent sending blank messages
                 var data = {message: cleanMessage, type: 'userMessage'};
                 chatCom.send(JSON.stringify(data));
-                $('#message').val('');
+                document.getElementById('message').value = '';
             }
         }
-        return false;
     });
 
-    $('#message').on('keypress', function (e) {
-        if(e.keyCode === 13){
-            $('#send').click();
+    document.getElementById('message').addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            document.getElementById('send').click();
         }
     });
     // show and hide toggle for chat
-    $(".slide-toggle").click(function(){
-        $("#chatroom").animate({
-            width: "toggle"
-        });
+    document.querySelector('.slide-toggle').addEventListener('click', function () {
+        var chatroom = document.getElementById('chatroom');
+        var hidden = chatroom.classList.contains('hidden');
+        chatroom.classList.toggle('hidden', !hidden);
+        this.setAttribute('aria-expanded', String(hidden));
 
-        $('.svg-container').toggleClass("big-map");
-        $('.slide-toggle').toggleClass("slide-toggle-close");
-        $(".slide-toggle").removeClass("chat-notifier-repeat");
-        resizeImage();
+        this.classList.remove('chat-notifier-repeat');
     });
 
-    if ($(window).width() < 480) {
-        $("#chatroom").css("display","none");
-        $("#chatroom").animate({
-            width: "toggle"
-        }, {
-            complete: function() {
-                $(".slide-toggle").addClass("chat-notifier-repeat");
-            }
-        });
-        resizeImage();
+    if (window.matchMedia('(max-width: 480px)').matches) {
+        document.getElementById('chatroom').classList.add('hidden');
+        document.querySelector('.slide-toggle').setAttribute('aria-expanded', 'false');
+        document.querySelector('.slide-toggle').classList.add('chat-notifier-repeat');
     }
-
 });
 
 function chatNotifier() {
-    if($('#chatroom').css('display') === 'none') {
-        $(".slide-toggle").addClass("chat-notifier");
+    if (document.getElementById('chatroom').classList.contains('hidden')) {
+        var toggle = document.querySelector('.slide-toggle');
+        toggle.classList.add('chat-notifier');
         setTimeout(function () { // timeout is high to prevent spamming notifications
-            $(".slide-toggle").removeClass("chat-notifier");
+            toggle.classList.remove('chat-notifier');
         }, 3000);
     }
 }

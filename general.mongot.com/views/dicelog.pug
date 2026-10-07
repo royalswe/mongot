@@ -46,7 +46,6 @@ html
     #dice_log
 
   script(src='/socket.io/socket.io.js')
-  script(src='/resources/jquery.min.js')
   script.
     'use strict';
     var gameInfra = io(location.host + '/game_infra', {
@@ -79,10 +78,10 @@ html
       }
 
       diceRole += '</ul>';
-      $('#dice_log').append(diceRole);
+        document.getElementById('dice_log').insertAdjacentHTML('beforeend', diceRole);
 
-      if($('#auto_scroll').prop('checked')){
-          $("html, body").scrollTop($(document).height());
+        if(document.getElementById('auto_scroll').checked){
+          window.scrollTo(0, document.documentElement.scrollHeight);
       }
 
     });

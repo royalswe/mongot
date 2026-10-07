@@ -1,0 +1,22 @@
+doctype html
+html
+  head
+    title Multiplayer test cockpit
+    meta(name='viewport', content='width=device-width, initial-scale=1')
+    link(rel='stylesheet', type='text/css', href='/css/retro.css')
+    link(rel='stylesheet', type='text/css', href='/css/dev-multiplayer.css')
+  body
+    main#cockpit
+      header#cockpit-toolbar
+        h1 Multiplayer test
+        label(for='room_select') Room
+        select#room_select(aria-label='Room')
+          option(value='') Finding open rooms...
+        label(for='player_count') Windows
+        select#player_count(aria-label='Number of windows')
+        button#open_players(type='button') Open players
+        button#clear_players(type='button') Close all
+        span#cockpit_status(role='status') Connecting...
+      section#workspace(aria-label='Game windows')
+    script(src='/socket.io/socket.io.js')
+    script(src='/js/dev-multiplayer.js')

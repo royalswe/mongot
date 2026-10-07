@@ -158,8 +158,14 @@ function highlightRoutes(id) {
     });
 }
 
-$(document).on('mouseenter', '.svg-content > g.territory-marker', function () { highlightRoutes(parseInt(this.id, 10)); });
-$(document).on('mouseleave', '.svg-content > g.territory-marker', clearRouteHighlight);
+document.addEventListener('mouseover', function (event) {
+    var marker = event.target.closest('.svg-content > g.territory-marker');
+    if (marker && !marker.contains(event.relatedTarget)) { highlightRoutes(parseInt(marker.id, 10)); }
+});
+document.addEventListener('mouseout', function (event) {
+    var marker = event.target.closest('.svg-content > g.territory-marker');
+    if (marker && !marker.contains(event.relatedTarget)) { clearRouteHighlight(); }
+});
 /**
  * Add nuke effect when attack
  */
@@ -247,7 +253,7 @@ gameInfra.on('render_disabled_countries', function (countries) {
 });
 
 function drawMap() {
-    if($(".show-gold").is(':visible')) { return; } // dont render if user watching gold
+    if (document.querySelector('.show-gold')) { return; } // dont render if user watching gold
 
     for (var i = 0; i < circles.length; i++) {
         var g = document.getElementsByTagName('g')[circles[i].country.id];
@@ -294,62 +300,39 @@ function drawGold() {
  * Toggle 'Show gold' button
  */
 
-$(function(){
-    $('#show_gold').click(function () {
-        $("button.clicked-btn").removeClass("clicked-btn");
-        if($(".show-gold").is(':visible')) {
-            $('.phase-message').html('<div class="show-phase">Phase: ' + phase + '</div>');
-            $('.phase-info').html(phaseMessage);
+document.getElementById('show_gold').addEventListener('click', function () {
+        document.querySelectorAll('button.clicked-btn').forEach(function (button) { button.classList.remove('clicked-btn'); });
+        if (document.querySelector('.show-gold')) {
+            document.querySelector('.phase-message').innerHTML = '<div class="show-phase">Phase: ' + phase + '</div>';
+            document.querySelector('.phase-info').innerHTML = phaseMessage;
             drawMap();
         }
         else {
             drawGold();
-            $(this).addClass('clicked-btn');
-            $('.phase-info').empty();
+            this.classList.add('clicked-btn');
+            document.querySelector('.phase-info').replaceChildren();
             var regionIncome = mapContinents.map(function (region) {
                 return '<p>' + region.continent + ': ' + region.gold + ' gold</p>';
             }).join('');
-            $('.phase-message').html('<div class="show-gold">' + regionIncome + '</div>');
+            document.querySelector('.phase-message').innerHTML = '<div class="show-gold">' + regionIncome + '</div>';
         }
-    });
 });
 
 drawGold();
 
 // Resize map
 function resizeImage(){
-    var mobileBool = (isMobile ? 32 : 0) // Mobile or not
-    var winHeight = $(window).height() - $('#game_header').outerHeight() - mobileBool;
-    var winWidth = $(window).width();
-    if($('#chatroom').css('display') !== 'none') {
-        winWidth -= $('#chatroom').width();
-    }
-    cont.css('height', 0.75 * el.width());
-
-    if(cont.height() > winHeight){
-        cont.css('height', winHeight);
-    }
-    if(isMobile){ return; }
-
-    el.removeAttr("style");
-    if(cont.height() < winHeight && cont.width() < winWidth ){
-        cont.css('height', winHeight);
-    }
-
-    if(el.width() > cont.width()){
-        el.css('width', 'auto');
-    }
+    var container = document.querySelector('.svg-container');
+    var content = document.querySelector('.svg-content');
+    var bounds = container.getBoundingClientRect();
+    var viewBox = content.viewBox.baseVal;
+    var scale = Math.max(0, Math.min(bounds.width / viewBox.width, bounds.height / viewBox.height));
+    content.style.width = viewBox.width * scale + 'px';
+    content.style.height = viewBox.height * scale + 'px';
+    if (typeof positionUnitBar === 'function') { positionUnitBar(); }
 }
 
-var isMobile = /Android|webOS|iPhone|iPad|iPod|Windows Phone|BlackBerry/i.test(navigator.userAgent) ? true : false;
-
-
-$(window).resize(function() {
-    resizeImage();
-});
-
-var el = $(".svg-container");
-var cont = $(".svg-content");
+new ResizeObserver(resizeImage).observe(document.querySelector('.svg-container'));
 
 resizeImage();
 

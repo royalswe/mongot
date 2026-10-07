@@ -23,6 +23,9 @@ var MODS = ["roYal", "svabben", "mlinde"];
 
 // Random id kept in the browser; the server turns it into a stable guest name.
 function getGuestId() {
+    var devGuestId = new URLSearchParams(window.location.search).get('devGuestId');
+    if (devGuestId) { return devGuestId; }
+
     var guestId;
     try {
         guestId = localStorage.getItem('general_guest_id');

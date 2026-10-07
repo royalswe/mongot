@@ -23,6 +23,11 @@ body, html {
 }
 
 body {
+    display: grid;
+    grid-template-columns: 30% minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    height: 100dvh;
+    transition: grid-template-columns 0.35s ease;
     font-family: Retro, "Arial Narrow", Arial, sans-serif;
     font-weight: 500;
     font-size: 16px;
@@ -43,7 +48,7 @@ text {
 }
 
 #messages {
-    height: calc(80% - 50px);
+    min-height: 0;
     padding: 8px;
     border: 3px solid var(--ink);
     background-color: var(--ink);
@@ -163,8 +168,8 @@ input[type=checkbox]#black_player + label {
 }
 
 #player_list {
-    margin: 0 0 6px;
-    height: 20%;
+    margin: 0;
+    min-height: 0;
     background-color: var(--paper-light);
     border: 3px solid var(--ink);
     padding: 0 8px 0 28px
@@ -242,16 +247,23 @@ input[type=checkbox]#black_player + label {
     line-height: 20px
 }
 
+.chat-composer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 30px;
+    align-items: center;
+    gap: 6px
+}
+
 input#message {
-    width: calc(100% - 38px);
-    margin-top: 8px;
+    width: 100%;
+    min-width: 0;
     border: 3px solid var(--ink);
     border-radius: 0;
     background: var(--paper-light);
     color: var(--ink);
     font-family: inherit;
     font-size: 15px;
-    height: 30px;
+    height: 40px;
     padding: 0 5px;
     box-sizing: border-box;
     outline: 0
@@ -262,11 +274,19 @@ input#message:focus {
     box-shadow: 3px 3px 0 var(--mustard)
 }
 
-img#send {
+#send {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer
+}
+
+#send img {
     width: 26px;
-    margin-top: -3px;
-    margin-left: 4px;
-    cursor: pointer;
 }
 
 .popup {
@@ -283,7 +303,7 @@ img#send {
 
 #game_info, #stats {
     vertical-align: top;
-    height: 92%
+    min-width: 0
 }
 
 .pophead {
@@ -372,22 +392,51 @@ img#send {
     text-align: center
 }
 
-#game_info, #stats, .svg-container {
-    display: inline-block
+body:has(#chatroom.hidden) {
+    grid-template-columns: 0% minmax(0, 1fr)
+}
+
+#game_board {
+    grid-column: 2;
+    grid-row: 1;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+    container-type: inline-size;
+    container-name: game-board;
+    overflow-y: auto
+}
+
+#game_board:has(> .input-unit-bar) {
+    grid-template-rows: auto minmax(0, 1fr) auto
 }
 
 section#chatroom {
-    height: 100%;
-    width: 30%;
-    float: left;
+    grid-column: 1;
+    grid-row: 1;
+    position: relative;
+    z-index: 9;
+    min-width: 0;
+    min-height: 0;
     box-sizing: border-box;
-    padding: 8px 8px 0;
     background: var(--paper)
 }
 
-/*#next_turn {*/
-    /*float: right*/
-/*}*/
+.chat-content {
+    display: grid;
+    grid-template-rows: minmax(70px, 1fr) minmax(0, 4fr) auto;
+    gap: 8px;
+    height: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 8px;
+    transition: padding 0.35s ease;
+}
+
+#chatroom.hidden .chat-content {
+    padding: 8px 0;
+}
 
 g {
     -webkit-touch-callout: none;
@@ -461,13 +510,12 @@ text {
 }
 
 .svg-container {
+    display: grid;
+    place-items: start center;
     position: relative;
-    width: 70%;
+    min-width: 0;
+    min-height: 0;
     background: var(--ink)
-}
-
-.big-map {
-    width: 100%
 }
 
 @keyframes flash {
@@ -480,12 +528,26 @@ text {
 }
 
 .slide-toggle {
-    width: 3%;
-    max-width: 20px;
+    width: 20px;
+    padding: 0;
+    border: 0;
+    background: transparent;
     position: absolute;
-    top: 37%;
+    left: 100%;
+    top: 50%;
     cursor: pointer;
 }
+.slide-toggle img {
+    display: block;
+    width: 100%;
+    pointer-events: none
+}
+
+button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--mustard);
+    outline-offset: 2px
+}
+
 .slide-toggle:hover {
     filter: brightness(140%);
     transition: .3s ease-in-out;
@@ -501,10 +563,6 @@ text {
     animation-iteration-count: infinite;
 }
 #game_header img, #header_buttons {
-    width: 12%;
-    height: 100%;
-    vertical-align: top;
-    display: inline-block;
     box-sizing: border-box
 }
 
@@ -530,10 +588,10 @@ text {
     }
 }
 #game_header img {
-    display: inline-block;
-    vertical-align: top;
-    height: calc(100% - 13px);
-    padding: 1.4vh;
+    grid-area: phase;
+    width: 64px;
+    height: 64px;
+    padding: 8px;
     object-fit: contain;
     background: var(--paper);
     border: 3px solid var(--ink);
@@ -762,36 +820,37 @@ text {
 #game_header {
     color: var(--paper);
     background: linear-gradient(to top, var(--mustard) 0 4px, var(--red) 4px 8px, var(--ink) 8px);
+    display: grid;
+    grid-template-columns: 64px 136px minmax(0, 1fr) 170px;
+    grid-template-areas: "phase controls info stats";
+    align-items: stretch;
+    gap: 12px;
     width: 100%;
-    height: 16vh;
-    padding: 5px 0 0 5px;
+    padding: 12px 12px 20px;
     box-sizing: border-box
 }
 
 #header_buttons {
-    display: inline-flex;
+    grid-area: controls;
+    display: flex;
     flex-direction: column;
-    gap: 4px;
-    height: calc(100% - 13px);
-    margin-left: 6px;
-    vertical-align: top
+    gap: 6px;
+    min-width: 0
 }
 
 #header_buttons button {
     flex: 1;
     width: 100%;
-    min-height: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-height: 44px;
+    padding: 6px;
     border: 2px solid var(--paper);
     outline: 0;
     background: var(--paper);
     color: var(--ink);
     font-family: inherit;
-    font-size: 2.1vh;
+    font-size: 16px;
     font-weight: 700;
-    letter-spacing: .08em;
+    letter-spacing: 0;
     text-transform: uppercase;
     border-radius: 0;
 }
@@ -809,28 +868,29 @@ text {
 }
 
 #game_info {
+    grid-area: info;
     border-left: 3px solid var(--mustard);
-    margin-left: 10px;
-    width: 28%;
-    box-sizing: border-box
+    padding-left: 12px;
+    overflow-wrap: anywhere;
+    box-sizing: border-box;
 }
 
-#game_info p {
-    padding-left: 10px;
-    margin: .6vh 0;
-    font-size: 2.2vh
+#game_info > div, #game_info p {
+    margin: 0 0 6px;
+    font-size: 17px;
+    line-height: 1.25
 }
 
 .phase-message {
     font-weight: 700
 }
 
-p.phase-info {
+.phase-info {
     line-height: 1.2
 }
 
 .show-gold {
-    line-height: .7;
+    line-height: 1.25;
     color: var(--mustard)
 }
 /*Withdraw gold effect*/
@@ -851,14 +911,24 @@ p.phase-info {
 }
 
 #stats {
-    font-size: 2.3vh;
-    margin-left: 14px;
+    grid-area: stats;
+    font-size: 17px;
+    line-height: 1.25;
     padding-left: 12px;
-    border-left: 3px solid var(--mustard)
+    overflow-wrap: anywhere;
+    border-left: 3px solid var(--mustard);
 }
 
 #stats p {
-    margin: .6vh 0
+    margin: 0 0 6px
+}
+
+#match_rank:empty {
+    display: none
+}
+
+#stats .turn-timer {
+    white-space: nowrap
 }
 
 #stats .user-gold {
@@ -958,28 +1028,36 @@ p.phase-info {
 
 .input-unit-bar {
     position: absolute;
+    top: var(--unit-bar-top, 0px);
+    left: var(--unit-bar-left, 0px);
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: 24px 32px 24px;
+    grid-template-areas: "decrease increase" "amount amount" "send cancel";
     font-family: inherit;
-    width: 9%;
-    height: 12%;
+    width: clamp(64px, 9%, 96px);
+    max-width: 100%;
+    box-sizing: border-box;
     background: var(--paper);
     border: 3px solid var(--ink);
     box-shadow: 5px 5px 0 var(--ink);
 }
 
 .input-unit-bar #send_units,.input-unit-bar #cancel_units {
-    width: 50%;
-    height: 30%;
+    min-width: 0;
     border: 0;
     outline: none;
     box-sizing: border-box;
     font-family: inherit;
     font-weight: bold;
-    letter-spacing: .06em;
+    letter-spacing: 0;
     text-transform: uppercase;
     color: var(--paper);
     cursor: pointer;
 }
 .input-unit-bar #send_units{
+    grid-area: send;
     background: var(--green);
     border-right: 2px solid var(--ink);
 }
@@ -987,15 +1065,16 @@ p.phase-info {
     background: #52a54e;
 }
 .input-unit-bar #cancel_units{
+    grid-area: cancel;
     background: var(--red);
 }
 .input-unit-bar #cancel_units:hover{
     background: #de4a3f;
 }
 .input-unit-bar #unit_output {
-    float: left;
+    grid-area: amount;
+    min-width: 0;
     width: 100%;
-    height: 40%;
     box-sizing : border-box;
     padding: 0;
     font-family: inherit;
@@ -1006,14 +1085,12 @@ p.phase-info {
     border: 0;
     border-bottom: 2px solid var(--ink);
     outline: none;
-    color: transparent;
-    text-shadow: 0 0 0 var(--ink);
+    color: var(--ink);
 }
-.sub,
-.add {
-    float: left;
-    width: 50%;
-    height: 30%;
+.input-unit-bar .sub,
+.input-unit-bar .add {
+    min-width: 0;
+    border: 0;
     box-sizing : border-box;
     color: var(--paper);
     font-family: inherit;
@@ -1030,8 +1107,25 @@ p.phase-info {
     -webkit-touch-callout: none;
     user-select: none;
 }
-.sub{
+.input-unit-bar #unit_input {
+    display: none;
+    grid-area: slider;
+    width: 100%;
+    min-width: 0;
+    height: 28px;
+    margin: 0;
+    accent-color: var(--red)
+}
+.input-unit-bar .sub {
+    grid-area: decrease;
     border-right: 2px solid var(--paper);
+}
+.input-unit-bar .add {
+    grid-area: increase
+}
+
+.mobile-unit-label {
+    display: none
 }
 .sub:hover,
 .add:hover {
@@ -1041,52 +1135,6 @@ p.phase-info {
 .input-unit-bar #unit_output::selection{color: #000}
 .input-unit-bar #unit_output::-moz-selection { color: #000}
 
-/************** range slider for unit bar **************/
-
-.range-unit-bar #unit_input{
-    vertical-align: middle;
-    cursor: pointer;
-}
-.range-unit-bar #unit_output{
-    vertical-align: middle;
-    margin-right: 1%;
-}
-.range-unit-bar {
-    text-align: center;
-    height: 32px;
-    padding: 6px 0;
-    background: var(--paper);
-    border-top: 3px solid var(--ink);
-}
-.range-unit-bar input[type="range"]{
-    -webkit-appearance: none;
-    -webkit-tap-highlight-color: rgba(255, 255, 255, 0);
-    width: 30%;
-    max-width: 40%;
-    margin-right: 12px;
-    height: 12px;
-    border: 3px solid var(--ink);
-    border-radius: 0;
-    background: var(--paper-light);
-    outline: none; /* no focus outline */
-}
-.range-unit-bar input[type="submit"]{
-    vertical-align:middle;
-    background-color: var(--green);
-    color: var(--paper);
-    border: 3px solid var(--ink);
-    border-radius: 0;
-    box-shadow: 3px 3px 0 var(--ink);
-    outline:none;
-    cursor: pointer;
-    font-family: inherit;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    font-size: 1.8vh;
-    line-height: 20px;
-    padding: 3px 8px;
-}
 input[type="range"]::-moz-range-track {
     border: inherit;
     background: transparent;
@@ -1122,57 +1170,97 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 50%;
     background: var(--mustard);
 }
-.range-unit-bar #unit_output {
-    background: var(--paper-light);
-    border: 3px solid var(--ink);
-    padding: 5px;
-    width: 40px;
-    position: relative;
-    display: inline-block;
-    font-family: inherit;
-    font-weight: 700;
-}
-.range-unit-bar #unit_output:before {
-    content:"";
-    position: absolute;
-    height: 0px;
-    width: 0px;
-    top: 3.5px;
-    left: -17px;
-    border-width: 10px;
-    border-color: transparent var(--ink) transparent transparent;
-    border-style: solid;
+@container game-board (max-width:720px) {
+    .input-unit-bar {
+        position: static;
+        width: 100%;
+        padding: 6px 8px;
+        gap: 12px;
+        grid-template-columns: minmax(0, 1fr) 40px max-content;
+        grid-template-rows: 32px;
+        grid-template-areas: "slider amount send";
+        align-items: center;
+        border: 0;
+        border-top: 3px solid var(--ink);
+        box-shadow: none
+    }
+
+    .input-unit-bar .sub, .input-unit-bar .add,
+    .input-unit-bar #cancel_units, .desktop-unit-label {
+        display: none
+    }
+
+    .mobile-unit-label {
+        display: inline
+    }
+
+    .input-unit-bar #unit_input {
+        display: block;
+        cursor: pointer
+    }
+
+    .input-unit-bar #unit_output {
+        height: 32px;
+        border: 3px solid var(--ink);
+        font-size: 16px
+    }
+
+    .input-unit-bar #send_units {
+        height: 32px;
+        padding: 3px 8px;
+        border: 3px solid var(--ink);
+        box-shadow: 3px 3px 0 var(--ink);
+        font-size: 15px
+    }
+
+    #game_header {
+        grid-template-columns: 64px minmax(0, 1fr);
+        grid-template-areas: "phase info" "controls controls" "stats stats";
+        gap: 10px;
+    }
+
+    #header_buttons {
+        flex-direction: row;
+    }
+
+    #header_buttons button {
+        min-width: 0;
+        width: auto;
+        font-size: 15px;
+    }
+
+    #stats {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 16px;
+        border-left: 0;
+        border-top: 1px solid var(--mustard);
+        padding: 8px 0 0;
+        font-size: 16px;
+    }
+
+    #stats p {
+        margin: 0
+    }
 }
 
 /*Mobile */
 @media only screen and (max-width:480px) {
-    #game_header{
-        height: 20vh;
+    body {
+        grid-template-columns: 0% minmax(0, 1fr)
     }
-    #game_info {
-        width: 38%;
-    }
-    #game_header img, #header_buttons {
-        width: 18%;
-    }
-    #game_info p {
-        padding-left: 4px;
-    }
+
     section#chatroom {
         position: absolute;
         z-index: 9;
-        width: 50%;
-        /*display: none;*/
+        width: min(80%, 320px);
+        height: 100%;
+        transition: width 0.35s ease;
     }
-    .svg-container {
-        width: 100%;
-    }
-    .slide-toggle {
-        transition: .4s ease-in-out !important;
-        left:50%;
-    }
-    .slide-toggle-close {
-        left:0%;
+
+    section#chatroom.hidden {
+        width: 0
     }
     g circle{
          r:25; /* gulp will remove this */

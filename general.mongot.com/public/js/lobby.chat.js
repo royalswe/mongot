@@ -62,7 +62,7 @@ function toggleNotificationPermissions(input) {
 }
 
 if (("Notification" in window) && getNotificationPermissions() === 'granted') { // check checkbox if notification is granted
-    $('#toggle_notification').prop('checked', true);
+    document.getElementById('toggle_notification').checked = true;
 }
 
 function getNotificationPermissions() {
@@ -74,7 +74,9 @@ function getNotificationPermissions() {
 }
 
 function escapeHtml(value) {
-    return $('<div>').text(String(value == null ? '' : value)).html();
+    var element = document.createElement('div');
+    element.textContent = String(value == null ? '' : value);
+    return element.innerHTML;
 }
 
 
@@ -93,41 +95,39 @@ function chatMessageHtml(message, removeId) {
 }
 
 function scrollChatToBottom() {
-    $('#messages').scrollTop($('#messages')[0].scrollHeight);
+    var messagesElement = document.getElementById('messages');
+    messagesElement.scrollTop = messagesElement.scrollHeight;
 }
 
 lobbyChat.on('message', function (json) {
     var message = JSON.parse(json);
-    $('#messages').append(chatMessageHtml(message, message.index));
+    document.getElementById('messages').insertAdjacentHTML('beforeend', chatMessageHtml(message, message.index));
     scrollChatToBottom();
 });
 
 lobbyChat.on('render_messages', function (messages) {
-    $('#messages').html(messages.map(chatMessageHtml).join(''));
+    document.getElementById('messages').innerHTML = messages.map(chatMessageHtml).join('');
     scrollChatToBottom();
 });
 
 lobbyChat.emit('player_joined');
 
 var timeStamp = Date.now();
-$('#send').click(function () {
+document.getElementById('send').addEventListener('click', function () {
+    var messageElement = document.getElementById('message');
+    var messagesElement = document.getElementById('messages');
     //Dont allow guest to chat
     // if(user === 'guest'){
-    //     return $('#messages').append('<div class="new-message">' +
-    //         '<span class="chat-message"><a href="/login">Login</a> to use the chat</span>' +
-    //         '</div>');
+    //     return messagesElement.insertAdjacentHTML('beforeend', '<div class="new-message">' +
+    //         '<span class="chat-message"><a href="/login">Login</a> to use the chat</span></div>');
     // }
-    var message = $('#message').val();
+    var message = messageElement.value;
     
     if(message.length > 400){
-        return $('#messages').append('<div class="new-message">' +
+        return messagesElement.insertAdjacentHTML('beforeend', '<div class="new-message">' +
             '<span class="chat-message">Your text is too long</span>' +
             '</div>');
     }
-
-    String.prototype.repeat = function(num){
-        return new Array(num + 1).join(this);
-    };
 
     // iterate over all words
     for(var i=0; i<WORDFILTER.length; i+= 1){
@@ -144,24 +144,23 @@ $('#send').click(function () {
             timeStamp = Date.now()+2000;
             var data = { message: cleanMessage, type: 'userMessage' };
             lobbyChat.send(JSON.stringify(data));
-            $('#message').val('');
+            messageElement.value = '';
         }
         else{
-            $('#messages').append('<div class="new-message">' +
+            messagesElement.insertAdjacentHTML('beforeend', '<div class="new-message">' +
                 '<span class="chat-message">You are writing to fast</span>' +
                 '</div>');
         }
     }
-    false;
 });
 
-$('#message').on('keypress', function (e) {
-    if(e.keyCode === 13){
-        $('#send').click();
+document.getElementById('message').addEventListener('keydown', function (event) {
+    if(event.key === 'Enter'){
+        document.getElementById('send').click();
     }
 });
 
-$(function(){
+document.addEventListener('DOMContentLoaded', function () {
     var PlayerArrivedSound = new Howl({src: ['sounds/join-lobby.mp3']});
 
     var arrivedTimestamp = Date.now();
@@ -181,10 +180,11 @@ $(function(){
         setTimeout(n.close.bind(n), 3000);
     }
 
-    $('#messages').on('click', '.remove-message', function (e) {
+    document.getElementById('messages').addEventListener('click', function (event) {
+        if (!event.target.closest('.remove-message')) { return; }
         var removeMsg = confirm('Do you want to remove this message?');
         if(removeMsg){
-            lobbyChat.emit('remove_message', parseInt(e.target.id, 10));
+            lobbyChat.emit('remove_message', parseInt(event.target.closest('.remove-message').id, 10));
         }
     });
 });

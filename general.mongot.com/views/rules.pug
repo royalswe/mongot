@@ -138,22 +138,19 @@ block body
         a(href='/img/map-rules-eng.png')
           img(src='/img/map-rules-eng.png', alt='Game board with rules', class="center img-respponsive")
 
-  script(src='/resources/jquery.min.js')
   script.
-    $(function() {
-      $('.page').hide();
-
-      var hash = document.location.hash;
-      if(hash === ''){ hash = '#english'; }
-
-      $(hash).show();
-      $('a[href$=\\'+hash+']').parent().addClass('active');
-
-      $(window).on('hashchange', function() {
-        $('.page').hide();
-        $('.nav-parent').removeClass('active');
-        var hash = document.location.hash;
-        $('a[href$=\\'+hash+']').parent().addClass('active');
-        $(hash).show("slow");
+    'use strict';
+    function showRulesPage() {
+      var hash = document.location.hash || '#english';
+      document.querySelectorAll('.page').forEach(function(page) {
+        page.hidden = '#' + page.id !== hash;
       });
-    });
+      document.querySelectorAll('.nav-parent').forEach(function(parent) {
+        parent.classList.remove('active');
+      });
+      document.querySelectorAll('a[href]').forEach(function(link) {
+        if (link.hash === hash) { link.parentElement.classList.add('active'); }
+      });
+    }
+    showRulesPage();
+    window.addEventListener('hashchange', showRulesPage);

@@ -25,7 +25,8 @@ if (roomName) {
 
 // Socket.IO reconnects with a brand-new server socket, so identity and room must be sent again.
 gameInfra.io.on('reconnect', function () {
-    $('.disconnect-popup').closest('.modal-overlay').remove();
+    var disconnectPopup = document.querySelector('.disconnect-popup');
+    if (disconnectPopup) { disconnectPopup.closest('.modal-overlay').remove(); }
     if (roomName) { enterRoom(); }
 });
 
@@ -36,14 +37,14 @@ gameInfra.on('disconnect', function() {
     var element = '<div class="modal-overlay"><div class="disconnect-popup"><span class="close-popup">X</span>';
     element += "<h1>Disconnected &#x2639;</h1><p>You drop connection and cannot see any activity anymore! Reload this window or reopen it to rejoin the game again.</p>";
     element += "</div></div>";
-    $('body').append(element);
+    document.body.insertAdjacentHTML('beforeend', element);
 
-    $(".modal-overlay").css("display","block");
+    document.querySelector('.modal-overlay').style.display = 'block';
 });
 
 gameInfra.on('bot_takeover', function (msg) {
     var reason = msg.reason === 'surrender' ? 'surrendered' : 'did not return';
-    $('#messages').append('<div class="server-message">' + msg.username + ' ' + reason + '. A bot now controls that faction.</div>');
+    document.getElementById('messages').insertAdjacentHTML('beforeend', '<div class="server-message">' + msg.username + ' ' + reason + '. A bot now controls that faction.</div>');
 });
 
 // Guests and unverified accounts can play, but their matches are unranked.
@@ -77,17 +78,17 @@ var joinGameSound = new Howl({src: ['sounds/player-joined.mp3'], volume: 0.5});
 gameInfra.on('message', function (msg) {
     switch (msg.type) {
         case "serverMessage":
-            $('#messages').append('<div class="server-message">' + msg.message + '</div>');
+            document.getElementById('messages').insertAdjacentHTML('beforeend', '<div class="server-message">' + msg.message + '</div>');
             break;
         case "phase":
             phase = msg.message;
             phaseMessage = msg.phaseMsg
 
-            if($(".show-mission, .show-gold").length === 0) { // Dont change game information if user watching mission or gold
-                $('.phase-message').html('<div class="show-phase">Phase: ' + phase + '</div>');
-                $('.phase-info').html(phaseMessage);
+                if (!document.querySelector('.show-mission, .show-gold')) { // Dont change game information if user watching gold
+                    document.querySelector('.phase-message').innerHTML = '<div class="show-phase">Phase: ' + phase + '</div>';
+                    document.querySelector('.phase-info').innerHTML = phaseMessage;
             }
-            var image = $("#phase_img");
+            var image = document.getElementById('phase_img');
             var phaseIcon = {
                 'Everyone deploy': 'everyone-deploy',
                 'Deploy': 'deploy',
@@ -95,11 +96,12 @@ gameInfra.on('message', function (msg) {
                 'Tactical move': 'tactical-move',
                 'Game over': 'game-over'
             }[phase] || 'waiting';
-            image.fadeOut(50, function () {
-                image.attr("src", "img/game/icons/" + phaseIcon + ".svg");
-                image.fadeIn(50);
-            });
-            $(".remove_unit_bar").remove(); // if player didn't fulfill the attack or movement
+            image.style.opacity = '0';
+            setTimeout(function () {
+                image.src = '/img/game/icons/' + phaseIcon + '.svg';
+                image.style.opacity = '1';
+            }, 50);
+            document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); }); // if player didn't fulfill the attack or movement
             drawMap();
             break;
         case "identity":
@@ -107,8 +109,8 @@ gameInfra.on('message', function (msg) {
             identityKind = msg.isGuest ? 'guest' : (msg.isUnverified ? 'unverified' : 'verified');
             break;
         case "attack":
-            if($(".show-phase").is(':visible')) {
-                $('.phase-info').html(msg.message);
+            if (document.querySelector('.show-phase')) {
+                document.querySelector('.phase-info').innerHTML = msg.message;
             }
             break;
         case "current_player":
@@ -119,14 +121,14 @@ gameInfra.on('message', function (msg) {
             if(phase !== 'Game over'){ yourTurnSound.play(); } // Notify player turn
             break;
         case "update_gold":
-            $('.user-gold').html('<span>Gold: </span>' + msg.gold);
+            document.querySelector('.user-gold').innerHTML = '<span>Gold: </span>' + msg.gold;
             break;
         case "update_gold_income":
-            $('.user-goldIncome').html('<span>Income: </span>' + msg.goldIncome);
+            document.querySelector('.user-goldIncome').innerHTML = '<span>Income: </span>' + msg.goldIncome;
             break;
         case "start_game":
             clearInterval(countInterval); // if countdown is active then disable it
-            $('#start_bots').hide();
+            document.getElementById('start_bots').style.display = 'none';
             canRematch = true;
             window.onbeforeunload = function () { return "Dude, are you sure you want to leave?"; }
             yourTurnSound.play(); // Notify player turn
@@ -140,14 +142,14 @@ gameInfra.on('message', function (msg) {
             break;
         case "room_settings":
             var tableIsWaiting = msg.status === 'open' || msg.status === 'waiting for players';
-            $('#start_bots').toggle(tableIsWaiting && msg.host === gameUsername && msg.allowBots);
+            document.getElementById('start_bots').style.display = tableIsWaiting && msg.host === gameUsername && msg.allowBots ? '' : 'none';
             break;
         case "game_over":
-            $('#messages').append('<div class="server-message">' + msg.message + '</div>');
+            document.getElementById('messages').insertAdjacentHTML('beforeend', '<div class="server-message">' + msg.message + '</div>');
             window.onbeforeunload = function () { }; // Dont prompt if user leaves
             gameOverSound.play();
-            if (canRematch && $('#rematch-panel').length === 0) {
-                $('.svg-container').append('<div id="rematch-panel"><div><strong>Match complete</strong><span id="rematch-status">Ready for another round?</span></div><button id="rematch-button" type="button">Rematch</button></div>');
+            if (canRematch && !document.getElementById('rematch-panel')) {
+                document.querySelector('.svg-container').insertAdjacentHTML('beforeend', '<div id="rematch-panel"><div><strong>Match complete</strong><span id="rematch-status">Ready for another round?</span></div><button id="rematch-button" type="button">Rematch</button></div>');
             }
             break;
         default:
@@ -157,19 +159,22 @@ gameInfra.on('message', function (msg) {
 });
 
 gameInfra.on('rematch_status', function (status) {
-    $('#rematch-status').text('Rematch ready: ' + status.votes + ' of ' + status.required);
+    document.getElementById('rematch-status').textContent = 'Rematch ready: ' + status.votes + ' of ' + status.required;
     var hasVoted = status.voters.indexOf(gameUsername) !== -1;
-    $('#rematch-button').prop('disabled', hasVoted).text(hasVoted ? 'Waiting' : 'Rematch');
+    var rematchButton = document.getElementById('rematch-button');
+    rematchButton.disabled = hasVoted;
+    rematchButton.textContent = hasVoted ? 'Waiting' : 'Rematch';
 });
 
 gameInfra.on('rematch_started', function () {
-    $('#rematch-panel').remove();
-    $('#messages').empty();
+    var rematchPanel = document.getElementById('rematch-panel');
+    if (rematchPanel) { rematchPanel.remove(); }
+    document.getElementById('messages').replaceChildren();
     canRematch = true;
     mission = null;
     phase = 'Waiting for players';
-    $('.phase-message').text(phase);
-    $('.phase-info').text('The next match is starting.');
+    document.querySelector('.phase-message').textContent = phase;
+    document.querySelector('.phase-info').textContent = 'The next match is starting.';
 });
 
 gameInfra.on("start_countdown", function () {
@@ -185,12 +190,12 @@ gameInfra.on("error", function (err) { // if there will be any errors then show 
 var countInterval;
 gameInfra.on("game_countdown", function (bool) {
     if(bool){
-        $('.phase-message').html('<span style="color:#4bff00">Be ready!</span>');
-        $('.phase-info').html('<span style="color:#4bff00">The game starts in <b style="margin: 0px; color: #ff0" id="start_countdown">5</b> seconds.</span>');
+        document.querySelector('.phase-message').innerHTML = '<span style="color:#4bff00">Be ready!</span>';
+        document.querySelector('.phase-info').innerHTML = '<span style="color:#4bff00">The game starts in <b style="margin: 0px; color: #ff0" id="start_countdown">5</b> seconds.</span>';
         var i = 4;
 
         countInterval = setInterval(function() {
-            $("#start_countdown").html(i);
+            document.getElementById('start_countdown').textContent = i;
             if (i === 0) {
                 clearInterval(countInterval);
                 gameInfra.emit("countdown_finished", roomName);
@@ -199,8 +204,8 @@ gameInfra.on("game_countdown", function (bool) {
         }, 1000);
     }
     else {
-        $('.phase-message').html('Oh no! player left the game');
-        $('.phase-info').html('The game will start as soon new players have joined.');
+        document.querySelector('.phase-message').textContent = 'Oh no! player left the game';
+        document.querySelector('.phase-info').textContent = 'The game will start as soon new players have joined.';
     }
 });
 
@@ -236,33 +241,33 @@ function showActivePlayer(msg) {
     text.textContent = msg.username;
 }
 
-$('g').mouseenter(function () { // change cursor if it is players turn
-    if (playerEnabled)
-        $(this).css('cursor', 'pointer');
-    else
-        $(this).css('cursor', 'default');
+document.addEventListener('mouseover', function (event) {
+    var marker = event.target.closest('.svg-content > g.territory-marker');
+    if (marker) { marker.style.cursor = playerEnabled ? 'pointer' : 'default'; }
 });
 
-$(document).on('mousedown', '.svg-content > g.territory-marker', function () {
+document.addEventListener('mousedown', function (event) {
+    var marker = event.target.closest('.svg-content > g.territory-marker');
+    if (!marker) { return; }
     if (playerEnabled) {
-        var country = getCountry(this.id);
-        var click = this.id;
+        var country = getCountry(marker.id);
+        var click = marker.id;
         switch (phase) {
             case "Everyone deploy":
-                if($.isNumeric(click) && $.isNumeric(country.owner)) {
+                if(Number.isInteger(Number(click)) && Number.isInteger(Number(country.owner))) {
                     gameInfra.emit("everyone_deploy", parseInt(click), country.owner);
                 }
                 break;
             case "Deploy":
-                if($.isNumeric(click) && $.isNumeric(country.owner)) {
+                if(Number.isInteger(Number(click)) && Number.isInteger(Number(country.owner))) {
                     gameInfra.emit("deploy", parseInt(click), country.owner);
                 }
                 break;
             case "Battle":
-                battle(click, $(this));
+                battle(click, marker);
                 break;
             case "Tactical move":
-                tacticalMove(click, $(this));
+                tacticalMove(click, marker);
                 break;
             default:
                 break;
@@ -278,9 +283,11 @@ function getCountry(country) {
 }
 
 gameInfra.on("list_of_players", function (playerList) {
-    $('#player_list').empty();
+    var playerListElement = document.getElementById('player_list');
+    playerListElement.replaceChildren();
 
-    $.each(playerList, function (key, value) {
+    Object.keys(playerList).forEach(function (key) {
+        var value = playerList[key];
         var isUnranked = value.isGuest || value.isUnverified;
         var points = isUnranked ? 'Unranked' : value.points;
 
@@ -313,20 +320,20 @@ gameInfra.on("list_of_players", function (playerList) {
         var rankImage = isUnranked ? '' : '<img src="img/rankings/' + rankIcon(points) + '"/>';
         var roomDiv = '<li class="player-name player-color-' + value.color + '">'+ imgInfo +'<span class="player-username">' + value.username + '</span>' +
             '<span class="player-points">' + points + rankImage + '</span></li>';
-        $('#player_list').append(roomDiv);
+        playerListElement.insertAdjacentHTML('beforeend', roomDiv);
     });
 
     // The server decides this from everyone seated for the match, including players who have since left.
     var matchIsUnranked = playerList.length > 0 && playerList[0].matchRanked === false;
-    $('#match_rank')
-        .text(playerList.length === 0 ? '' : (matchIsUnranked ? 'Unranked match' : 'Ranked match'))
-        .toggleClass('unranked', matchIsUnranked)
-        .attr('title', matchIsUnranked ? 'A guest or an unverified player is or was seated, so nobody\'s rating changes.' : 'Ratings change with the result.');
+    var matchRank = document.getElementById('match_rank');
+    matchRank.textContent = playerList.length === 0 ? '' : (matchIsUnranked ? 'Unranked match' : 'Ranked match');
+    matchRank.classList.toggle('unranked', matchIsUnranked);
+    matchRank.title = matchIsUnranked ? 'A guest or an unverified player is or was seated, so nobody\'s rating changes.' : 'Ratings change with the result.';
 });
 
 // choose color
 gameInfra.on("choose_color", function (usedColors, colors, roomSettings) {
-    $('.popup').remove();
+    document.querySelectorAll('.popup').forEach(function (popup) { popup.remove(); });
 
     var popup = '<div class="modal-overlay"></div><div class="popup">'+
         '  <span class="close-popup" aria-label="Close">X</span>' +
@@ -346,110 +353,115 @@ gameInfra.on("choose_color", function (usedColors, colors, roomSettings) {
     }
         popup += '</ul></div></div>';
 
-    $('.svg-container').before(popup);
-    $(".modal-overlay").css("display","block");
-    
-    $.each(usedColors, function (key, value) {
-        $('#'+value.color).remove();
+    document.querySelector('.svg-container').insertAdjacentHTML('beforebegin', popup);
+    document.querySelector('.modal-overlay').style.display = 'block';
+
+    usedColors.forEach(function (value) {
+        var usedColor = document.getElementById(value.color);
+        if (usedColor) { usedColor.remove(); }
     });
     if (roomSettings.isHost) {
-        $.each(roomSettings.maps, function (key, map) {
-            $('#map_choice').append($('<option></option>').attr('value', map.id).text(map.name));
+        roomSettings.maps.forEach(function (map) {
+            var option = document.createElement('option');
+            option.value = map.id;
+            option.textContent = map.name;
+            document.getElementById('map_choice').appendChild(option);
         });
-        $('#map_choice').val(roomSettings.mapId);
+        document.getElementById('map_choice').value = roomSettings.mapId;
     }
     else {
-        $('.room-map-name').text((roomSettings.maps.find(function(map) { return map.id === roomSettings.mapId; }) || {}).name || 'Original Map');
+        document.querySelector('.room-map-name').textContent = (roomSettings.maps.find(function(map) { return map.id === roomSettings.mapId; }) || {}).name || 'Original Map';
     }
 });
 // if player choosed color remove it
 gameInfra.on("remove_color_popup", function (usedColors) {
-    $.each(usedColors, function (key, value) {
-        $('#'+value.color).remove();
+    usedColors.forEach(function (value) {
+        var usedColor = document.getElementById(value.color);
+        if (usedColor) { usedColor.remove(); }
     });
     joinGameSound.play();
 });
 // remove box when game starts for everyone
 gameInfra.on("remove_color_popup_box", function () {
-    $('.popup').remove();
-    $(".modal-overlay").css("display","none");
+    document.querySelectorAll('.popup').forEach(function (popup) { popup.remove(); });
+    document.querySelectorAll('.modal-overlay').forEach(function (overlay) { overlay.style.display = 'none'; });
 });
 // Show withdrawing gold effect
 gameInfra.on("withdraw_gold_effect", function (gold) {
     var fadingNumber = '<span class="user-gold-withdraw">-' + gold + '</span>';
-    $('.user-gold').append(fadingNumber);
+    document.querySelector('.user-gold').insertAdjacentHTML('beforeend', fadingNumber);
 });
 
 gameInfra.on("display_flag", function () {
-    $(".surrender-flag").css("display","block");
+    document.querySelector('.surrender-flag').style.display = 'block';
 });
 
-$(function(){
-    $('#next_turn').click(function () {
+document.getElementById('next_turn').addEventListener('click', function () {
         gameInfra.emit("next_turn");
-        false;
     });
 
-    $('#start_bots').click(function () {
+document.getElementById('start_bots').addEventListener('click', function () {
         gameInfra.emit('start_with_bots', roomName);
-        $(this).prop('disabled', true).text('Starting');
+        this.disabled = true;
+        this.textContent = 'Starting';
     });
 
-    $('#game_board').on('click', '#rematch-button', function () {
+document.getElementById('game_board').addEventListener('click', function (event) {
+    if (event.target.closest('#rematch-button')) {
         gameInfra.emit('rematch', roomName);
-        $(this).prop('disabled', true).text('Waiting');
-    });
+        event.target.closest('#rematch-button').disabled = true;
+        event.target.closest('#rematch-button').textContent = 'Waiting';
+    }
 
-    $('#game_board').on('click', 'label', function(e) {
-        var x = $(this).parent();
-        if (x.is('.player-check')) { // check if label has correct parent
+    if (event.target.closest('label')) {
+        var label = event.target.closest('label');
+        if (label.parentElement.classList.contains('player-check')) { // check if label has correct parent
             var mapSettings = {
-                mapId: $('#map_choice').val() || (mapData && mapData.id) || 'original',
-                allowBots: $('#allow_bots').is(':checked')
+                mapId: (document.getElementById('map_choice') || {}).value || (mapData && mapData.id) || 'original',
+                allowBots: Boolean(document.getElementById('allow_bots') && document.getElementById('allow_bots').checked)
             };
-            gameInfra.emit("join_game", roomName, e.target.id, mapSettings);
-            $('.popup').remove();
-            $(".modal-overlay").css("display","none");
+            gameInfra.emit("join_game", roomName, label.id, mapSettings);
+            document.querySelectorAll('.popup').forEach(function (popup) { popup.remove(); });
+            document.querySelectorAll('.modal-overlay').forEach(function (overlay) { overlay.style.display = 'none'; });
         }
-        false;
-    });
+    }
+});
 
-    $('#mission').click(function () {
-        $("button.clicked-btn").removeClass("clicked-btn");
-        if($(".show-mission").is(':visible')) {
-            $('.phase-message').html('<div class="show-phase">Phase: ' + phase + '</div>');
-            $('.phase-info').html(phaseMessage);
+document.getElementById('mission').addEventListener('click', function () {
+        document.querySelectorAll('button.clicked-btn').forEach(function (button) { button.classList.remove('clicked-btn'); });
+        if (document.querySelector('.show-mission')) {
+            document.querySelector('.phase-message').innerHTML = '<div class="show-phase">Phase: ' + phase + '</div>';
+            document.querySelector('.phase-info').innerHTML = phaseMessage;
         }
         else {
-            $('.phase-message').html('<div class=show-mission>Game mission:</div>');
-            $(this).addClass('clicked-btn');
+            document.querySelector('.phase-message').innerHTML = '<div class=show-mission>Game mission:</div>';
+            this.classList.add('clicked-btn');
             if(mission != null){
-                $('.phase-info').html(mission.message);
+                document.querySelector('.phase-info').innerHTML = mission.message;
             }
             else {
-                $('.phase-info').html('Mission will be generated when the game begins.');
+                document.querySelector('.phase-info').textContent = 'Mission will be generated when the game begins.';
             }
             drawMap();
         }
     });
 
-    $(".dice-log").click(function(){
+document.querySelector('.dice-log').addEventListener('click', function () {
         window.open("/dicelog?room=log-"+ roomName, "_blank", "width=220,height=575");
     });
 
-    $(".surrender-flag").click(function(){
+document.querySelector('.surrender-flag').addEventListener('click', function () {
         var confirmSurrender = confirm('Do you really want to surrender and lose this game?');
         if(confirmSurrender){
             gameInfra.emit("surrender");
-            $('.surrender-flag').remove();
+            this.remove();
         }
 
     });
 
-    $('body').on('click', '.close-popup', function () {
-        $('.disconnect-popup').remove();
-        $('.popup').remove();
-        $(".modal-overlay").css("display","none");
+document.body.addEventListener('click', function (event) {
+    if (event.target.closest('.close-popup')) {
+        document.querySelectorAll('.disconnect-popup, .popup').forEach(function (popup) { popup.remove(); });
+        document.querySelectorAll('.modal-overlay').forEach(function (overlay) { overlay.style.display = 'none'; });
+    }
     });
-
-});

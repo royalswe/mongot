@@ -6,34 +6,40 @@ html
     meta(name='viewport', content='width=device-width, initial-scale=1')
     link(rel='preload', href='/fonts/BarlowCondensed-700.woff2', as='font', type='font/woff2', crossorigin)
     link(rel='stylesheet', type='text/css', href='/css/retro.css?v=1.0')
-    link(rel='stylesheet', type='text/css', href='/css/game.board.css?v=2.0')
+    link(rel='stylesheet', type='text/css', href='/css/game.board.css?v=2.1')
 
+  body
     section#chatroom
-      ul#player_list
+      .chat-content
+        ul#player_list
 
-      div#messages
-      input#message(type='text', autocomplete="off", placeholder='Enter your message here')
-      img#send(src='/img/game/icons/send.svg' alt="send chat message")
+        div#messages
+        .chat-composer
+          input#message(type='text', autocomplete="off", placeholder='Enter your message here', aria-label='Chat message')
+          button#send(type='button', aria-label='Send chat message', title='Send chat message')
+            img(src='/img/game/icons/send.svg' alt='')
+      button.slide-toggle(type='button', aria-label='Toggle chat', aria-controls='chatroom', aria-expanded='true', title='Toggle chat')
+        img(src='/img/game/icons/chat-toggle.svg' alt='')
 
     section#game_board
-      div#game_header
+      header#game_header
         img#phase_img(src='/img/game/icons/waiting.svg' alt='')
         div#header_buttons
           button#next_turn Next turn
           button#show_gold Show gold
           button#mission Show mission
         div#game_info
-          p.phase-message Waiting for players
-          p.phase-info #{!user ? "Choose a color to join. Guests play unranked." : (user.active ? "The game starts when all players have joined." : "Choose a color to join. Verify your email to earn rank.")}
+          div.phase-message Waiting for players
+          div.phase-info #{!user ? "Choose a color to join. Guests play unranked." : (user.active ? "The game starts when all players have joined." : "Choose a color to join. Verify your email to earn rank.")}
         div#stats
           p.user-gold Gold: 0
           p.user-goldIncome Income: 0
           p#match_rank
-          label(for='countdown') &#128337;
-          span#countdown
+          p.turn-timer
+            span(aria-hidden='true') &#128337;
+            span#countdown(role='timer' aria-label='Time remaining')
 
       .svg-container
-        img.slide-toggle(src='/img/game/icons/chat-toggle.svg', alt="hide and show chat")
         svg.svg-content(version='2.0', viewbox='0 0 1147.148 859.25')
           // Europe
           g
@@ -173,11 +179,10 @@ html
       else
         | var user = 'guest';
     script(src='/socket.io/socket.io.js')
-    script(src='/resources/jquery.min.js')
     script(src='/resources/howler.min.js')
 
     if useBundles
-      script(src='/js/compress.js?v=2.0')
+      script(src='/js/compress.js?v=2.1')
     else
       script(src='/js/storage.js')
       script(src='/js/ranks.js')
