@@ -145,8 +145,22 @@ img.browsers {
     margin: 0 auto;
 }
 
-.fb-like {
-    text-align: center;
+.facebook-link {
+    display: inline-block;
+    margin: 4px 0 12px;
+    padding: 7px 12px;
+    border: 2px solid var(--ink);
+    background-color: var(--blue);
+    color: var(--paper);
+    box-shadow: 2px 2px 0 var(--ink);
+    font-weight: 700;
+    text-decoration: none;
+    text-transform: uppercase;
+}
+
+.facebook-link:hover {
+    background-color: var(--mustard);
+    color: var(--ink);
 }
 
 #toggle_notification {
@@ -309,7 +323,6 @@ section#users_online img {
 }
 
 #admin_panel {
-    display: none;
     padding: 10px;
     background-color: var(--ink);
     border-bottom: 3px solid var(--mustard);

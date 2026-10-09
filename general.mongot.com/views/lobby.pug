@@ -7,7 +7,7 @@ block styles
 
 block body
   if user && user.god
-    #admin_panel
+    #admin_panel(hidden)
       select(id='kick_out_room')
         option(value='', disabled='disabled', selected='selected') Choose room
       select(id='kick_out_player')
@@ -37,7 +37,7 @@ block body
         p.news-heading Browsers ordered by best game compability
         img.browsers(src='/img/browsers.png', alt='Chrome works best in game', title='Chrome works best in game')
         p.news-heading Help us grow
-        .fb-like(data-href='https://www.facebook.com/blipmini/', data-layout='button_count', data-action='like', data-size='large', data-show-faces='false', data-share='true')
+        a.facebook-link(href='https://www.facebook.com/blipmini/', target='_blank', rel='noopener noreferrer') Visit us on Facebook
 
         p.news-heading Heads up
         p.news-text
@@ -69,14 +69,3 @@ block body
     script(src='/js/ranks.js')
     script(src='/js/lobby.js')
     script(src='/js/lobby.chat.js')
-  script.
-      document.addEventListener("DOMContentLoaded", function(event) { 
-        (function (d, s, id) {
-            var js, fjs = d.getElementsByTagName(s)[0];
-            if (d.getElementById(id)) return;
-            js = d.createElement(s);
-            js.id = id;
-            js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.8&appId=396659270516324";
-            fjs.parentNode.insertBefore(js, fjs);
-        }(document, 'script', 'facebook-jssdk'));
-      });

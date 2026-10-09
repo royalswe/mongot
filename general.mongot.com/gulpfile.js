@@ -1,6 +1,8 @@
-const { src, dest, watch, series, parallel } = require('gulp');
-const imagemin = require('gulp-imagemin');
-const uglify = require('gulp-uglify');
+const { src, dest, parallel } = require('gulp');
+const { Transform } = require('node:stream');
+const { extname } = require('node:path');
+const sharp = require('sharp');
+const terser = require('gulp-terser');
 const concat = require('gulp-concat');
 const babel = require('gulp-babel');
 const cleanCSS = require('gulp-clean-css');
@@ -14,7 +16,7 @@ function jsGame() {
             presets: ['@babel/preset-env']
         }))
         .pipe(concat('compress.js'))
-        .pipe(uglify())
+        .pipe(terser())
         .pipe(dest(PROD + '/public/js'));
 };
 
@@ -24,7 +26,7 @@ function jsLobby(){
             presets: ['@babel/preset-env']
         }))    
         .pipe(concat('lobby.min.js'))
-        .pipe(uglify())
+        .pipe(terser())
         .pipe(dest(PROD + '/public/js'));
 };
 
@@ -38,7 +40,7 @@ function moveServerJs(){
 // Dont forget to add: g circle{r:25} in game.board.css, before the last }
 function css(){
     return src('public/css/*.css')
-        .pipe(cleanCSS())
+        .pipe(cleanCSS({ level: 0 }))
         .pipe(dest(PROD + '/public/css'));
 };
 
@@ -55,9 +57,27 @@ function views(){
 
 // Optimize Images
 function img(){
-    return src('public/img/*/**')
-    .pipe(imagemin())
-    .pipe(dest(PROD + '/public/img/'))
+    const optimizePng = new Transform({
+        objectMode: true,
+        transform(file, encoding, callback) {
+            if (extname(file.path).toLowerCase() !== '.png') {
+                callback(null, file);
+                return;
+            }
+
+            sharp(file.contents)
+                .png({ compressionLevel: 9 })
+                .toBuffer()
+                .then(contents => {
+                    file.contents = contents;
+                    callback(null, file);
+                }, callback);
+        }
+    });
+
+    return src('public/img/*/**', { encoding: false })
+        .pipe(optimizePng)
+        .pipe(dest(PROD + '/public/img/'));
 };
 
 exports.jsGame = jsGame;
