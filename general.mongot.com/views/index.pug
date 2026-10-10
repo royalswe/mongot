@@ -1,32 +1,34 @@
 extends base
 block head
   - var title = 'General'
-  link(rel='stylesheet', type='text/css', href='/css/home.css?v=1.2')
+
+block styles
+  link(rel='stylesheet', type='text/css', href='/css/home.css?v=2.0')
 
 block body
-  div#myHeader.container.theme.padding
-    .center
-      h1.xxxlarge.animate-bottom General
-      h2 Conquer the world in a realtime Risk-like strategy game
-      .padding-32
+  main.landing
+    section.hero
+      div
+        p.kicker Realtime strategy · 2–4 players
+        h1.hero-title General
+        p.hero-tagline Conquer the world in a realtime Risk-like strategy game. Pick a colour, deploy your armies and roll for glory.
+        .hero-actions
+          a.btn.btn-primary(href='/lobby') Play now
+          a.btn(href='/rules') How to play
+      .hero-board
+        img(src='/img/game/maps/world.svg', alt='The World game board with its six continents')
+        span.sticker Now with bots
 
-  .row-padding.center
-    a.third(href='/lobby')
-      .card-2.padding-top
-        h4 Lobby
-        br
-        i.fa.fa-globe.margin-bottom.text-theme
-        p Check out the lobby to join games.
-        p Note that you have to be registered to play games.
-    a.third(href='/highscore')
-      .card-2.padding-top
-        h4 High Score
-        br
-        i.fa.fa-trophy.margin-bottom.text-theme
-        p Check out the top 30 users.
-    a.third(href='/rules')
-      .card-2.padding-top
-        h4 How to play
-        br
-        i.fa.fa-leanpub.margin-bottom.text-theme
-        p First time playing? You can find the rules here.
+    section.features
+      a.feature.card(href='/lobby')
+        img(src='/img/game/icons/battle.svg', alt='')
+        h2 Lobby
+        p Join an open table or start one with bots. Guests play unranked; log in to earn rank.
+      a.feature.card(href='/highscore')
+        img(src='/img/game/icons/game-over.svg', alt='')
+        h2 High Score
+        p See the top 30 generals and where you stand.
+      a.feature.card(href='/rules')
+        img(src='/img/game/icons/dice.svg', alt='')
+        h2 How to play
+        p First time playing? Learn the phases, missions and how the dice decide a battle.

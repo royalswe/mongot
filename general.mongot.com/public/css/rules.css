@@ -1,0 +1,127 @@
+/* How to play. */
+main#rules {
+    max-width: 960px;
+    margin: 32px auto 48px;
+    padding: 0 24px;
+}
+
+.lang-menu {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+main#rules .lang-menu a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border: 3px solid var(--ink);
+    border-bottom: 0;
+    background: #e2d4b2;
+    color: var(--ink);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    line-height: 1;
+    text-decoration: none;
+    text-transform: uppercase;
+}
+
+main#rules .lang-menu a:hover {
+    background: var(--mustard);
+}
+
+main#rules .lang-menu .active a {
+    position: relative;
+    top: 3px;
+    background: var(--paper-light);
+}
+
+.lang-menu img {
+    width: 28px;
+    height: auto;
+}
+
+#lang_content {
+    padding: 28px 36px 36px;
+    border: 3px solid var(--ink);
+    background-color: var(--paper-light);
+    box-shadow: 6px 6px 0 var(--ink);
+    font-size: 18px;
+    line-height: 1.5;
+}
+
+#rules h1 {
+    margin: 0 0 18px;
+    padding: 0;
+    color: var(--ink);
+    font-size: 46px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    line-height: 1;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+#rules h1::after {
+    content: '';
+    display: block;
+    width: 140px;
+    height: 6px;
+    margin-top: 8px;
+    background: linear-gradient(to right, var(--red) 0 50%, var(--mustard) 50% 100%);
+}
+
+main#rules h4 {
+    margin: 26px 0 6px;
+    padding-left: 10px;
+    border-left: 6px solid var(--red);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    line-height: 1.1;
+    text-transform: uppercase;
+}
+
+main#rules a {
+    color: var(--red);
+    font-weight: 700;
+}
+
+main#rules b {
+    font-weight: 700;
+}
+
+main#rules ul:not(.lang-menu) {
+    padding-left: 22px;
+}
+
+main#rules li::marker {
+    color: var(--red);
+}
+
+img.img-respponsive {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 3px solid var(--ink);
+}
+
+@media screen and (max-width: 815px) {
+    main#rules {
+        margin-top: 20px;
+        padding: 0 12px;
+    }
+
+    #lang_content {
+        padding: 20px 18px 26px;
+        font-size: 17px;
+    }
+
+    #rules h1 {
+        font-size: 36px;
+    }
+}

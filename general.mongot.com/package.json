@@ -4,34 +4,28 @@
   "description": "Clone from blip.se general",
   "main": "app.js",
   "scripts": {
+    "dev": "COOKIE_SECRET=secret node app.js",
     "gulp": "gulp",
-    "test": "mocha && mocha test --require blanket --reporter html-cov > coverage.html"
+    "test": "node --test test/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=game/** --test-coverage-include=public/js/ranks.js test/*.test.js",
+    "test:e2e": "playwright test",
+    "test:all": "npm test && npm run test:e2e",
+    "map:world": "node scripts/generate-world-map.js"
   },
   "author": "roYal",
   "license": "ISC",
   "dependencies": {
-    "socket.io": "^2.5.0",
+    "socket.io": "^4.8.4",
     "web-push": "^3.5.0"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.20.2",
-    "gulp": "^4.0.2",
-    "gulp-babel": "^8.0.0",
+    "@babel/preset-env": "^7.29.7",
+    "@playwright/test": "^1.63.0",
+    "gulp": "^5.0.1",
+    "gulp-babel": "^8.1.0",
     "gulp-clean-css": "^4.3.0",
     "gulp-concat": "^2.6.1",
-    "gulp-imagemin": "^7.1.0",
-    "gulp-uglify": "^3.0.2"
-  },
-  "config": {
-    "blanket": {
-      "pattern": [
-        "models.js",
-        "middleware.js",
-        "app.js",
-        "routes/auth.js",
-        "routes/main.js"
-      ],
-      "data-cover-never": "node_modules"
-    }
+    "gulp-terser": "^2.1.0",
+    "sharp": "^0.35.5"
   }
 }

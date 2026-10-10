@@ -9,21 +9,23 @@ gameInfra.on("connect", function(){
 });
 var playersArr;
 gameInfra.on("rooms_list", function(rooms, players){
-    var roomsTable;
+    var roomsTable = '';
     playersArr = players;
-    $('#kick_out_room').children('option:not(:first)').remove();
+    document.querySelectorAll('#kick_out_room option:not(:first-child)').forEach(function (option) { option.remove(); });
 
-    $.each(rooms, function (key, value) {
+    rooms.forEach(function (value) {
 
-       if(value.status === 'game in progress'){
-           $('#kick_out_room') // add to kickout list
-               .append($("<option></option>")
-               .attr("value",value.name)
-               .text(value.name));
+       var kickOutRoom = document.getElementById('kick_out_room');
+       if(value.status === 'game in progress' && kickOutRoom){
+           var option = document.createElement('option');
+           option.value = value.name;
+           option.textContent = value.name;
+           kickOutRoom.appendChild(option);
        }
 
-        if(value.status === 'game in progress' || user === 'guest'){
-            var btnText = 'watch game';
+        var tableIsOpen = value.status === 'open' || value.status === 'waiting for players';
+        if(!tableIsOpen){
+            var btnText = value.status === 'rematch' ? 'watch / rematch' : 'watch game';
             var btnClass = 'watch-btn';
         }
         else{
@@ -32,51 +34,73 @@ gameInfra.on("rooms_list", function(rooms, players){
         }
         roomsTable +='<tr><td>'
             + value.name + '</td><td>'
-            + value.players + '/'+ value.startingPlayers +'</td>><td>'
+            + value.players + '/'+ value.startingPlayers +'</td><td>'
+            + ({ original: 'Original Map', archipelago: 'Archipelago', frontier: 'The Marches', world: 'World', quick: 'Quick Test' }[value.mapId] || 'Original Map') + '</td><td>'
             + value.status +'</td><td>'
             + '<a id="'+ value.name +'" class="join-room '+ btnClass +'">' + btnText +'</a></td></tr>';
     });
-    $('#allrooms tbody').empty();
-    $('#allrooms tbody').append(roomsTable);
+    document.querySelector('#allrooms tbody').innerHTML = roomsTable;
 
     for(var i=0; i < players.length; i += 1){
         if(user.username === players[i].username){
-            $('#'+players[i].room).addClass('disable-join-link');
+            var roomLink = document.getElementById(players[i].room);
+            if (roomLink) { roomLink.classList.add('disable-join-link'); }
         }
     }
 });
     
-$('#allrooms tbody').on("click", ".join-room", function(e){
-    redirectRoom(e.target.id);
+document.querySelector('#allrooms tbody').addEventListener('click', function (event) {
+    var joinLink = event.target.closest('.join-room');
+    if (joinLink) { redirectRoom(joinLink.id); }
 });
 
-$('#kick_out_btn').click(function () {
-    gameInfra.emit("god_mode", {type: 'kick_player', room: $('#kick_out_room').val(), player: $('#kick_out_player').val(), user: user});
-});
+var kickOutButton = document.getElementById('kick_out_btn');
+if (kickOutButton) {
+    kickOutButton.addEventListener('click', function () {
+        gameInfra.emit("god_mode", {
+            type: 'kick_player',
+            room: document.getElementById('kick_out_room').value,
+            player: document.getElementById('kick_out_player').value
+        });
+    });
+}
 // change players selection after room name
-$('#kick_out_room').on('change', function() {
-    $('#kick_out_player').children('option:not(:first)').remove();
+var kickOutRoom = document.getElementById('kick_out_room');
+if (kickOutRoom) { kickOutRoom.addEventListener('change', function () {
+    var playerSelect = document.getElementById('kick_out_player');
+    playerSelect.querySelectorAll('option:not(:first-child)').forEach(function (option) { option.remove(); });
     for(var i=0; i < playersArr.length; i += 1){
         if(this.value === playersArr[i].room){
-            $('#kick_out_player')
-                .append($("<option></option>")
-                .attr("value",playersArr[i].username)
-                .text(playersArr[i].username));
+            var option = document.createElement('option');
+            option.value = playersArr[i].username;
+            option.textContent = playersArr[i].username;
+            playerSelect.appendChild(option);
         }
     }
-})
+}); }
 
 gameInfra.on("flash_message", function(message){
-    $('.flash_message').text(message).fadeIn('normal', function() {
-        $(this).delay(2500).fadeOut();
-    });
+    var flashMessage = document.querySelector('.flash_message');
+    flashMessage.textContent = message;
+    flashMessage.style.display = 'block';
+    flashMessage.style.opacity = '1';
+    setTimeout(function () {
+        flashMessage.style.transition = 'opacity 400ms';
+        flashMessage.style.opacity = '0';
+        setTimeout(function () {
+            flashMessage.style.display = 'none';
+            flashMessage.style.transition = '';
+        }, 400);
+    }, 2500);
 });
 
 // show and hide toggle for godmode
-$(".admin-toggle").click(function(){
-    $("#admin_panel").toggle( "slow" );
-    $(".admin-toggle").toggleClass('active-btn');
-});
+var adminToggle = document.querySelector('.admin-toggle');
+if (adminToggle) { adminToggle.addEventListener('click', function () {
+    var adminPanel = document.getElementById('admin_panel');
+    adminPanel.hidden = !adminPanel.hidden;
+    this.classList.toggle('active-btn');
+}); }
 
 function redirectRoom(roomName) {
     window.open("/game?room=" + roomName, "_blank", "width=835,height=523");

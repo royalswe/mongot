@@ -28,7 +28,6 @@ block body
   section#chatroom
     div#messages
 
-  script(src='/resources/jquery.min.js')
   script.
     messages=(!{JSON.stringify(messages)})
 
@@ -46,10 +45,10 @@ block body
     for (var i=0; i<messages.length; i++){
         if (roomName !== messages[i].room) {
             roomName = messages[i].room
-            $('#messages').append('<h2 class="">'+ messages[i].room +'</h2>');
+            document.getElementById('messages').insertAdjacentHTML('beforeend', '<h2>'+ messages[i].room +'</h2>');
         }
 
-        $('#messages').append('<div class="' +
+        document.getElementById('messages').insertAdjacentHTML('beforeend', '<div class="' +
             messages[i].type + '"><span class="name-' + messages[i].color + '" >' +
             messages[i].username + ':</span> ' +
             messages[i].message + '</div>');

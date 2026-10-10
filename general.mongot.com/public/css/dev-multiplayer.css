@@ -1,0 +1,190 @@
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    overflow: hidden;
+    color: #231d17;
+    background: #e7e0d0;
+    font-family: Retro, "Arial Narrow", Arial, sans-serif;
+}
+
+#cockpit {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100vh;
+}
+
+#cockpit-toolbar {
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 56px;
+    padding: 8px 14px;
+    border-bottom: 3px solid #231d17;
+    background: #f4ead3;
+    box-shadow: 0 3px 0 #c8372d;
+}
+
+#cockpit-toolbar h1 {
+    margin: 0 12px 0 0;
+    font-size: 22px;
+    white-space: nowrap;
+}
+
+#cockpit-toolbar label {
+    flex: 0 0 auto;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+#cockpit-toolbar select,
+#cockpit-toolbar button {
+    height: 34px;
+    border: 2px solid #231d17;
+    border-radius: 2px;
+    padding: 0 9px;
+    background: #fbf5e6;
+    color: #231d17;
+    font: inherit;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+#room_select {
+    width: min(240px, 24vw);
+}
+
+#cockpit-toolbar button {
+    cursor: pointer;
+    background: #e8a820;
+    font-weight: 700;
+}
+
+#cockpit-toolbar button:hover {
+    background: #f0bd4b;
+}
+
+#cockpit-toolbar button:disabled,
+#cockpit-toolbar select:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+}
+
+#cockpit_status {
+    overflow: hidden;
+    margin-left: auto;
+    color: #4c443a;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#workspace {
+    position: relative;
+    min-height: 0;
+    overflow: auto;
+    background-color: #ded6c5;
+    background-image: radial-gradient(#bdb4a2 0.7px, transparent 0.7px);
+    background-size: 15px 15px;
+}
+
+.player-window {
+    position: absolute;
+    width: 620px;
+    height: 468px;
+    min-width: 420px;
+    min-height: 320px;
+    overflow: hidden;
+    resize: both;
+    border: 2px solid #231d17;
+    background: #231d17;
+    box-shadow: 4px 4px 0 rgba(35, 29, 23, .35);
+}
+
+.window-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+    padding: 0 7px 0 10px;
+    color: #fbf5e6;
+    background: #231d17;
+    cursor: grab;
+    user-select: none;
+}
+
+.window-titlebar:active {
+    cursor: grabbing;
+}
+
+.window-title {
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.window-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.window-actions button {
+    width: 27px;
+    height: 25px;
+    padding: 0;
+    border: 1px solid #fbf5e6;
+    border-radius: 2px;
+    color: #fbf5e6;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    line-height: 1;
+}
+
+.window-actions button:hover {
+    color: #231d17;
+    background: #e8a820;
+}
+
+.player-window iframe {
+    display: block;
+    width: 100%;
+    height: calc(100% - 32px);
+    border: 0;
+    background: #231d17;
+}
+
+@media (max-width: 760px) {
+    #cockpit-toolbar {
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 7px;
+    }
+
+    #cockpit-toolbar h1 {
+        width: 100%;
+        margin: 0;
+        font-size: 19px;
+    }
+
+    #cockpit-toolbar label {
+        font-size: 14px;
+    }
+
+    #room_select {
+        width: min(190px, 38vw);
+    }
+
+    #cockpit_status {
+        display: none;
+    }
+}

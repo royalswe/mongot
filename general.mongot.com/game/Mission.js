@@ -1,11 +1,12 @@
 'use strict';
 let countryHandler = require('./countryHandler');
 
-let Mission = function (sockets) {
+let Mission = function (sockets, mapId) {
 
     let players = [];
     let numOfPlayers;
-    let continents = countryHandler.continents();
+    let map = countryHandler.getMap(mapId);
+    let continents = countryHandler.continents(mapId);
     let missions = [1,2,3,4,5];
 
     function Init() {
@@ -15,7 +16,7 @@ let Mission = function (sockets) {
 
     this.setMission = function (id) {
         let randomMission = 1;
-        if(numOfPlayers > 2){
+        if(numOfPlayers > 2 && !map.conquestOnly && map.countries.length > 10){
             randomMission = missions[Math.floor(Math.random()*missions.length)];
         }
         let index = missions.indexOf(randomMission);
@@ -72,7 +73,7 @@ let Mission = function (sockets) {
             case Init.Mission.own21Countries:
                 return "Own 21 countries";
             case Init.Mission.europePlusOne:
-                return "Own Europe and one more continent";
+                return "Own " + continents[0].continent.charAt(0).toUpperCase() + continents[0].continent.slice(1) + " and one more continent";
             case  Init.Mission.own17With4Each:
                 return "Own 17 countries with at least 4 armies in each";
             default:
@@ -100,9 +101,9 @@ let Mission = function (sockets) {
     function europePlusOne(id, playerList, disabledCountries){
         let playersCountries = collectCountries(id, playerList, disabledCountries);
 
-        if (compareCountriesWithContinent(continents[0].countries, playersCountries)) {
+        if (countryHandler.ownsContinent(continents[0].countries, playersCountries)) {
             for (let i = 1; i < continents.length; i += 1) {
-                if (compareCountriesWithContinent(continents[i].countries, playersCountries)) {
+                if (countryHandler.ownsContinent(continents[i].countries, playersCountries)) {
                     return true; // Player has Europe and one more continent
                 }
             }
@@ -116,7 +117,7 @@ let Mission = function (sockets) {
         let numOfContinents = 0;
 
         for (let i = 0; i < continents.length; i += 1) {
-            if (compareCountriesWithContinent(continents[i].countries, playersCountries)) {
+            if (countryHandler.ownsContinent(continents[i].countries, playersCountries)) {
                 numOfContinents += 1;
             }
         }
@@ -155,17 +156,6 @@ let Mission = function (sockets) {
             playersCountries.push(playerList[id].countries[i]);
         }
         return playersCountries;
-    }
-
-    function compareCountriesWithContinent(continent, playersCountries) {
-        let filteredCountries = playersCountries.filter(function (a) {
-            return ~this.indexOf(a);
-        }, continent);
-
-        if (continent.sort().join(',') === filteredCountries.sort().join(',')) {
-            return true;
-        }
-        return false;
     }
 
     new Init();

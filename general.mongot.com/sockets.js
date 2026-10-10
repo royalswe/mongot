@@ -1,8 +1,14 @@
 'use strict';
 
 let GameBoard = require('./game/GameBoard');
+let BotPlayer = require('./game/BotPlayer');
+let countryHandler = require('./game/countryHandler');
+let identity = require('./game/identity');
+let rating = require('./game/rating');
 let models = require('../models');
-let io = require('socket.io');
+let mongoose = require('mongoose');
+const { Server } = require('socket.io');
+let io;
 let fs = require('fs');
 let lobbyChat = require('./lobbyChat.json');
 let gameChat = require('./gameChat.json');
@@ -10,415 +16,555 @@ let lobbyRooms = [];
 let joinedPlayers = [];
 let playerSockets = [];
 let newGames = [];
+let rematchVotes = {};
 let colors = ['red', 'blue', 'orange', 'green', 'purple', 'black'];
+let botProfiles = require('./game/botProfiles');
+let gameInfra;
+let chatCom;
+let lobbyCom;
 
 for(let i = 0; i<2; i += 1){
-    lobbyRooms.push({name: nameGenerator(), players: 0, startingPlayers: 2 ,status: 'open'});
-    lobbyRooms.push({name: nameGenerator(), players: 0, startingPlayers: 3 ,status: 'open'});
-    lobbyRooms.push({name: nameGenerator(), players: 0, startingPlayers: 4 ,status: 'open'});
+    [2, 3, 4].forEach((numOfPlayers) => lobbyRooms.push(newRoom(numOfPlayers)));
 }
 
 exports.returnRoom = (room, socket, color) => { // If player returns after disconnection
-    if (hasPlayerJoined(room, socket.username, color) ) { // Cant join room twice
+    evictStaleSeat(room, socket);
+    if (canTakeSeat(room, socket.username, color)) {
         socket.color = color;
         socket.room = room;
         joinedPlayers.push({username: socket.username, room: room, color: color});
-        playerSockets.splice(socket.id, 0, socket);
-        let playerList = updatePlayerListInRoom(room);
-        this.gameInfra.to(room).emit("list_of_players", playerList);
+        playerSockets.push(socket);
+        gameInfra.to(room).emit("list_of_players", updatePlayerListInRoom(room));
 
         updateLobby(room);
-        this.gameInfra.emit("rooms_list", lobbyRooms, joinedPlayers); // update rooms in lobby
+        broadcastRooms();
     }
 }
 
 exports.updatePlayerList = (room, usernames) => { // Update playerlist in room and lobbyrooms
-    let self = this;
-    let userCounter = 0;
-    for(let i=0; i < usernames.length; i+=1){
-        models.User.findOne({ username: usernames[i] }, function(err, user) {
-            updatePlayerScore(user.points_general, user.username)
-        });
+    // Ratings are reloaded after the game's own database writes have had time to land; tests have no database.
+    if (process.env.NODE_ENV !== 'test') { setTimeout(() => refreshRatings(room, usernames), 400); }
+
+    let roomInfo = findRoom(room);
+    if (roomInfo) {
+        roomInfo.status = 'rematch';
+        roomInfo.players = newGames[room] ? newGames[room].getPlayerCount() : seatedIn(room).length;
     }
-    function updatePlayerScore(points, username){
-        for(let i=0; i < playerSockets.length; i+=1){
-            if(playerSockets[i].username === username && playerSockets[i].room === room){
-                playerSockets[i].points = points;
-                break;
+    delete rematchVotes[room];
+    broadcastRooms();
+    if (newGames[room]) {
+        gameInfra.in(room).emit('list_of_players', newGames[room].getRoomPlayers());
+    }
+}
+
+const lobbyHooks = {returnRoom: exports.returnRoom, updatePlayerList: exports.updatePlayerList};
+
+// Reloads the players' stored ratings after a match, then refreshes the room's player list.
+function refreshRatings(room, usernames) {
+    let loaded = 0;
+    usernames.forEach((username) => {
+        models.User.findOne({username: username}, function(err, user) {
+            const seated = user && playerSockets.find((player) => player.username === user.username && player.room === room);
+            if (seated) { seated.points = user.points_general; }
+            loaded += 1;
+            if (loaded === usernames.length) {
+                gameInfra.in(room).emit('list_of_players', updatePlayerListInRoom(room));
             }
-        }
-        userCounter +=1;
-        if(userCounter === usernames.length){
-            let playerList = updatePlayerListInRoom(room);
-            self.gameInfra.in(room).emit('list_of_players', playerList);
-        }
-    }
+        });
+    });
+}
 
-    for(let i=0; i < lobbyRooms.length; i+=1){
-        if(lobbyRooms[i].name === room){
-            lobbyRooms.splice(i, 1);
-            break;
-        }
-    }
+// Identity is set before any event is handled and only ever comes from the login cookie.
+function authenticate(socket, next) {
+    // v2 clients (tabs opened before the upgrade) still send the guest id as a query parameter.
+    const guestId = (socket.handshake.auth && socket.handshake.auth.guestId) || socket.handshake.query.guestId;
+    identity.resolve(socket.request.headers.cookie, guestId, socket.id).then((who) => {
+        socket.isGuest = who.isGuest;
+        socket.isUnverified = who.isUnverified; // can play, but never changes or earns rank
+        socket.isGod = who.isGod;
+        socket.username = who.username;
+        socket.points = who.points;
+        socket.ip = who.ip;
+        next();
+    }).catch(next);
+}
 
-    this.gameInfra.emit("rooms_list", lobbyRooms, joinedPlayers);
-    delete newGames[room];
+// A player's game and chat sockets travel on one client connection, so they share client.id.
+function siblingSocket(namespace, socket) {
+    for (const candidate of namespace.sockets.values()) {
+        if (candidate.client.id === socket.client.id) { return candidate; }
+    }
+    return null;
 }
 
 exports.initialize = (server) => {
-    io = io.listen(server);
+    // allowEIO3 lets tabs still running the old client reconnect after the upgrade; drop it once they are gone.
+    io = new Server(server, {allowEIO3: true});
 
-    let usersOnline = [];
-    let self = this;
-
-    this.gameInfra = io.of('/game_infra');
-    this.gameInfra.on('connection', (socket) => {
-        
-        socket.on('player_ready', (data) => {
-            socket.username = (data === 'guest') ? 'guest' : data.username;
-            socket.points = data.points_general;
-            socket.activated = data.active;
-            socket.ip = data.ip;
-            socket.send({
-                type: 'serverMessage',
-                message: 'Welcome ' + socket.username
-            });
-        });
-
-        socket.on('dice_log_room', (room) => {
-            socket.join(room); 
-        });
-
-        socket.on('join_room', (room) => {
-            if (lobbyRooms.find(x=> x.name === room)) { // Check if room exist before join
-                if (hasPlayerJoined(room, socket.username)) { // Cant join room twice
-                    socket.join(room); // player joins choosen room
-                    let playerList = updatePlayerListInRoom(room);
-                    socket.emit("list_of_players", playerList);
-                    /**
-                     * Guests can't play only chat and inspect the game, same for logged in users if game is full
-                     */
-                    let roomStatus = lobbyRooms.find(x=> x.name === room).status;
-                    if (socket.activated && (roomStatus === 'open' || roomStatus === 'waiting for players')) {
-                        socket.emit("choose_color", playerList, colors);
-                    }
-                    else if(socket.activated === false){
-                        socket.emit("not_activated");
-                    }
-                    /**
-                     * Join the chat in chat_com namespace
-                     */
-                    let comSocket = self.chatCom.connected['/chat_com#' +socket.client.id];
-                    comSocket.join(room);
-                    comSocket.room = room;
-
-                    socket.broadcast.to(room).send({
-                        type: 'serverMessage',
-                        message: socket.username + ' has joined the room.'
-                    });
-                }
-            }
-        });
-
-        socket.on("join_game", (room, color) => {
-            if (hasPlayerJoined(room, socket.username, color) && socket.activated && lobbyRooms.find(x=> x.name === room).status !== 'game in progress') { // Cant join room twice
-                socket.color = color;
-                socket.room = room;   
-                playerSockets.push(socket);
-                joinedPlayers.push({username: socket.username, room: room, color: color});
-
-                let playerList = updatePlayerListInRoom(room);
-                self.gameInfra.to(room).emit("list_of_players", playerList);
-                self.gameInfra.to(room).emit("remove_color_popup", playerList);
-
-                let numOfStartingPlayers = lobbyRooms.find(x=> x.name === room).startingPlayers;
-
-                let waitingPlayers = updateLobby(room);
-                self.gameInfra.emit("rooms_list", lobbyRooms, joinedPlayers); // update rooms in lobby
-
-                if (waitingPlayers === numOfStartingPlayers) {
-                    self.gameInfra.to(room).emit("clear_game_countdown"); // // clear game countdown for everyone
-                    self.gameInfra.to(room).emit("remove_color_popup_box");
-                    self.gameInfra.to(room).emit("game_countdown", true);
-                }
-            }
-        });
-
-        /**
-         * Game starts
-         */
-        socket.on('countdown_finished', (room) => {
-            if (newGames[room] === undefined) {
-                let numOfStartingPlayers = lobbyRooms.find(x=> x.name === room).startingPlayers;
-                let startingPlayers = updateLobby(room);
-                if (startingPlayers !== numOfStartingPlayers) {
-                    return self.gameInfra.to(room).emit("game_countdown", false);
-                }
-                /**
-                 * Store playerSockets socket from choosen room and start new game
-                 */
-                createRoom(numOfStartingPlayers); // Create new room with same number of players
-                let socketsArr = [];
-                for (let i in playerSockets) {
-                    if (playerSockets[i].room === room) {
-                        socketsArr.push(playerSockets[i]);
-                    }
-                }
-                if (newGames[room] !== undefined) { return; } // Probably not needed. Returns if room already created
-                newGames[room] = new GameBoard.GameBoard(socketsArr, io, room);
-            }
-        });
-
-        socket.on('god_mode', (data) => {
-            if(!data.user.god){ return; } // only for gods
-
-            if(data.type === 'kick_player' && newGames[data.room] !== undefined) {
-                newGames[data.room].kickoutPlayer(data.player);
-                this.gameInfra.in(data.room).send({type: 'serverMessage', message: data.user.username +' kicked '+ data.player +' from the game'});
-            }
-        });
-        /**
-         * Update the gameboard for visitors
-         */
-        socket.on('visitor', (room) => {
-            if (newGames[room] !== undefined) {
-                let game = newGames[room].getGameInfo();
-                
-                socket.emit("start_countdown");
-                if(game.phase === 'Everyone deploy'){
-                    socket.emit("render_no_army_map", game.playerList);
-                }
-                else {
-                    if(game.disabledCountries !== undefined) {
-                        socket.emit('render_disabled_countries', game.disabledCountries);
-                    }
-                    socket.emit("render_map", game.playerList);
-                }
-                socket.send({type: 'phase', message: game.phase, phaseMsg: "Welcome! You are a guest in this room"});
-
-                if(game.ap !== undefined) {
-                    socket.send({
-                        type: 'current_player',
-                        bool: false,
-                        player: game.ap,
-                        username: game.playerList[game.ap].username,
-                        color: game.playerList[game.ap].color
-                    });
-                }
-                newGames[room].returningPlayer(socket);
-            }
-        });
-
-        socket.on("get_rooms", () => {
-            socket.emit("rooms_list", lobbyRooms, joinedPlayers);
-        });
-        
-        function createRoom(numOfPlayers) {
-            lobbyRooms.push({name: nameGenerator(), players: 0, startingPlayers: numOfPlayers ,status: 'open'});
-            self.gameInfra.emit("rooms_list", lobbyRooms, joinedPlayers);
-        }
-        /**
-         * Runs when user leaves or drop connection
-         */
-        socket.onclose = () => {
-            if (socket.rooms[socket.room]) { // if user disconnect from a joined room
-                                
-                for(let i=0; i < joinedPlayers.length; i+=1){ // remove player from joinedPlayers array
-                    if(joinedPlayers[i].username === socket.username && joinedPlayers[i].room === socket.room){
-                        joinedPlayers.splice(i, 1);
-                        break;
-                    }
-                }
-                socket.broadcast.to(socket.room).send({type: 'disconnect_player', id: socket.id});
-                socket.leave(socket.room);
-                /**
-                 * Remove player from showing in lobby and remove the room from lobby if it is the last user leaving.
-                 * Allso remove player from game room if user disconnects
-                 */
-                for (let i = 0; i < playerSockets.length; i+=1) {
-                    // Get the correct room and username to remove
-                    if (playerSockets[i].room === socket.room && playerSockets[i].username === socket.username) {
-                        playerSockets.splice(i, 1);
-
-                        for (let i in lobbyRooms) {
-                            if (lobbyRooms[i].name === socket.room) {
-                                lobbyRooms[i].players = lobbyRooms[i].players - 1; // update the room player count in lobby
-                                if (lobbyRooms[i].players === 0 && lobbyRooms[i].status === 'game in progress') {
-                                    lobbyRooms.splice(i, 1);  // remove room from lobby if empty
-                                    delete newGames[socket.room];  // remove game object
-                                }
-                                break; // stop the loop we are done
-                            }
-                        }
-                        break; // stop the loop we are done
-                    }
-                }
-                let playerList = updatePlayerListInRoom(socket.room);
-                socket.broadcast.to(socket.room).emit('list_of_players', playerList);
-                updateLobby(socket.room);
-                self.gameInfra.emit("rooms_list", lobbyRooms, joinedPlayers); // update lobby
-            }
-        };
+    gameInfra = io.of('/game_infra');
+    gameInfra.use(authenticate);
+    gameInfra.on('connection', (socket) => {
+        socket.on('player_ready', () => greetPlayer(socket));
+        socket.on('dice_log_room', (room) => socket.join(room));
+        socket.on('join_room', (room) => joinRoom(socket, room));
+        socket.on('join_game', (room, color, settings) => joinGame(socket, room, color, settings));
+        socket.on('countdown_finished', (room) => startCountedDownGame(room));
+        socket.on('start_with_bots', (room) => startWithBots(socket, room));
+        socket.on('rematch', (room) => voteRematch(socket, room));
+        socket.on('god_mode', (data) => godMode(socket, data));
+        socket.on('visitor', (room) => showGameToVisitor(socket, room));
+        socket.on('get_rooms', () => socket.emit('rooms_list', lobbyRooms, joinedPlayers));
+        // 'disconnecting' fires while the socket is still in its rooms, and leaves socket.io's own cleanup intact.
+        socket.on('disconnecting', () => leaveTable(socket));
     });
-    /**
-     * The chat
-     */
-    this.chatCom = io.of('/chat_com');
-    this.chatCom.on('connection', (socket) => {
 
-        socket.on('message', (msg) => {
-            let message = msg.replace(/(<([^>]+)>)/ig,""); // remove scripts
-            message = JSON.parse(message);
-            if (message.type === 'userMessage') {
-                message.color = self.gameInfra.connected['/game_infra#' +socket.client.id].color;
-                message.username = self.gameInfra.connected['/game_infra#' +socket.client.id].username;
-                message.room = socket.room;
-
-                gameChat.push(message);
-                fs.writeFile('gameChat.json', JSON.stringify(gameChat), (error) => { });
-
-                socket.in(socket.room).broadcast.send(JSON.stringify(message));
-                message.type = 'myMessage';
-                socket.send(JSON.stringify(message));
-            }
+    chatCom = io.of('/chat_com');
+    chatCom.on('connection', (socket) => {
+        socket.on('message', (msg) => relayGameChat(socket, msg));
+        // The game socket may already be gone here, so the name was kept on this socket when it joined.
+        socket.on('disconnecting', () => {
+            if (!socket.room || !socket.playerName) { return; }
+            socket.to(socket.room).emit('player_left', socket.playerName);
         });
-
-        socket.onclose = () => {
-            /**
-             * Tell the players in room that player has left
-             */
-            const username = self.gameInfra.connected['/game_infra#' + socket.client.id].username;          
-            socket.broadcast.to(socket.room).emit('player_left', username);
-        }
-
     });
-    /**
-     * The lobby chat
-     */
-    this.lobbyCom = io.of('/lobby_com');
-    this.lobbyCom.on('connection', function(socket){
-        socket.on('disconnect', () => {   
-            updateLobbyList();      
-        })
 
-        socket.on('message', (msg, user) => {
-            let timeStamp = new Date().getTime();
-            let message = msg.replace(/(<([^>]+)>)/ig,""); // remove scripts
-            message = JSON.parse(message);
-            if (message.type === 'userMessage') {
-                message.username = (user === 'guest') ? 'guest' : user.username;
-                message.timeStamp = timeStamp;
-                message.index = lobbyChat.length;
-
-                lobbyChat.push(message);
-                if(lobbyChat.length > 80){ lobbyChat.shift(); }
-                fs.writeFile('lobbyChat.json', JSON.stringify(lobbyChat), (error) => { });
-
-                socket.broadcast.send(JSON.stringify(message));
-                message.type = 'myMessage';
-                socket.send(JSON.stringify(message));
-            }
-        });
-
-        socket.on('remove_message', (index, user) =>{
-            if(!user.god){ return; } // only for gods
-            lobbyChat.splice(index, 1);
-            fs.writeFile('lobbyChat.json', JSON.stringify(lobbyChat), (error) => { });
-            io.of('/lobby_com').emit('render_messages', lobbyChat);
-        });
-
-        socket.on('player_joined', (data) => {       
-            if(data.user.username){
-                socket.username = data.user.username;
-                socket.activated = data.user.active;
-                socket.points = data.user.points_general;
-                socket.broadcast.emit('user_notification', data.user.username  +' arrived to the lobby');
+    lobbyCom = io.of('/lobby_com');
+    lobbyCom.use(authenticate);
+    lobbyCom.on('connection', (socket) => {
+        socket.on('disconnect', broadcastUsersOnline);
+        socket.on('message', (msg) => relayLobbyChat(socket, msg));
+        socket.on('remove_message', (index) => removeLobbyMessage(socket, index));
+        socket.on('player_joined', () => {
+            if (!socket.isGuest) {
+                socket.broadcast.emit('user_notification', socket.username + ' arrived to the lobby');
             }
             socket.emit('render_messages', lobbyChat);
-            updateLobbyList();
+            broadcastUsersOnline();
         });
+    });
+};
 
-        function updateLobbyList() {
-            usersOnline = [];         
-            let username;
-            let guests = 0;
-            Object.keys(io.of('/lobby_com').sockets).map(function(value) { // Add connected usernames to usersOnline
-                username = io.of('/lobby_com').sockets[value].username;
-                var found = usersOnline.some(function (e) {
-                    return e.username === username;
-                });
-                if (!found && username) {
-                    usersOnline.push({
-                        username: username,
-                        activated: io.of('/lobby_com').sockets[value].activated,
-                        points: io.of('/lobby_com').sockets[value].points }); 
-                }
-                else{
-                    guests++;
-                }
-            });
-            io.of('/lobby_com').emit('users_online', usersOnline, guests);
-        }
-
+function greetPlayer(socket) {
+    socket.send({type: 'identity', username: socket.username, isGuest: socket.isGuest, isUnverified: socket.isUnverified});
+    socket.send({
+        type: 'serverMessage',
+        message: socket.isGuest ? 'Welcome ' + socket.username + '. You are playing as a guest, so your games are unranked. Log in to earn rank.' :
+            socket.isUnverified ? 'Welcome ' + socket.username + '. Your email is not verified, so your games are unranked until you verify it.' :
+            'Welcome ' + socket.username
     });
 }
 
-function updatePlayerListInRoom(room) {
-    let players = [];
-    for (let i in playerSockets) {
-        if (playerSockets[i].room === room) {
-            players.push({
-                username: playerSockets[i].username,
-                points: playerSockets[i].points,
-                color: playerSockets[i].color,
-                ip: playerSockets[i].ip
-            });
+function joinRoom(socket, room) {
+    const roomInfo = findRoom(room);
+    if (!roomInfo) { return; }
+    evictStaleSeat(room, socket);
+    if (!canTakeSeat(room, socket.username)) { return; }
+
+    socket.join(room);
+    socket.send(roomSettingsMessage(roomInfo));
+    const playerList = updatePlayerListInRoom(room);
+    socket.emit('list_of_players', playerList);
+    socket.emit('map_info', countryHandler.getMap(roomInfo.mapId));
+    // Everyone can watch and chat; a colour is only offered while the table is open.
+    if (roomInfo.status === 'open' || roomInfo.status === 'waiting for players') {
+        socket.emit('choose_color', playerList, colors, {
+            maps: countryHandler.list(),
+            mapId: roomInfo.mapId,
+            allowBots: roomInfo.allowBots,
+            isHost: roomInfo.host === null
+        });
+    }
+
+    const comSocket = siblingSocket(chatCom, socket);
+    if (comSocket) {
+        comSocket.join(room);
+        comSocket.room = room;
+        comSocket.playerName = socket.username;
+    }
+    socket.to(room).emit('message', {type: 'serverMessage', message: socket.username + ' has joined the room.'});
+}
+
+function joinGame(socket, room, color, settings) {
+    const roomInfo = findRoom(room);
+    const tableIsOpen = roomInfo && (roomInfo.status === 'open' || roomInfo.status === 'waiting for players');
+    if (!tableIsOpen || colors.indexOf(color) === -1 || !canTakeSeat(room, socket.username, color) ||
+        seatedIn(room).length >= roomInfo.startingPlayers) {        return;
+    }
+    if (roomInfo.host === null) {
+        roomInfo.host = socket.username;
+        roomInfo.mapId = countryHandler.list().some((map) => map.id === (settings && settings.mapId)) ? settings.mapId : 'original';
+        roomInfo.allowBots = Boolean(settings && settings.allowBots);
+    }
+    socket.color = color;
+    socket.room = room;
+    playerSockets.push(socket);
+    joinedPlayers.push({username: socket.username, room: room, color: color});
+
+    const playerList = updatePlayerListInRoom(room);
+    gameInfra.to(room).emit('list_of_players', playerList);
+    gameInfra.to(room).emit('remove_color_popup', playerList);
+
+    const waitingPlayers = updateLobby(room);
+    gameInfra.to(room).emit('map_info', countryHandler.getMap(roomInfo.mapId));
+    gameInfra.to(room).emit('message', roomSettingsMessage(roomInfo));
+    broadcastRooms();
+
+    if (waitingPlayers === roomInfo.startingPlayers) {
+        gameInfra.to(room).emit('clear_game_countdown');
+        gameInfra.to(room).emit('remove_color_popup_box');
+        gameInfra.to(room).emit('game_countdown', true);
+    }
+}
+
+function startCountedDownGame(room) {
+    const roomInfo = findRoom(room);
+    if (!roomInfo || newGames[room] !== undefined) { return; }
+    if (updateLobby(room) !== roomInfo.startingPlayers) {
+        gameInfra.to(room).emit('game_countdown', false);
+        return;
+    }
+    openNewTable(roomInfo.startingPlayers);
+    startGame(roomInfo, seatedIn(room));
+}
+
+async function startWithBots(socket, room) {
+    const roomInfo = findRoom(room);
+    const humanSockets = seatedIn(room);
+    if (!roomInfo || !roomInfo.allowBots || roomInfo.host !== socket.username ||
+        roomInfo.status === 'game in progress' || roomInfo.status === 'starting with bots' ||
+        humanSockets.length === 0 || humanSockets.length >= roomInfo.startingPlayers ||
+        humanSockets.indexOf(socket) === -1 || newGames[room] !== undefined) {
+        return;
+    }
+
+    roomInfo.status = 'starting with bots';
+    const availableColors = colors.filter((color) => !humanSockets.some((player) => player.color === color));
+    const botSockets = [];
+    try {
+        const botsNeeded = roomInfo.startingPlayers - humanSockets.length;
+        for (let index = 0; index < botsNeeded; index += 1) {
+            const definition = botProfiles[index % botProfiles.length];
+            const profile = mongoose.connection.readyState === 1 ? (await models.Bot.findOneAndUpdate(
+                {key: definition.key},
+                {$setOnInsert: {username: definition.username, points_general: definition.points_general}},
+                {new: true, upsert: true, setDefaultsOnInsert: true}
+            ).exec()).toObject() : {};
+            botSockets.push(new BotPlayer(
+                Object.assign({}, definition, profile, {aggression: definition.aggression}),
+                humanSockets.length + index,
+                availableColors[index]
+            ));
         }
+
+        const allPlayers = humanSockets.concat(botSockets);
+        openNewTable(roomInfo.startingPlayers); // same replacement table a normal start creates
+        roomInfo.status = 'game in progress';
+        roomInfo.botCount = botSockets.length;
+        gameInfra.in(room).emit('clear_game_countdown');
+        gameInfra.in(room).emit('remove_color_popup_box');
+        const game = startGame(roomInfo, allPlayers);
+        roomInfo.players = allPlayers.length;
+        gameInfra.in(room).emit('list_of_players', game.getRoomPlayers());
+        broadcastRooms();
+    }
+    catch (error) {
+        roomInfo.status = humanSockets.length === roomInfo.startingPlayers ? 'game is starting' : 'waiting for players';
+        gameInfra.in(room).emit('message', {type: 'serverMessage', message: 'Could not start the bot match. Please try again.'});
+    }
+}
+
+function voteRematch(socket, room) {
+    const roomInfo = findRoom(room);
+    const game = newGames[room];
+    const seatedPlayers = seatedIn(room);
+    if (!roomInfo || roomInfo.status !== 'rematch' || !game || !game.isOver() || seatedPlayers.indexOf(socket) === -1) {
+        return;
+    }
+
+    rematchVotes[room] = rematchVotes[room] || {};
+    rematchVotes[room][socket.username] = true;
+    const votes = Object.keys(rematchVotes[room]).length;
+    gameInfra.in(room).emit('rematch_status', {
+        votes: votes,
+        required: seatedPlayers.length,
+        voters: Object.keys(rematchVotes[room])
+    });
+    if (votes < seatedPlayers.length) { return; }
+    const rematchPlayers = game.getRematchPlayers(seatedPlayers);
+    if (rematchPlayers.length < 2) { return; }
+
+    // The finished board registered these listeners on each human socket.
+    ['next_turn', 'deploy', 'battle', 'tactical_move', 'everyone_deploy', 'surrender'].forEach((eventName) => {
+        seatedPlayers.forEach((player) => player.removeAllListeners(eventName));
+    });
+    delete rematchVotes[room];
+    roomInfo.status = 'game in progress';
+    gameInfra.in(room).emit('rematch_started');
+    roomInfo.botCount = rematchPlayers.filter((player) => player.isBot).length;
+    startGame(roomInfo, rematchPlayers);
+    broadcastRooms();
+}
+
+function godMode(socket, data) {
+    if (!socket.isGod || !data) { return; }
+    if (data.type === 'kick_player' && newGames[data.room] !== undefined) {
+        newGames[data.room].kickoutPlayer(data.player);
+        gameInfra.in(data.room).emit('message', {type: 'serverMessage', message: socket.username + ' kicked ' + data.player + ' from the game'});
+    }
+}
+
+// Brings a spectator (or a returning player) up to date with a game in progress.
+function showGameToVisitor(socket, room) {
+    const board = newGames[room];
+    if (board === undefined) { return; }
+    const game = board.getGameInfo();
+
+    socket.emit('start_countdown');
+    socket.emit('map_info', board.getMapInfo());
+    if (game.phase === 'Everyone deploy') {
+        socket.emit('render_no_army_map', game.playerList);
+    }
+    else {
+        if (game.disabledCountries !== undefined) {
+            socket.emit('render_disabled_countries', game.disabledCountries);
+        }
+        socket.emit('render_map', game.playerList);
+    }
+    socket.send({type: 'phase', message: game.phase, phaseMsg: "Welcome! You are a guest in this room"});
+
+    if (game.ap !== undefined) {
+        socket.send({
+            type: 'current_player',
+            bool: false,
+            player: game.ap,
+            username: game.playerList[game.ap].username,
+            color: game.playerList[game.ap].color
+        });
+    }
+    board.returningPlayer(socket);
+}
+
+function leaveTable(socket) {
+    const room = socket.room;
+    if (socket.replaced || !socket.rooms.has(room)) { return; } // replaced: a newer socket of the same player took over
+
+    const joinedIndex = joinedPlayers.findIndex((player) => player.username === socket.username && player.room === room);
+    if (joinedIndex !== -1) { joinedPlayers.splice(joinedIndex, 1); }
+    socket.leave(room);
+    if (newGames[room]) { newGames[room].playerDisconnected(socket); }
+
+    const seatIndex = playerSockets.findIndex((player) => player.room === room && player.username === socket.username);
+    const roomInfo = findRoom(room);
+    if (seatIndex !== -1) {
+        playerSockets.splice(seatIndex, 1);
+        if (roomInfo) { releaseSeat(roomInfo, socket.username); }
+    }
+    socket.to(room).emit('list_of_players', updatePlayerListInRoom(room));
+    updateLobby(room);
+    broadcastRooms();
+}
+
+// After a seated player leaves: clean up an abandoned game, hand over hosting, and restart any rematch vote.
+function releaseSeat(roomInfo, username) {
+    const room = roomInfo.name;
+    const remaining = seatedIn(room);
+    roomInfo.players -= 1;
+    if (remaining.length === 0 && (roomInfo.status === 'game in progress' || roomInfo.status === 'rematch')) {
+        scheduleRoomCleanup(room); // keep the table briefly so a reload or dropped player can come back
+    }
+    else if (roomInfo.host === username && roomInfo.status !== 'game in progress') {
+        roomInfo.host = remaining.length ? remaining[0].username : null;
+        gameInfra.to(room).emit('message', roomSettingsMessage(roomInfo));
+    }
+    if (roomInfo.status === 'rematch') {
+        delete rematchVotes[room];
+        gameInfra.in(room).emit('rematch_status', {votes: 0, required: remaining.length, voters: []});
+    }
+}
+
+// Chat arrives as a JSON string from the browser; anything malformed is dropped instead of crashing the server.
+function parseChatMessage(raw) {
+    if (typeof raw !== 'string') { return null; }
+    try {
+const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.message !== 'string') { return null; }
+        const escaped = parsed.message.replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+        return {type: parsed.type, message: escaped};
+    }
+    catch (error) {
+        return null;
+    }
+}
+
+function relayGameChat(socket, raw) {
+    const message = parseChatMessage(raw);
+    if (!message || message.type !== 'userMessage') { return; }
+    const player = siblingSocket(gameInfra, socket);
+    if (!player) { return; }
+    message.color = player.color;
+    message.username = player.username;
+    message.room = socket.room;
+
+    gameChat.push(message);
+    saveChat('gameChat.json', gameChat);
+
+    socket.to(socket.room).emit('message', JSON.stringify(message));
+    message.type = 'myMessage';
+    socket.send(JSON.stringify(message));
+}
+
+function relayLobbyChat(socket, raw) {
+    const message = parseChatMessage(raw);
+    if (!message || message.type !== 'userMessage') { return; }
+    message.username = socket.username;
+    message.timeStamp = Date.now();
+
+    lobbyChat.push(message);
+    if (lobbyChat.length > 80) { lobbyChat.shift(); }
+    message.index = lobbyChat.length - 1;
+
+    saveChat('lobbyChat.json', lobbyChat);
+
+    socket.broadcast.emit('message', JSON.stringify(message));
+    message.type = 'myMessage';
+    socket.send(JSON.stringify(message));
+}
+
+function removeLobbyMessage(socket, index) {
+    if (!socket.isGod || !Number.isInteger(index) || index < 0 || index >= lobbyChat.length) { return; }
+    lobbyChat.splice(index, 1);
+    saveChat('lobbyChat.json', lobbyChat);
+    lobbyCom.emit('render_messages', lobbyChat);
+}
+
+function broadcastUsersOnline() {
+    const usersOnline = [];
+    let guests = 0;
+    lobbyCom.sockets.forEach((lobbySocket) => {
+        if (lobbySocket.isGuest) {
+            guests += 1;
+        }
+        else if (lobbySocket.username && !usersOnline.some((online) => online.username === lobbySocket.username)) {
+            usersOnline.push({username: lobbySocket.username, activated: !lobbySocket.isUnverified, points: lobbySocket.points});
+        }
+    });
+    lobbyCom.emit('users_online', usersOnline, guests);
+}
+
+function findRoom(room) {
+    return lobbyRooms.find((gameRoom) => gameRoom.name === room);
+}
+
+function seatedIn(room) {
+    return playerSockets.filter((player) => player.room === room);
+}
+
+function broadcastRooms() {
+    gameInfra.emit('rooms_list', lobbyRooms, joinedPlayers);
+}
+
+function newRoom(numOfPlayers) {
+    return {name: nameGenerator(), players: 0, startingPlayers: numOfPlayers, status: 'open', mapId: 'original', host: null, allowBots: false};
+}
+
+// Starting a table's game puts a fresh empty table of the same size in the lobby.
+function openNewTable(numOfPlayers) {
+    lobbyRooms.push(newRoom(numOfPlayers));
+    broadcastRooms();
+}
+
+function startGame(roomInfo, players) {
+    newGames[roomInfo.name] = new GameBoard.GameBoard(players, io, roomInfo.name, roomInfo.mapId, lobbyHooks);
+    return newGames[roomInfo.name];
+}
+
+function saveChat(file, messages) {
+    fs.writeFile(file, JSON.stringify(messages), (error) => { });
+}
+
+function roomSettingsMessage(roomInfo) {
+    return {type: 'room_settings', mapId: roomInfo.mapId, allowBots: roomInfo.allowBots, host: roomInfo.host, status: roomInfo.status};
+}
+
+const ROOM_CLEANUP_DELAY = Number(process.env.ROOM_CLEANUP_DELAY_MS) || 30000;
+let cleanupTimers = {};
+
+function scheduleRoomCleanup(room) {
+    clearTimeout(cleanupTimers[room]);
+    cleanupTimers[room] = setTimeout(() => {
+        delete cleanupTimers[room];
+        if (seatedIn(room).length > 0) { return; }
+        const index = lobbyRooms.findIndex((gameRoom) => gameRoom.name === room);
+        if (index !== -1) { lobbyRooms.splice(index, 1); }
+        if (newGames[room]) { newGames[room].destroy(); }
+        delete newGames[room];
+        delete rematchVotes[room];
+        broadcastRooms();
+    }, ROOM_CLEANUP_DELAY);
+}
+
+function updatePlayerListInRoom(room) {
+    const seated = seatedIn(room);
+    const matchRanked = newGames[room] ? newGames[room].isRankedMatch() : rating.isRankedMatch(seated);
+    const players = seated.map((player) => ({
+        username: player.username,
+        points: player.points,
+        color: player.color,
+        ip: player.ip,
+        isBot: Boolean(player.isBot),
+        isGuest: Boolean(player.isGuest),
+        isUnverified: Boolean(player.isUnverified),
+        matchRanked: matchRanked
+    }));
+    if (newGames[room]) {
+        players.push(...newGames[room].getRoomPlayers().filter((participant) => participant.isBot));
     }
     return players;
 }
 
+// Recounts a table and moves it between open, waiting and starting; running games and rematches keep their status.
 function updateLobby(room) {
-    let playersInRoom = playerSockets.filter((x) => {
-        return x.room === room
-    }).length
-    for (let i in lobbyRooms) {
-        if (lobbyRooms[i].name === room) {
-            lobbyRooms[i].players = playersInRoom;
-            if(lobbyRooms[i].status === 'game in progress'){
-                break;
-            }
-            else if(lobbyRooms[i].status === 'game is starting' && playersInRoom === lobbyRooms[i].startingPlayers){
-                lobbyRooms[i].status = 'game in progress';
-            }
-            else if (playersInRoom === lobbyRooms[i].startingPlayers) {
-                lobbyRooms[i].status = 'game is starting';
-            }
-            else if (playersInRoom > 0) {
-                lobbyRooms[i].status = 'waiting for players';
-            }
-            else if (playersInRoom === 0) {
-                lobbyRooms[i].status = 'open';
-            }
-            break;
-        }
+    const humans = seatedIn(room).length;
+    const roomInfo = findRoom(room);
+    if (!roomInfo) { return humans; }
+    const playersInRoom = roomInfo.status === 'rematch' && newGames[room] ?
+        newGames[room].getPlayerCount() :
+        humans + (roomInfo.status === 'game in progress' ? roomInfo.botCount || 0 : 0);
+    roomInfo.players = playersInRoom;
+    if (roomInfo.status === 'game in progress' || roomInfo.status === 'rematch') { return playersInRoom; }
+
+    if (playersInRoom === roomInfo.startingPlayers) {
+        roomInfo.status = roomInfo.status === 'game is starting' ? 'game in progress' : 'game is starting';
+    }
+    else {
+        roomInfo.status = playersInRoom > 0 ? 'waiting for players' : 'open';
     }
     return playersInRoom;
 }
 
-function hasPlayerJoined(room, username, color) {
-    if(lobbyRooms.find(x=> x.name === room)){
-        for (let i in playerSockets) {
-            if (playerSockets[i].room === room && playerSockets[i].username === username) {
-                return false;  // Player already joined
-            }
-            else if (playerSockets[i].room === room && playerSockets[i].color === color) {
-                return false;  // color already choosen
-            }
+// A reconnecting player's old socket can outlive the drop until the ping timeout.
+function evictStaleSeat(room, socket) {
+    let evicted = false;
+    for (let index = playerSockets.length - 1; index >= 0; index -= 1) {
+        const seated = playerSockets[index];
+        if (seated !== socket && seated.room === room && seated.username === socket.username) {
+            seated.replaced = true;
+            playerSockets.splice(index, 1);
+            evicted = true;
         }
-        return true;
     }
-    return false; // room don't exist
+    if (!evicted) { return; }
+    for (let index = joinedPlayers.length - 1; index >= 0; index -= 1) {
+        if (joinedPlayers[index].room === room && joinedPlayers[index].username === socket.username) {
+            joinedPlayers.splice(index, 1);
+        }
+    }
+    updateLobby(room);
+}
+
+// A seat is free when the room exists and neither this player nor this colour is already seated there.
+function canTakeSeat(room, username, color) {
+    return Boolean(findRoom(room)) && !seatedIn(room).some((player) => player.username === username || player.color === color);
 }
 
 function nameGenerator(){
@@ -430,7 +576,7 @@ function nameGenerator(){
         let randomNumber2 = parseInt(Math.random() * animals.length);
         name = adjectives[randomNumber1] + "-" + animals[randomNumber2];
     }
-    while (lobbyRooms.find(x=> x.name === name));
+    while (findRoom(name));
 
     return name;
 }

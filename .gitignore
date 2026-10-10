@@ -1,8 +1,11 @@
 .idea/
 .idea
+.fallow
 .DS_Store
 .vscode
 gameChat.json
 /.cache
 node_modules
 mongot.com/mail.json
+general.mongot.com/test-results/
+general.mongot.com/playwright-report/

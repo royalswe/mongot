@@ -9,14 +9,16 @@ const mongoose = require('mongoose');
 const sessions = require('client-sessions');
 const flash = require('express-flash');
 const middleware = require('../middleware');
+const identity = require('./game/identity');
 const config = require('../config.json');
 const app = express();
 
 /**
- * Connect to mongoDB
+ * Connect to mongoDB outside isolated test runs.
  */
 mongoose.connect(config.PROD_DB)
     .catch(err => console.log(err));
+
 //mongoose.connect(config.PROD_DB);
 
 /**
@@ -41,6 +43,10 @@ app.use(helmet({
  * only uses when developing
  */
 //app.locals.pretty = true;
+
+// Production serves the gulp bundles (compress.js, lobby.min.js) instead of the separate source scripts.
+app.locals.useBundles = process.env.NODE_ENV === 'production';
+app.locals.rankIcon = require('./public/js/ranks');
 
 const port = process.env.PORT || 5100;
 var server = http.createServer(app).listen(port);
@@ -81,7 +87,7 @@ app.use(
 /**
  * Middleware, Refresh session on page loads
  */
-app.use(middleware.cookieAuth);
+app.use(process.env.NODE_ENV === 'test' ? identity.testCookieAuth : middleware.cookieAuth);
 
 /**
  * Routes

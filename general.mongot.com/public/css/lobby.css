@@ -1,0 +1,365 @@
+/* Lobby layout and components; shared chrome lives in site.css. */
+#lobby_page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
+    grid-template-areas:
+        "title title"
+        "rooms news"
+        "chat online";
+    gap: 22px 26px;
+    align-items: start;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 6px 24px 24px;
+}
+
+section#lobby {
+    display: contents;
+}
+
+section#lobby h1 {
+    grid-area: title;
+}
+
+#allrooms, #news_box, section#lobby_chat, section#users_online {
+    border: 3px solid var(--ink);
+    background-color: var(--paper-light);
+    box-shadow: 6px 6px 0 var(--ink);
+}
+
+#allrooms {
+    grid-area: rooms;
+    max-height: 430px;
+    overflow: auto;
+}
+
+#allrooms table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+#allrooms thead {
+    position: sticky;
+    top: 0;
+    background-color: var(--ink);
+    color: var(--paper);
+}
+
+#allrooms th {
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+#allrooms table th:last-child {
+    text-align: right;
+}
+
+#allrooms table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(35, 29, 23, .15);
+}
+
+#allrooms table td:first-child {
+    font-weight: 700;
+}
+
+#allrooms table td:last-child {
+    text-align: right;
+}
+
+#allrooms table tr:nth-child(even) {
+    background: var(--paper);
+}
+
+#allrooms .join-room {
+    display: inline-block;
+    padding: 5px 12px;
+    border: 2px solid var(--ink);
+    background-color: var(--green);
+    color: var(--paper);
+    box-shadow: 2px 2px 0 var(--ink);
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+#allrooms .watch-btn {
+    background-color: var(--blue);
+}
+
+#allrooms .join-room:hover {
+    background-color: var(--mustard);
+    color: var(--ink);
+}
+
+#allrooms .join-room:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+}
+
+#allrooms .disable-join-link {
+    opacity: .5;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+#news_box {
+    grid-area: news;
+    padding-bottom: 16px;
+    text-align: center;
+}
+
+.news-heading, section#lobby_chat::before, #user_online_list {
+    margin: 14px 0 10px;
+    padding: 6px 12px;
+    border-top: 3px solid var(--ink);
+    border-bottom: 3px solid var(--ink);
+    background: var(--mustard);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.news-heading:first-child, section#lobby_chat::before, #user_online_list {
+    margin-top: 0;
+    border-top: 0;
+}
+
+.news-text {
+    padding: 0 14px;
+    line-height: 1.3;
+}
+
+img.browsers {
+    display: block;
+    width: 80%;
+    margin: 0 auto;
+}
+
+.facebook-link {
+    display: inline-block;
+    margin: 4px 0 12px;
+    padding: 7px 12px;
+    border: 2px solid var(--ink);
+    background-color: var(--blue);
+    color: var(--paper);
+    box-shadow: 2px 2px 0 var(--ink);
+    font-weight: 700;
+    text-decoration: none;
+    text-transform: uppercase;
+}
+
+.facebook-link:hover {
+    background-color: var(--mustard);
+    color: var(--ink);
+}
+
+#toggle_notification {
+    display: none;
+}
+
+label[for=toggle_notification] {
+    display: block;
+    margin: 10px auto 0;
+    cursor: pointer;
+}
+
+input[type=checkbox]#toggle_notification + label {
+    width: 44px;
+    height: 44px;
+    background: url(../img/icons/bell-off.svg) no-repeat center / contain;
+}
+
+input[type=checkbox]:checked#toggle_notification + label {
+    width: 44px;
+    height: 44px;
+    background: url(../img/icons/bell.svg) no-repeat center / contain;
+}
+
+section#lobby_chat {
+    grid-area: chat;
+}
+
+section#lobby_chat::before {
+    content: 'Lobby chat';
+    display: block;
+}
+
+section#lobby_chat #messages {
+    height: 240px;
+    padding: 4px 14px 10px;
+    overflow: auto;
+    overflow-wrap: break-word;
+    line-height: 1.35;
+}
+
+section#lobby_chat #chat_input {
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+    border-top: 3px solid var(--ink);
+}
+
+section#lobby_chat input[type=text] {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 12px;
+    border: 3px solid var(--ink);
+    background: #fff;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 17px;
+    outline: 0;
+}
+
+section#lobby_chat input[type=text]:focus {
+    box-shadow: 3px 3px 0 var(--mustard);
+}
+
+section#lobby_chat input[type=submit] {
+    padding: 9px 24px;
+    border: 3px solid var(--ink);
+    background-color: var(--red);
+    color: var(--paper);
+    box-shadow: 3px 3px 0 var(--ink);
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+section#lobby_chat input[type=submit]:hover {
+    background-color: var(--mustard);
+    color: var(--ink);
+}
+
+section#lobby_chat input[type=submit]:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--ink);
+}
+
+span.name {
+    color: var(--red);
+    font-weight: 700;
+}
+
+span.chat-timeStamp {
+    color: #8a7d6a;
+}
+
+span.remove-message {
+    float: right;
+    color: var(--red);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+#messages .server-message {
+    color: var(--blue);
+    font-weight: 700;
+}
+
+section#users_online {
+    grid-area: online;
+    max-height: 340px;
+    padding-bottom: 8px;
+    overflow-y: auto;
+}
+
+section#users_online #user_online_list {
+    margin: 0 0 6px;
+}
+
+section#users_online p, section#users_online a {
+    display: block;
+    overflow: hidden;
+    margin: 5px 12px;
+    color: var(--ink);
+    font-weight: 700;
+    text-decoration: none;
+    text-overflow: ellipsis;
+}
+
+section#users_online a:hover {
+    color: var(--red);
+}
+
+section#users_online img {
+    width: 15px;
+    margin-right: 4px;
+}
+
+.admin-toggle {
+    display: inline-block;
+    float: right;
+    margin: 5px 5px 0 0;
+    padding: 8px 15px;
+    border: 2px solid var(--paper);
+    background-color: var(--ink);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.active-btn {
+    background-color: var(--red);
+}
+
+#admin_panel {
+    padding: 10px;
+    background-color: var(--ink);
+    border-bottom: 3px solid var(--mustard);
+}
+
+#admin_panel select {
+    margin-right: 5px;
+}
+
+@media screen and (max-width: 815px) {
+    #lobby_page {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "title"
+            "rooms"
+            "chat"
+            "online";
+        padding: 6px 12px 20px;
+    }
+
+    #news_box {
+        display: none;
+    }
+}
+
+@media screen and (max-width: 575px) {
+    #allrooms th:nth-child(4), #allrooms td:nth-child(4) {
+        display: none;
+    }
+
+    #allrooms th, #allrooms table td {
+        padding: 8px 5px;
+        font-size: 14px;
+    }
+
+    #allrooms .join-room {
+        padding: 4px 7px;
+        letter-spacing: .03em;
+    }
+}

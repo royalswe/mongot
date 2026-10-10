@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <g id="sword" stroke="#231d17" stroke-width="2.5" stroke-linejoin="round">
+      <path d="M32 4l5 6v29h-10v-29z" fill="#f4ead3"/>
+      <rect x="21" y="39" width="22" height="5" fill="#e8a820"/>
+      <rect x="29" y="44" width="6" height="10" fill="#c8372d"/>
+      <circle cx="32" cy="57" r="3.5" fill="#e8a820"/>
+    </g>
+  </defs>
+  <use href="#sword" transform="rotate(-45 32 32)"/>
+  <use href="#sword" transform="rotate(45 32 32)"/>
+</svg>
