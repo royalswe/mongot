@@ -70,16 +70,16 @@ function createWorld() {
         'Ural', 'Siberia', 'Yakutsk', 'Kamchatka', 'Irkutsk', 'Mongolia', 'Japan', 'Afghanistan', 'Middle East', 'India', 'Siam', 'China',
         'Indonesia', 'New Guinea', 'Western Australia', 'Eastern Australia'
     ];
-    // Hand-tuned so markers, labels and routes never overlap each other or the board icons.
+    // Centers favor the widest interior of each reference territory.
     const coordinatePairs = [
-        [70,118],[180,118],[355,92],[150,218],[250,218],[350,205],[160,318],[275,318],[215,418],
-        [265,505],[220,612],[345,598],[265,718],
-        [470,112],[590,100],[700,190],[470,220],[585,212],[470,322],[595,318],
-        [495,462],[625,440],[680,548],[560,580],[590,700],[730,692],
-        [800,138],[895,98],[990,78],[1092,108],[985,185],[965,305],[1085,315],[815,288],[725,440],[850,478],[965,478],[905,385],
-        [960,590],[1075,598],[965,728],[1075,738]
+        [91,134],[179,132],[402,88],[183,201],[247,217],[333,211],[183,287],[272,316],[179,364],
+        [265,467],[295,577],[366,546],[304,658],
+        [489,178],[565,187],[690,208],[484,287],[576,280],[487,400],[602,358],
+        [526,527],[622,479],[657,546],[614,621],[633,719],[730,718],
+        [788,200],[837,122],[932,112],[1030,121],[919,198],[935,296],[1046,306],[774,313],[701,415],[837,437],[916,463],[933,382],
+        [942,597],[1042,577],[983,722],[1046,681]
     ];
-    const positions = coordinatePairs.map(([x, y]) => ({x, y}));
+    const positions = coordinatePairs.map(([x, y]) => ({x, y, radius: 20}));
     const countries = names.map((name, id) => ({id, name, gold: 2, units: 1, neighbour: []}));
     const id = Object.fromEntries(names.map((name, index) => [name, index]));
     const links = [
@@ -345,7 +345,7 @@ function cloneMap(map) {
             gold: region.gold,
             countries: region.countries.slice()
         })),
-        positions: map.positions && map.positions.map((position) => ({ x: position.x, y: position.y })),
+        positions: map.positions && map.positions.map((position) => ({ x: position.x, y: position.y, radius: position.radius })),
         seaLinks: map.seaLinks && map.seaLinks.map((link) => link.slice()),
         wrapLinks: map.wrapLinks && map.wrapLinks.map((link) => link.slice())
     };

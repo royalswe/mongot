@@ -17,7 +17,41 @@ function sendUnitsOnSubmit(eventName, fromId, toId, toOwner) {
         event.preventDefault();
         gameInfra.emit(eventName, parseInt(fromId, 10), parseInt(toId, 10), parseInt(toOwner, 10), parseInt(document.getElementById('unit_output').value, 10));
         document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); });
+        clearActionSelection();
+        drawMap();
     });
+}
+
+function clearActionSelection() {
+    attackFrom = null;
+    countryFrom = null;
+    clearRouteSelection();
+}
+
+function actionTargets(sourceId, action) {
+    var source = getCountry(sourceId);
+    if (!source || source.country.units <= 1) { return []; }
+    return source.country.neighbour.filter(function (neighborId) {
+        var neighbor = getCountry(neighborId);
+        if (!neighbor) { return false; }
+        return action === 'battle' ? neighbor.owner !== activePlayer : neighbor.owner === activePlayer;
+    });
+}
+
+function selectActionOrigin(id, marker, action) {
+    var targets = actionTargets(id, action);
+    if (!targets.length) {
+        clearActionSelection();
+        drawMap();
+        return;
+    }
+    clearRouteSelection();
+    drawMap();
+    document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); });
+    markSelected(marker, 'from');
+    if (action === 'battle') { attackFrom = id; }
+    else { countryFrom = id; }
+    showRouteSelection(id, targets);
 }
 
 /**
@@ -26,30 +60,28 @@ function sendUnitsOnSubmit(eventName, fromId, toId, toOwner) {
 var attackFrom;
 
 function battle(latestClickedCountry, thisCountry) {
-
+    latestClickedCountry = Number(latestClickedCountry);
     var country = getCountry(latestClickedCountry);
-
-    if (attackFrom && country && country.owner !== activePlayer) {
-
-        var attackersCountry = getCountry(attackFrom);
-
-        // Check that countries are neighbours and more than one unit
-        if(country.country.neighbour.indexOf(attackersCountry.country.id) > -1 && attackersCountry.country.units > 1){
-            showUnitBar(attackersCountry.country.units, latestClickedCountry);
-            markSelected(thisCountry, 'to', country.color);
+    if (!country) { return; }
+    if (country.owner === activePlayer) {
+        if (attackFrom === latestClickedCountry) {
+            clearActionSelection();
+            drawMap();
+            return;
         }
-        else { drawMap(); } // Remove highlights
-
-        attackFrom = null; // makes it possible to make a new country choise
-        sendUnitsOnSubmit('battle', attackersCountry.country.id, latestClickedCountry, country.owner);
+        selectActionOrigin(latestClickedCountry, thisCountry, 'battle');
+        return;
     }
+    if (attackFrom == null) { return; }
 
-    if (country && country.owner === activePlayer)  {
-        drawMap(); // Remove current highlight from circle
-        document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); });
-        markSelected(thisCountry, 'from');
-        attackFrom = latestClickedCountry;
-    }
+    var attackersCountry = getCountry(attackFrom);
+    if (!attackersCountry || actionTargets(attackFrom, 'battle').indexOf(latestClickedCountry) === -1) { return; }
+    var fromId = attackFrom;
+    showUnitBar(attackersCountry.country.units, latestClickedCountry);
+    markSelected(thisCountry, 'to', country.color);
+    showRouteSelection(fromId, [latestClickedCountry], latestClickedCountry);
+    attackFrom = null;
+    sendUnitsOnSubmit('battle', fromId, latestClickedCountry, country.owner);
 }
 
 /**
@@ -57,30 +89,30 @@ function battle(latestClickedCountry, thisCountry) {
  */
 var countryFrom;
 function tacticalMove(latestClickedCountry, thisCountry) {
-
+    latestClickedCountry = Number(latestClickedCountry);
     var country = getCountry(latestClickedCountry);
-
-    if (country.owner === activePlayer && countryFrom == null)  {
-        drawMap(); // Remove current highlight from circle
-        document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); });
-        markSelected(thisCountry, 'from');
-        countryFrom = latestClickedCountry;
+    if (!country || country.owner !== activePlayer) { return; }
+    if (countryFrom == null) {
+        selectActionOrigin(latestClickedCountry, thisCountry, 'tactical_move');
+        return;
+    }
+    if (latestClickedCountry === countryFrom) {
+        clearActionSelection();
+        drawMap();
+        return;
     }
 
-    if (countryFrom && country.owner === activePlayer && latestClickedCountry !== countryFrom) {
-
-        var fromCountry = getCountry(countryFrom);
-
-        //Check that countries are neighbours and more than one unit
-        if(country.country.neighbour.indexOf(fromCountry.country.id) > -1 && fromCountry.country.units > 1){
-            showUnitBar(fromCountry.country.units, latestClickedCountry);
-            markSelected(thisCountry, 'to');
-        }
-        else { drawMap(); } // Remove highlights
-
-        countryFrom = null; // makes it possible to make a new country choise
-        sendUnitsOnSubmit('tactical_move', fromCountry.country.id, latestClickedCountry, country.owner);
+    var fromCountry = getCountry(countryFrom);
+    if (actionTargets(countryFrom, 'tactical_move').indexOf(latestClickedCountry) === -1) {
+        return;
     }
+
+    var fromId = countryFrom;
+    showUnitBar(fromCountry.country.units, latestClickedCountry);
+    markSelected(thisCountry, 'to');
+    showRouteSelection(fromId, [latestClickedCountry], latestClickedCountry);
+    countryFrom = null;
+    sendUnitsOnSubmit('tactical_move', fromId, latestClickedCountry, country.owner);
 }
 
 function showUnitBar(units, clickedCountry) {
@@ -139,5 +171,6 @@ function positionUnitBar() {
 document.getElementById('game_board').addEventListener('click', function (event) {
     if (!event.target.closest('#cancel_units')) { return; }
     document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); });
+    clearActionSelection();
     drawMap();
 });

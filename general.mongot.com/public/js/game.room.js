@@ -83,6 +83,9 @@ gameInfra.on('message', function (msg) {
         case "phase":
             phase = msg.message;
             phaseMessage = msg.phaseMsg
+            if (typeof clearActionSelection === 'function') {
+                clearActionSelection();
+            }
 
                 if (!document.querySelector('.show-mission, .show-gold')) { // Dont change game information if user watching gold
                     document.querySelector('.phase-message').innerHTML = '<div class="show-phase">Phase: ' + phase + '</div>';

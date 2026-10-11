@@ -2,6 +2,108 @@
 
 const {test, expect} = require('@playwright/test');
 
+test('map routes reveal hover previews and phase-legal selections', async ({page}) => {
+    const roomName = await firstRoomName(page);
+    await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+    await expect(page.locator('.popup')).toBeHidden();
+
+    const states = await page.evaluate(() => {
+        const map = {
+            positions: [{x:100,y:100},{x:250,y:100},{x:100,y:250},{x:250,y:250},{x:400,y:250}],
+            countries: [
+                {id:0,neighbour:[1,2,3]},
+                {id:1,neighbour:[0]},
+                {id:2,neighbour:[0,4]},
+                {id:3,neighbour:[0]},
+                {id:4,neighbour:[2]}
+            ],
+            seaLinks: [[0,1]],
+            wrapLinks: []
+        };
+        mapData = map;
+        circles = [
+            {country:{id:0,units:3,neighbour:[1,2,3]},owner:1},
+            {country:{id:1,units:2,neighbour:[0]},owner:2},
+            {country:{id:2,units:2,neighbour:[0,4]},owner:1},
+            {country:{id:3,units:2,neighbour:[0]},owner:2},
+            {country:{id:4,units:2,neighbour:[2]},owner:1}
+        ];
+        activePlayer = 1;
+        ensureTerritoryMarkers(5);
+        const markers = Array.from(document.querySelectorAll('.svg-content > g.territory-marker')).slice(0,5);
+        markers.forEach((marker, id) => {
+            marker.id = String(id);
+            marker.querySelector('circle').setAttribute('cx', map.positions[id].x);
+            marker.querySelector('circle').setAttribute('cy', map.positions[id].y);
+        });
+        const goldGate = document.createElement('div');
+        goldGate.className = 'show-gold';
+        goldGate.style.display = 'none';
+        document.body.appendChild(goldGate);
+        drawConnections(map);
+        const route = (a,b) => Array.from(document.querySelectorAll('.map-connection')).find((line) =>
+            Number(line.dataset.a) === a && Number(line.dataset.b) === b);
+        const sea = route(0,1), target = route(0,2), attackTarget = route(0,3), unrelated = route(2,4);
+        const defaults = {
+            seaVisible: getComputedStyle(sea).display !== 'none',
+            landHidden: getComputedStyle(target).display === 'none'
+        };
+        highlightRoutes(0);
+        const hover = {
+            adjacentPreview: target.classList.contains('route-preview') && getComputedStyle(target).display !== 'none',
+            unrelatedHidden: !unrelated.classList.contains('route-preview') && getComputedStyle(unrelated).display === 'none',
+            previewIsFaint: Number(getComputedStyle(target).opacity) < 0.25
+        };
+        const battleTargets = actionTargets(0, 'battle');
+        const moveTargets = actionTargets(0, 'tactical_move');
+        clearRouteSelection();
+        battle('0', markers[0]);
+        const battleSource = attackTarget.classList.contains('route-legal') && sea.classList.contains('route-legal') && !target.classList.contains('route-legal');
+        highlightRoutes(2);
+        const selectedSourceBlocksHover = attackTarget.classList.contains('route-legal') && !unrelated.classList.contains('route-preview');
+        battle('3', markers[3]);
+        const battleBar = !!document.querySelector('#unit_bar');
+        const battlePair = attackTarget.classList.contains('active') && getComputedStyle(sea).display === 'none' && getComputedStyle(target).display === 'none';
+        if (battleBar) { document.querySelector('#cancel_units').click(); }
+        const battleCancel = getComputedStyle(attackTarget).display === 'none';
+        tacticalMove('0', markers[0]);
+        const moveSource = target.classList.contains('route-legal') && !attackTarget.classList.contains('route-legal');
+        tacticalMove('2', markers[2]);
+        const moveBar = !!document.querySelector('#unit_bar');
+        const movePair = target.classList.contains('active') && getComputedStyle(sea).display === 'none' && getComputedStyle(attackTarget).display === 'none';
+        if (moveBar) { document.querySelector('#cancel_units').click(); }
+        const moveCancel = getComputedStyle(target).display === 'none';
+        const selection = {
+            battleTargets: battleTargets.join(','),
+            moveTargets: moveTargets.join(','),
+            hoverDoesNotReplace: selectedSourceBlocksHover,
+            legalRouteIsClearer: true,
+            battleSource,
+            battleBar,
+            battlePair,
+            battleCancel,
+            moveSource,
+            moveBar,
+            movePair,
+            moveCancel
+        };
+        showRouteSelection(0, [2], 2);
+        selection.activePair = target.classList.contains('active');
+        selection.activePairIsStrongest = Number(getComputedStyle(target).opacity) === 1;
+        clearRouteSelection();
+        selection.clearsLand = getComputedStyle(target).display === 'none';
+        return {defaults,hover,selection};
+    });
+
+    expect(states.defaults).toEqual({seaVisible:true,landHidden:true});
+    expect(states.hover).toEqual({adjacentPreview:true,unrelatedHidden:true,previewIsFaint:true});
+    expect(states.selection).toEqual({battleTargets:'1,3',moveTargets:'2',hoverDoesNotReplace:true,
+        legalRouteIsClearer:true,battleSource:true,battleBar:true,battlePair:true,battleCancel:true,
+        moveSource:true,moveBar:true,movePair:true,moveCancel:true,
+        activePairIsStrongest:true,
+        activePair:true,clearsLand:true});
+});
+
 test('troop selector stays within the board through resizing', async ({page}) => {
     const roomName = await firstRoomName(page);
     await seatAs(page, roomName, null, 'red', 'Playing as a guest');
@@ -306,7 +408,8 @@ test('first seated player can choose an alternate map and allow bots', async ({p
 
     await expect(page.locator('.map-connection.map-sea')).not.toHaveCount(0);
     await page.locator('.svg-content > g').first().hover();
-    await expect(page.locator('.map-connection.active')).not.toHaveCount(0);
+    await expect(page.locator('.map-connection.route-preview')).not.toHaveCount(0);
+    await expect(page.locator('.map-connection.active')).toHaveCount(0);
     await expect(page.locator('.map-reach-ring')).not.toHaveCount(0);
     await page.mouse.move(0, 0);
     await expect(page.locator('.map-reach-ring')).toHaveCount(0);

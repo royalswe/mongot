@@ -4,8 +4,10 @@ var disabledCountries = [];
 var countriesGold = [];
 var mapContinents = [];
 var mapData;
+var routeSelection = null;
 
 gameInfra.on('map_info', function (map) {
+    clearRouteSelection();
     mapData = map;
     countriesGold = map.countries.map(function (country) {
         return { id: country.id, gold: country.gold };
@@ -77,6 +79,8 @@ function applyMapPositions(map) {
         circle.getBoundingClientRect();
         circle.style.transition = '';
         text.setAttribute('x', position.x);
+        circle.setAttribute('r', 20);
+        text.style.removeProperty('font-size');
         text.setAttribute('y', position.y + 7);
         group.id = id;
         var title = group.querySelector('title') || document.createElementNS('http://www.w3.org/2000/svg', 'title');
@@ -86,6 +90,7 @@ function applyMapPositions(map) {
 }
 
 function drawConnections(map) {
+    clearRouteSelection();
     document.querySelectorAll('.map-connection, .map-connection-casing').forEach(function (line) { line.remove(); });
     var svg = document.querySelector('.svg-content');
     var routeKey = function (link) { return Math.min(link[0], link[1]) + '-' + Math.max(link[0], link[1]); };
@@ -109,8 +114,9 @@ function drawConnections(map) {
                 segments = [[from, {x: to.x - shift, y: to.y}], [to, {x: from.x + shift, y: from.y}]];
                 isSea = true;
             }
+            var routeClass = isSea ? 'map-sea' : 'map-land';
             segments.forEach(function (segment) {
-                [['map-connection-casing', casings], ['map-connection' + (isSea ? ' map-sea' : ''), routes]].forEach(function (style) {
+                [['map-connection-casing ' + routeClass, casings], ['map-connection ' + routeClass, routes]].forEach(function (style) {
                     var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                     line.setAttribute('class', style[0]);
                     line.dataset.a = country.id;
@@ -128,27 +134,28 @@ function drawConnections(map) {
     svg.insertBefore(casings, svg.firstChild);
 }
 
-// Hovering a territory shows where it connects and which neighbours are enemies (red) or friends (green).
-function clearRouteHighlight() {
+function clearRouteElements() {
     document.querySelector('.svg-content').classList.remove('route-focus');
-    document.querySelectorAll('.map-connection.active, .map-connection-casing.active').forEach(function (line) { line.classList.remove('active'); });
+    document.querySelector('.svg-content').classList.remove('route-selection');
+    document.querySelectorAll('.map-connection.route-preview, .map-connection-casing.route-preview, .map-connection.route-legal, .map-connection-casing.route-legal, .map-connection.active, .map-connection-casing.active').forEach(function (line) {
+        line.classList.remove('route-preview', 'route-legal', 'active');
+    });
     document.querySelectorAll('.map-reach-ring').forEach(function (ring) { ring.remove(); });
 }
 
-function highlightRoutes(id) {
-    clearRouteHighlight();
-    if (!mapData || !mapData.positions || !mapData.countries[id]) { return; }
+function clearRouteSelection() {
+    routeSelection = null;
+    clearRouteElements();
+}
+
+function appendReachRings(originId, targetIds) {
     var svg = document.querySelector('.svg-content');
-    var hovered = getCountry(id);
-    svg.classList.add('route-focus');
-    document.querySelectorAll('.map-connection, .map-connection-casing').forEach(function (line) {
-        if (Number(line.dataset.a) === id || Number(line.dataset.b) === id) { line.classList.add('active'); }
-    });
-    mapData.countries[id].neighbour.forEach(function (neighborId) {
+    var origin = getCountry(originId);
+    targetIds.forEach(function (neighborId) {
         var neighbor = getCountry(neighborId);
         var position = mapData.positions[neighborId];
         var ring = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-        var relation = !hovered || !neighbor ? '' : (hovered.owner === neighbor.owner ? ' friendly' : ' enemy');
+        var relation = !origin || !neighbor ? '' : (origin.owner === neighbor.owner ? ' friendly' : ' enemy');
         ring.setAttribute('class', 'map-reach-ring' + relation);
         ring.setAttribute('cx', position.x);
         ring.setAttribute('cy', position.y);
@@ -156,6 +163,48 @@ function highlightRoutes(id) {
         ring.setAttribute('ry', 27);
         svg.appendChild(ring);
     });
+}
+
+function showRouteSelection(originId, targetIds, activeTargetId) {
+    originId = Number(originId);
+    targetIds = targetIds.map(Number);
+    if (activeTargetId !== undefined && activeTargetId !== null) { activeTargetId = Number(activeTargetId); }
+    if (!mapData || !mapData.positions || !mapData.countries[originId]) {
+        clearRouteSelection();
+        return;
+    }
+    routeSelection = {originId: originId, targetIds: targetIds.slice(), activeTargetId: activeTargetId};
+    clearRouteElements();
+    var svg = document.querySelector('.svg-content');
+    svg.classList.add('route-focus', 'route-selection');
+    document.querySelectorAll('.map-connection, .map-connection-casing').forEach(function (line) {
+        var a = Number(line.dataset.a), b = Number(line.dataset.b);
+        var targetId = a === originId ? b : b === originId ? a : null;
+        if (targetId === null || targetIds.indexOf(targetId) === -1) { return; }
+        line.classList.add('route-legal');
+        if (targetId === activeTargetId) { line.classList.add('active'); }
+    });
+    appendReachRings(originId, targetIds);
+}
+
+// Hover previews every adjacent territory; a selected action keeps priority over hover.
+function highlightRoutes(id) {
+    if (routeSelection) { return; }
+    clearRouteElements();
+    if (!mapData || !mapData.positions || !mapData.countries[id]) { return; }
+    var svg = document.querySelector('.svg-content');
+    svg.classList.add('route-focus');
+    document.querySelectorAll('.map-connection, .map-connection-casing').forEach(function (line) {
+        if ((Number(line.dataset.a) === id || Number(line.dataset.b) === id) && line.classList.contains('map-land')) {
+            line.classList.add('route-preview');
+        }
+    });
+    appendReachRings(id, mapData.countries[id].neighbour);
+}
+
+function clearRouteHighlight() {
+    if (routeSelection) { return; }
+    clearRouteElements();
 }
 
 document.addEventListener('mouseover', function (event) {

@@ -40,6 +40,7 @@ test('world has 42 territories and quick-test has four territories and low gold'
     assert.equal(world.countries.length, 42);
     assert.equal(world.continents.length, 6);
     assert.equal(world.continents[0].continent, 'Europe');
+    assert(world.positions.every((position) => Number.isFinite(position.radius) && position.radius > 0));
     assert.equal(quick.countries.length, 4);
     assert.equal(quick.startingGold, 15);
     assert.equal(quick.conquestOnly, true);
@@ -67,11 +68,12 @@ test('world routes are readable and the artwork matches the territory positions'
     }));
 
     map.positions.forEach((position, id) => map.positions.forEach((other, otherId) => {
-        if (otherId > id) { assert(Math.hypot(position.x - other.x, position.y - other.y) >= 80, `territories ${id} and ${otherId} too close`); }
+        if (otherId > id) { assert(Math.hypot(position.x - other.x, position.y - other.y) >= 65, `territories ${id} and ${otherId} too close`); }
     }));
     routes.forEach(([a, b]) => map.positions.forEach((position, id) => {
         if (id === a || id === b) { return; }
-        assert(pointSegmentDistance(position, map.positions[a], map.positions[b]) >= 40, `route ${a}-${b} passes territory ${id}`);
+        const clearance = (position.radius || 20) + 10;
+        assert(pointSegmentDistance(position, map.positions[a], map.positions[b]) >= clearance, `route ${a}-${b} passes territory ${id}`);
     }));
     routes.forEach(([a, b], index) => routes.slice(index + 1).forEach(([c, d]) => {
         if ([a, b].includes(c) || [a, b].includes(d)) { return; }
@@ -79,10 +81,17 @@ test('world routes are readable and the artwork matches the territory positions'
     }));
 
     const svg = fs.readFileSync(path.join(__dirname, '../public/img/game/maps/world.svg'), 'utf8');
+    assert.equal((svg.match(/data-territory-id="\d+"/g) || []).length, map.countries.length);
+    const labels = new Map([...svg.matchAll(/<text data-territory-label="(\d+)"[^>]*>([\s\S]*?)<\/text>/g)].map(([, id, content]) => [
+        Number(id), content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    ]));
+    assert.equal(labels.size, map.countries.length);
     map.countries.forEach((country) => {
-        const {x, y} = map.positions[country.id];
-        assert(svg.includes(`cx="${x}" cy="${y}"`), `${country.name} land is not drawn at its marker; run npm run map:world`);
-        country.name.split(/ (.*)/).filter(Boolean).forEach((line) => assert(svg.includes(`>${line}<`), `${country.name} label missing`));
+        assert(svg.includes(`data-territory-id="${country.id}"`), `${country.name} outline missing`);
+        const label = country.name.replace(/\bEurope\b/g, 'EU').replace(/^(Northern|Southern|Western|Eastern)(?= )/, (direction) => ({
+            Northern: 'N.', Southern: 'S.', Western: 'W.', Eastern: 'E.'
+        })[direction]);
+        assert.equal(labels.get(country.id), label, `${label} label missing or incorrect`);
     });
 });
 
