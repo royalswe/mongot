@@ -147,6 +147,7 @@ test('a tactical move shifts troops between own neighbours and ends the turn', (
 
     assert.equal(table.territory(from).units, 2);
     assert.equal(table.territory(to).units, arriving + 3);
+    assert.deepEqual(table.broadcasts.filter((entry) => entry.event === 'move_animation').pop().args, [from, to, 3]);
     assert.equal(table.phase(), 'Deploy');
     assert.equal(table.active(), defender);
 });
@@ -263,18 +264,21 @@ test('an active player who reconnects can act in the current turn phase', (t) =>
     let socket = reconnect();
     assert(socket.can('deploy'));
     assert(socket.can('next_turn'));
+    assert(socket.sent.some((message) => message.type === 'current_player' && message.bool));
 
     socket.act('next_turn');
     socket = reconnect();
     assert.equal(table.phase(), 'Battle');
     assert(socket.can('battle'));
     assert(socket.can('next_turn'));
+    assert(socket.sent.some((message) => message.type === 'current_player' && message.bool));
 
     socket.act('next_turn');
     socket = reconnect();
     assert.equal(table.phase(), 'Tactical move');
     assert(socket.can('tactical_move'));
     assert(socket.can('next_turn'));
+    assert(socket.sent.some((message) => message.type === 'current_player' && message.bool));
 });
 
 test('an admin can kick a player out of the game', (t) => {

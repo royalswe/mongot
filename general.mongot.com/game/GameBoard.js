@@ -92,7 +92,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
                     }
                     socket.send({
                         type: 'current_player',
-                        bool: false,
+                        bool: ap === i,
                         player: ap,
                         username: PlayerList[ap].username,
                         color: PlayerList[ap].color
@@ -517,7 +517,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
                 setCountryUnits(ap, moveToCountry, units + moveToCountryUnits);
 
                 this.renderGame();
-                gameInfra.in(room).emit('bounce_country', moveToCountry); // give moved units bounce effect
+                gameInfra.in(room).emit('move_animation', moveFromCountry, moveToCountry, units);
                 this.determineVictor();
                 return this.nextTurn();
             }
@@ -583,8 +583,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
                 }
                 this.renderGame();
 
-                gameInfra.in(room).emit('nuke_country', defendCountry); // give attacked country nuke effect
-                gameInfra.in(room).emit('attacker_animation', attackCountry); // give attack country bounce effect
+                gameInfra.in(room).emit('attack_animation', attackCountry, defendCountry);
 
                 let attackerLost = attackerUnits - unitsSent;
                 let defenderLost = getDefenderUnits - defenderUnits;

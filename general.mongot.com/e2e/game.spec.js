@@ -104,6 +104,81 @@ test('map routes reveal hover previews and phase-legal selections', async ({page
         activePair:true,clearsLand:true});
 });
 
+test('the attack tank follows the pointer, locks on the target, and fires into a blast', async ({page}) => {
+    const roomName = await firstRoomName(page);
+    await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+    await expect(page.locator('.popup')).toBeHidden();
+    await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
+
+    const turretAngle = () => page.locator('.attack-tank .tank-turret').evaluate((turret) =>
+        Number(/rotate\(([-\d.e]+)\)/.exec(turret.getAttribute('transform'))[1]));
+    const markerPoint = (id) => page.evaluate((markerId) => {
+        const bounds = document.getElementsByTagName('circle')[markerId].getBoundingClientRect();
+        return {x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2};
+    }, id);
+
+    await page.evaluate(() => {
+        const positions = [{x: 300, y: 300}, {x: 500, y: 300}, {x: 300, y: 500}];
+        const markers = Array.from(document.querySelectorAll('.svg-content > g.territory-marker')).slice(0, 3);
+        markers.forEach((marker, id) => {
+            marker.id = String(id);
+            marker.querySelector('circle').style.transition = 'none';
+            marker.querySelector('circle').setAttribute('cx', positions[id].x);
+            marker.querySelector('circle').setAttribute('cy', positions[id].y);
+        });
+        circles = [
+            {country: {id: 0, units: 5, neighbour: [1, 2]}, owner: 1, color: 'red'},
+            {country: {id: 1, units: 2, neighbour: [0]}, owner: 2, color: 'blue'},
+            {country: {id: 2, units: 2, neighbour: [0]}, owner: 2, color: 'blue'}
+        ];
+        activePlayer = 1;
+        battle('0', markers[0]);
+    });
+    await expect(page.locator('.attack-tank')).toHaveCount(1);
+
+    const right = await markerPoint(1);
+    await page.mouse.move(right.x, right.y);
+    expect(Math.abs(await turretAngle())).toBeLessThan(20);
+    const below = await markerPoint(2);
+    await page.mouse.move(below.x, below.y);
+    expect(await turretAngle()).toBeGreaterThan(60);
+
+    await page.evaluate(() => battle('1', document.getElementById('1')));
+    const lockedAngle = await turretAngle();
+    expect(Math.abs(lockedAngle)).toBeLessThan(20);
+    await page.mouse.move(below.x, below.y);
+    expect(await turretAngle()).toBe(lockedAngle);
+
+    await page.locator('#cancel_units').click();
+    await expect(page.locator('.attack-tank')).toHaveCount(0);
+
+    await page.evaluate(() => gameInfra.listeners('attack_animation').forEach((listener) => listener(0, 1)));
+    await expect(page.locator('.attack-tank')).toHaveCount(1);
+    await expect(page.locator('.map-blast')).toHaveCount(1);
+    await expect(page.locator('.attack-tank, .map-blast, .tank-shell, .muzzle-flash')).toHaveCount(0, {timeout: 3000});
+});
+
+test('tactical moves drive a convoy between territories and deploys float a +1', async ({page}) => {
+    const roomName = await firstRoomName(page);
+    await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+    await expect(page.locator('.popup')).toBeHidden();
+    await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
+
+    await page.evaluate(() => {
+        circles = [{country: {id: 0, units: 2, neighbour: [1]}, owner: 1, color: 'red'}, {country: {id: 1, units: 9, neighbour: [0]}, owner: 1, color: 'red'}];
+        mapData = Object.assign({}, mapData, {seaLinks: [], wrapLinks: []});
+        gameInfra.listeners('move_animation').forEach((listener) => listener(0, 1, 7));
+    });
+    await expect(page.locator('.convoy-vehicle')).toHaveCount(3);
+    await expect(page.locator('.unit-change.loss')).toHaveText('-7');
+    await expect(page.locator('.unit-change.gain')).toHaveText('+7', {timeout: 2000});
+    await expect(page.locator('.convoy-vehicle, .unit-change')).toHaveCount(0, {timeout: 3000});
+
+    await page.evaluate(() => gameInfra.listeners('bounce_country').forEach((listener) => listener(0)));
+    await expect(page.locator('.unit-change.gain')).toHaveText('+1');
+    await expect(page.locator('.unit-change')).toHaveCount(0, {timeout: 2000});
+});
+
 test('troop selector stays within the board through resizing', async ({page}) => {
     const roomName = await firstRoomName(page);
     await seatAs(page, roomName, null, 'red', 'Playing as a guest');
@@ -555,6 +630,62 @@ test('battle and tactical move forms submit the selected troop counts', async ({
     await page.locator('#unit_output').fill('2');
     await page.locator('#send_units').click();
     await expect.poll(() => page.evaluate(() => window.__gameEvents[1])).toEqual(['tactical_move', 0, 1, 0, 2]);
+});
+
+test('game room sound preference persists across reloads', async ({page}) => {
+    await page.goto('/game');
+    const soundToggle = page.locator('#toggle_game_sound');
+
+    for (const viewport of [{width: 320, height: 568}, {width: 1280, height: 800}]) {
+        await page.setViewportSize(viewport);
+        const soundControlPosition = await page.evaluate(() => {
+            const sound = document.getElementById('toggle_game_sound');
+            const dice = document.querySelector('.dice-log');
+            const flag = document.querySelector('.surrender-flag');
+            const originalDisplay = flag.style.display;
+            flag.classList.add('is-visible');
+            const diceBounds = dice.getBoundingClientRect();
+            const flagBounds = flag.getBoundingClientRect();
+            const soundBounds = sound.getBoundingClientRect();
+            const mapBounds = document.querySelector('.svg-container').getBoundingClientRect();
+            flag.classList.remove('is-visible');
+            flag.style.display = originalDisplay;
+            return {
+                inMapOverlay: sound.parentElement.classList.contains('svg-container'),
+                sharesControlRow: Math.abs(soundBounds.top - diceBounds.top) < 1 && Math.abs(soundBounds.top - flagBounds.top) < 1,
+                betweenIcons: soundBounds.left > diceBounds.right && soundBounds.right < flagBounds.left,
+                sameSize: Math.abs(soundBounds.width - diceBounds.width) < 1 && Math.abs(soundBounds.width - flagBounds.width) < 1
+                    && Math.abs(soundBounds.height - diceBounds.height) < 1 && Math.abs(soundBounds.height - flagBounds.height) < 1,
+                insideMap: soundBounds.left >= mapBounds.left && soundBounds.right <= mapBounds.right
+            };
+        });
+        expect(soundControlPosition).toEqual({inMapOverlay: true, sharesControlRow: true, betweenIcons: true, sameSize: true, insideMap: true});
+    }
+    await expect(page.getByRole('button', {name: 'Open dice log'})).toBeVisible();
+    await expect(soundToggle).toHaveAttribute('aria-label', 'Mute game sounds');
+    await expect(soundToggle.locator('i')).toHaveClass(/fa-volume-up/);
+    await expect(soundToggle).toHaveAttribute('aria-pressed', 'false');
+    expect(await page.evaluate(() => Howler._muted)).toBe(false);
+
+    await soundToggle.click();
+    await expect(soundToggle).toHaveAttribute('aria-label', 'Unmute game sounds');
+    await expect(soundToggle.locator('i')).toHaveClass(/fa-volume-off/);
+    await expect(soundToggle).toHaveAttribute('aria-pressed', 'true');
+    expect(await page.evaluate(() => localStorage.getItem('general_game_room_sound_muted'))).toBe('true');
+    expect(await page.evaluate(() => Howler._muted)).toBe(true);
+
+    await page.reload();
+    await expect(soundToggle).toHaveAttribute('aria-label', 'Unmute game sounds');
+    await expect(soundToggle.locator('i')).toHaveClass(/fa-volume-off/);
+    await expect(soundToggle).toHaveAttribute('aria-pressed', 'true');
+    expect(await page.evaluate(() => Howler._muted)).toBe(true);
+
+    await soundToggle.click();
+    await page.reload();
+    await expect(soundToggle).toHaveAttribute('aria-label', 'Mute game sounds');
+    await expect(soundToggle.locator('i')).toHaveClass(/fa-volume-up/);
+    await expect(soundToggle).toHaveAttribute('aria-pressed', 'false');
+    expect(await page.evaluate(() => Howler._muted)).toBe(false);
 });
 
 test('game room controls switch views, toggle chat, and send a room message', async ({page}) => {

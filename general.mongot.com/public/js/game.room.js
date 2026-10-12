@@ -68,11 +68,39 @@ var activePlayer;
 var playerEnabled;
 var gameUsername = user === 'guest' ? null : user.username;
 var canRematch = false;
+var GAME_SOUND_MUTED_KEY = 'general_game_room_sound_muted';
+var gameSoundsMuted = false;
+try {
+    gameSoundsMuted = localStorage.getItem(GAME_SOUND_MUTED_KEY) === 'true';
+}
+catch (error) { }
+Howler.mute(gameSoundsMuted);
 
 var disconnectedSound = new Howl({src: ['sounds/disconnected.mp3']});
 var yourTurnSound = new Howl({src: ['sounds/notify-turn.mp3']});
 var gameOverSound = new Howl({src: ['sounds/game-over.mp3'], volume: 0.5});
 var joinGameSound = new Howl({src: ['sounds/player-joined.mp3'], volume: 0.5});
+
+function updateGameSoundToggle() {
+    var soundToggle = document.getElementById('toggle_game_sound');
+    var soundIcon = document.getElementById('game_sound_icon');
+    soundIcon.classList.toggle('fa-volume-off', gameSoundsMuted);
+    soundIcon.classList.toggle('fa-volume-up', !gameSoundsMuted);
+    soundToggle.setAttribute('aria-pressed', String(gameSoundsMuted));
+    soundToggle.setAttribute('aria-label', (gameSoundsMuted ? 'Unmute' : 'Mute') + ' game sounds');
+    soundToggle.title = (gameSoundsMuted ? 'Unmute' : 'Mute') + ' game sounds';
+}
+
+document.getElementById('toggle_game_sound').addEventListener('click', function () {
+    gameSoundsMuted = !gameSoundsMuted;
+    Howler.mute(gameSoundsMuted);
+    try {
+        localStorage.setItem(GAME_SOUND_MUTED_KEY, String(gameSoundsMuted));
+    }
+    catch (error) { }
+    updateGameSoundToggle();
+});
+updateGameSoundToggle();
 
 
 gameInfra.on('message', function (msg) {
@@ -396,7 +424,7 @@ gameInfra.on("withdraw_gold_effect", function (gold) {
 });
 
 gameInfra.on("display_flag", function () {
-    document.querySelector('.surrender-flag').style.display = 'block';
+    document.querySelector('.surrender-flag').classList.add('is-visible');
 });
 
 document.getElementById('next_turn').addEventListener('click', function () {

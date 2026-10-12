@@ -5,8 +5,9 @@ html
     link(rel='shortcut icon', href='img/favicon.ico', type='image/x-icon')
     meta(name='viewport', content='width=device-width, initial-scale=1')
     link(rel='preload', href='/fonts/BarlowCondensed-700.woff2', as='font', type='font/woff2', crossorigin)
+    link(rel='stylesheet', type='text/css', href='/resources/font-awesome.min.css')
     link(rel='stylesheet', type='text/css', href='/css/retro.css?v=1.0')
-    link(rel='stylesheet', type='text/css', href='/css/game.board.css?v=2.1')
+    link(rel='stylesheet', type='text/css', href='/css/game.board.css?v=2.2')
 
   body
     section#chatroom
@@ -146,12 +147,6 @@ html
             circle(cx='144', cy='765', r='20')
             text(x='144', y='772')
 
-          filter#cannon(x='0%', y='0%', width='100%', height='100%')
-            feimage(xlink:href='/img/game/cannon.png')
-
-          filter#explosion(x='0%', y='0%', width='100%', height='100%')
-            feimage(xlink:href='/img/game/explosion.png')
-
           defs
             radialgradient#radial_blue
               stop(offset='0%', stop-color='#2d5fa8')
@@ -170,8 +165,12 @@ html
           circle#user_color(cx='958', cy='20', r='14')
           text#username_turn.player-round(x='980', y='29')
 
-        img(class="dice-log" src="/img/game/icons/dice.svg" title="start dice log" alt="dice log")
-        img(class="surrender-flag" src="/img/game/icons/flag.svg" title="surrender" alt="surrender")
+        button.dice-log.game-action-button(type='button' aria-label='Open dice log' title='Open dice log')
+          img(src='/img/game/icons/dice.svg' alt='')
+        button#toggle_game_sound.game-action-button.game-sound-toggle(type='button' aria-pressed='false' aria-label='Mute game sounds' title='Mute game sounds')
+          i#game_sound_icon.fa.fa-volume-up(aria-hidden='true')
+        button.surrender-flag.game-action-button(type='button' aria-label='Give up' title='Give up')
+          img(src='/img/game/icons/flag.svg' alt='')
         button#start_bots(type='button' style='display:none') Start with bots
     script
       if user

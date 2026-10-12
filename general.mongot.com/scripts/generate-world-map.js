@@ -7,7 +7,7 @@ const { chromium } = require('@playwright/test');
 const maps = require('../game/maps');
 
 const OUTPUT = path.join(__dirname, '../public/img/game/maps/world.svg');
-const SOURCE = path.join(__dirname, '../Risk_board.svg');
+const SOURCE = path.join(__dirname, './Risk_board.svg');
 const FONT_DATA = fs.readFileSync(path.join(__dirname, '../public/fonts/BarlowCondensed-700.woff2')).toString('base64');
 const W = 1147.148, H = 859.25, LABEL_GAP = 2, FRAME = 16;
 const FONT = 14, LINE = 15, TAG_FONT = 17;
@@ -176,7 +176,6 @@ async function measureLabels() {
                                 if (!touchesForeignLand) {
                                     callouts.push({x, top: box.y1, w: width, h: height, lines, fontSize: size,
                                         lineHeight: size * 1.05, distance: Math.hypot(dx, dy)});
-                                    if (callouts.length >= 80) { return {inside: options, callouts}; }
                                 }
                             }
                         }

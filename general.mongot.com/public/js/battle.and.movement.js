@@ -26,6 +26,7 @@ function clearActionSelection() {
     attackFrom = null;
     countryFrom = null;
     clearRouteSelection();
+    removeAimTank();
 }
 
 function actionTargets(sourceId, action) {
@@ -49,7 +50,10 @@ function selectActionOrigin(id, marker, action) {
     drawMap();
     document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); });
     markSelected(marker, 'from');
-    if (action === 'battle') { attackFrom = id; }
+    if (action === 'battle') {
+        attackFrom = id;
+        showAimTank(id, targets);
+    }
     else { countryFrom = id; }
     showRouteSelection(id, targets);
 }
@@ -79,6 +83,7 @@ function battle(latestClickedCountry, thisCountry) {
     var fromId = attackFrom;
     showUnitBar(attackersCountry.country.units, latestClickedCountry);
     markSelected(thisCountry, 'to', country.color);
+    lockAimTank(latestClickedCountry);
     showRouteSelection(fromId, [latestClickedCountry], latestClickedCountry);
     attackFrom = null;
     sendUnitsOnSubmit('battle', fromId, latestClickedCountry, country.owner);

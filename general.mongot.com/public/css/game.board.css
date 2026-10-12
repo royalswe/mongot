@@ -830,6 +830,125 @@ button:focus-visible, input:focus-visible {
     stroke: var(--green);
 }
 
+.attack-tank, .map-blast, .muzzle-flash, .tank-shell {
+    pointer-events: none;
+}
+
+.attack-tank rect, .attack-tank circle {
+    stroke: var(--ink);
+    stroke-width: 2;
+    transition: none;
+}
+
+.attack-tank .tank-tread {
+    fill: var(--ink);
+}
+
+.attack-tank .tank-hull, .attack-tank .tank-dome {
+    fill: var(--tank-color, var(--paper-light));
+}
+
+.attack-tank .tank-barrel {
+    fill: var(--paper-light);
+}
+
+/* Scale effect circles around their own centre, not the map's. */
+.svg-content .map-blast circle, .svg-content .muzzle-flash {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: none;
+}
+
+.svg-content .muzzle-flash, .map-blast .blast-core {
+    fill: #fff3b0;
+    stroke: none;
+}
+
+.svg-content .tank-shell {
+    fill: var(--ink);
+    stroke: var(--mustard);
+    stroke-width: 1.5;
+    transition: none;
+}
+
+.map-blast .blast-ring {
+    fill: none;
+    stroke: var(--paper-light);
+    stroke-width: 3;
+}
+
+.map-blast .blast-fire {
+    fill: var(--mustard);
+    stroke: var(--red);
+    stroke-width: 4;
+}
+
+.map-blast .blast-smoke {
+    fill: #5b5249;
+    stroke: none;
+}
+
+.map-blast .blast-debris {
+    fill: var(--mustard);
+    stroke: var(--ink);
+    stroke-width: 1.5;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.map-blast .blast-burst {
+    fill: var(--red);
+    stroke: var(--ink);
+    stroke-width: 3;
+    stroke-linejoin: round;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.convoy-vehicle, .unit-change {
+    pointer-events: none;
+}
+
+.convoy-vehicle {
+    transform-box: view-box;
+    transform-origin: 0 0;
+}
+
+.convoy-vehicle rect, .convoy-vehicle path, .convoy-vehicle circle {
+    stroke: var(--ink);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+    transition: none;
+}
+
+.convoy-vehicle .convoy-body {
+    fill: var(--convoy-color, var(--paper-light));
+}
+
+.convoy-vehicle .convoy-cab {
+    fill: var(--paper-light);
+}
+
+.convoy-vehicle .convoy-wheel {
+    fill: var(--ink);
+}
+
+.svg-content .unit-change {
+    font-size: 20px;
+    stroke: var(--ink);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+    paint-order: stroke;
+}
+
+.unit-change.gain {
+    fill: var(--mustard);
+}
+
+.unit-change.loss {
+    fill: var(--paper-light);
+}
+
 #username_turn {
     text-anchor: start
 }
@@ -963,27 +1082,55 @@ button:focus-visible, input:focus-visible {
     letter-spacing: .06em
 }
 
-.dice-log, .surrender-flag {
+.svg-container {
+    --game-control-size: clamp(32px, 5%, 48px);
+}
+
+.game-action-button {
     position: absolute;
     top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     box-sizing: border-box;
-    padding: .35%;
+    width: var(--game-control-size);
+    height: var(--game-control-size);
+    padding: 4px;
     background: var(--paper);
     border: 3px solid var(--ink);
     box-shadow: 3px 3px 0 var(--ink);
+    color: var(--ink);
+    font-size: 20px;
+    line-height: 1;
     cursor: pointer;
 }
-.dice-log:hover, .surrender-flag:hover {
+.game-action-button:hover {
     background: var(--mustard)
 }
+.game-action-button:focus-visible {
+    outline: 3px solid var(--mustard);
+    outline-offset: 2px;
+}
+.game-action-button img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
 .dice-log {
-    width: 5%;
     left: 10px;
 }
+.game-sound-toggle {
+    left: calc(18px + var(--game-control-size));
+}
 .surrender-flag {
-    width: 5%;
-    left: calc(20px + 5%);
+    left: calc(26px + var(--game-control-size) + var(--game-control-size));
+}
+.surrender-flag:not(.is-visible) {
     display: none;
+}
+.game-sound-toggle i {
+    pointer-events: none;
 }
 
 .close-popup {
