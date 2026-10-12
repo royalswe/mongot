@@ -84,12 +84,102 @@ var joinGameSound = new Howl({src: ['sounds/player-joined.mp3'], volume: 0.5});
 function updateGameSoundToggle() {
     var soundToggle = document.getElementById('toggle_game_sound');
     var soundIcon = document.getElementById('game_sound_icon');
-    soundIcon.classList.toggle('fa-volume-off', gameSoundsMuted);
-    soundIcon.classList.toggle('fa-volume-up', !gameSoundsMuted);
+    soundIcon.setAttribute('href', '/img/game/icons/options.sprite.svg?v=1#' + (gameSoundsMuted ? 'sound-off' : 'sound-on'));
     soundToggle.setAttribute('aria-pressed', String(gameSoundsMuted));
     soundToggle.setAttribute('aria-label', (gameSoundsMuted ? 'Unmute' : 'Mute') + ' game sounds');
     soundToggle.title = (gameSoundsMuted ? 'Unmute' : 'Mute') + ' game sounds';
 }
+
+function territoryLabel(id) {
+    var territory = mapData && mapData.countries[Number(id)];
+    return territory && territory.name ? territory.name : 'Territory ' + (Number(id) + 1);
+}
+
+function actionDescription(action) {
+    if (action.type === 'deploy') { return 'reinforced ' + territoryLabel(action.country) + ' (+' + action.units + ')'; }
+    if (action.type === 'move') { return 'moved ' + action.units + ' from ' + territoryLabel(action.from) + ' to ' + territoryLabel(action.to); }
+    if (action.type === 'attack') {
+        return 'attacked ' + territoryLabel(action.to) + ' from ' + territoryLabel(action.from) +
+            ' with ' + action.units + '; losses ' + action.attackerLost + '/' + action.defenderLost +
+            (action.captured ? '; captured territory' : '');
+    }
+    return '';
+}
+
+function appendGameAction(action) {
+    var list = document.getElementById('game_actions');
+    var description = actionDescription(action);
+    if (!description) { return; }
+    var emptyMessage = list.querySelector('.activity-empty');
+    if (emptyMessage) { emptyMessage.remove(); }
+
+    var entry = document.createElement('li');
+    entry.className = 'activity-entry';
+    if (typeof getPlayerColorHex === 'function') {
+        entry.style.setProperty('--action-color', getPlayerColorHex(action.color));
+    }
+    var player = document.createElement('strong');
+    player.textContent = action.player || 'Player';
+    var details = document.createElement('span');
+    details.textContent = description;
+    entry.appendChild(player);
+    entry.appendChild(details);
+    list.appendChild(entry);
+    while (list.children.length > 40) { list.firstElementChild.remove(); }
+    list.scrollTop = list.scrollHeight;
+}
+
+function setGameActionHistory(actions) {
+    var list = document.getElementById('game_actions');
+    list.replaceChildren();
+    if (!actions || !actions.length) {
+        var emptyMessage = document.createElement('li');
+        emptyMessage.className = 'activity-empty';
+        emptyMessage.textContent = 'No actions recorded yet';
+        list.appendChild(emptyMessage);
+        return;
+    }
+    actions.forEach(appendGameAction);
+}
+
+var chatTab = document.getElementById('show_chat');
+var activityTab = document.getElementById('show_activity');
+var chatPanel = document.getElementById('chat-panel');
+var activityPanel = document.getElementById('activity-panel');
+function selectSidebarTab(selectedTab, moveFocus) {
+    var showActivity = selectedTab === activityTab;
+    chatTab.setAttribute('aria-selected', String(!showActivity));
+    chatTab.tabIndex = showActivity ? -1 : 0;
+    activityTab.setAttribute('aria-selected', String(showActivity));
+    activityTab.tabIndex = showActivity ? 0 : -1;
+    chatPanel.classList.toggle('is-active', !showActivity);
+    activityPanel.classList.toggle('is-active', showActivity);
+    chatPanel.hidden = showActivity;
+    activityPanel.hidden = !showActivity;
+    activityPanel.setAttribute('aria-hidden', String(!showActivity));
+    if (moveFocus) { selectedTab.focus(); }
+}
+chatTab.addEventListener('click', function () {
+    selectSidebarTab(chatTab, false);
+});
+activityTab.addEventListener('click', function () {
+    selectSidebarTab(activityTab, false);
+});
+document.querySelector('.sidebar-tabs').addEventListener('keydown', function (event) {
+    var tabs = [chatTab, activityTab];
+    var selectedIndex = tabs.indexOf(document.activeElement);
+    if (selectedIndex < 0) { return; }
+    var nextIndex = event.key === 'ArrowRight' ? (selectedIndex + 1) % tabs.length :
+        event.key === 'ArrowLeft' ? (selectedIndex + tabs.length - 1) % tabs.length :
+        event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : selectedIndex;
+    if (nextIndex !== selectedIndex) {
+        event.preventDefault();
+        selectSidebarTab(tabs[nextIndex], true);
+    }
+});
+selectSidebarTab(chatTab, false);
+gameInfra.on('action_history', setGameActionHistory);
+gameInfra.on('action_log', appendGameAction);
 
 document.getElementById('toggle_game_sound').addEventListener('click', function () {
     gameSoundsMuted = !gameSoundsMuted;
@@ -203,13 +293,14 @@ gameInfra.on('rematch_started', function () {
     document.getElementById('messages').replaceChildren();
     canRematch = true;
     mission = null;
+    setGameActionHistory([]);
     phase = 'Waiting for players';
     document.querySelector('.phase-message').textContent = phase;
     document.querySelector('.phase-info').textContent = 'The next match is starting.';
 });
 
-gameInfra.on("start_countdown", function () {
-    startTimer();
+gameInfra.on("start_countdown", function (timerInfo) {
+    startTimer(timerInfo);
 });
 
 gameInfra.on("error", function (err) { // if there will be any errors then show it
@@ -245,22 +336,23 @@ gameInfra.on("clear_game_countdown", function () { // clear game countdown for e
 });
 
 var countdown
-function startTimer() {
+function startTimer(timerInfo) {
     var display = document.querySelector('#countdown');
-    var twoMinutes = 120;
-    var timer = twoMinutes, minutes, seconds;
     clearInterval(countdown);
-    countdown = setInterval(function () {
-        minutes = parseInt(timer / 60, 10)
-        seconds = parseInt(timer % 60, 10);
-
-        minutes = minutes < 10 ? "0" + minutes : minutes;
-        seconds = seconds < 10 ? "0" + seconds : seconds;
-
-        display.textContent = minutes + ":" + seconds;
-
-        if (--timer < 0) { clearInterval(countdown); }
-    }, 1000);
+    if (!timerInfo || timerInfo.deadline === null || timerInfo.deadline === undefined) {
+        display.textContent = '';
+        return;
+    }
+    var localDeadline = Date.now() + Math.max(0, timerInfo.deadline - timerInfo.serverTime);
+    var renderCountdown = function () {
+        var remaining = Math.max(0, Math.ceil((localDeadline - Date.now()) / 1000));
+        var minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+        var seconds = String(remaining % 60).padStart(2, '0');
+        display.textContent = minutes + ':' + seconds;
+        if (remaining === 0) { clearInterval(countdown); }
+    };
+    renderCountdown();
+    countdown = setInterval(renderCountdown, 1000);
 }
 
 function showActivePlayer(msg) {

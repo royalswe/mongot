@@ -319,8 +319,12 @@ function showGameToVisitor(socket, room) {
     if (board === undefined) { return; }
     const game = board.getGameInfo();
 
-    socket.emit('start_countdown');
+    socket.emit('start_countdown', {
+        deadline: game.phaseDeadline,
+        serverTime: Date.now()
+    });
     socket.emit('map_info', board.getMapInfo());
+    socket.emit('action_history', game.actionHistory);
     if (game.phase === 'Everyone deploy') {
         socket.emit('render_no_army_map', game.playerList);
     }

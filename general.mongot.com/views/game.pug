@@ -5,20 +5,25 @@ html
     link(rel='shortcut icon', href='img/favicon.ico', type='image/x-icon')
     meta(name='viewport', content='width=device-width, initial-scale=1')
     link(rel='preload', href='/fonts/BarlowCondensed-700.woff2', as='font', type='font/woff2', crossorigin)
-    link(rel='stylesheet', type='text/css', href='/resources/font-awesome.min.css')
     link(rel='stylesheet', type='text/css', href='/css/retro.css?v=1.0')
-    link(rel='stylesheet', type='text/css', href='/css/game.board.css?v=2.2')
+    link(rel='stylesheet', type='text/css', href='/css/game.board.css?v=2.3')
 
   body
     section#chatroom
       .chat-content
         ul#player_list
-
-        div#messages
-        .chat-composer
-          input#message(type='text', autocomplete="off", placeholder='Enter your message here', aria-label='Chat message')
-          button#send(type='button', aria-label='Send chat message', title='Send chat message')
-            img(src='/img/game/icons/send.svg' alt='')
+        div.sidebar-tabs(role='tablist' aria-label='Sidebar views')
+          button#show_chat.sidebar-tab(type='button' role='tab' aria-selected='true' aria-controls='chat-panel' tabindex='0') Chat
+          button#show_activity.sidebar-tab(type='button' role='tab' aria-selected='false' aria-controls='activity-panel' aria-label='Activity' tabindex='-1') Activity
+        div#chat-panel.sidebar-panel.chat-panel.is-active(role='tabpanel' aria-labelledby='show_chat')
+          div#messages
+          .chat-composer
+            input#message(type='text' autocomplete="off" placeholder='Enter your message here' aria-label='Chat message')
+            button#send(type='button' aria-label='Send chat message' title='Send chat message')
+              img(src='/img/game/icons/send.svg' alt='')
+        div#activity-panel.sidebar-panel.activity-panel(role='tabpanel' aria-labelledby='show_activity' aria-hidden='true')
+          ol#game_actions(role='log' aria-label='Game activity' aria-live='polite' aria-relevant='additions')
+            li.activity-empty No actions recorded yet
       button.slide-toggle(type='button', aria-label='Toggle chat', aria-controls='chatroom', aria-expanded='true', title='Toggle chat')
         img(src='/img/game/icons/chat-toggle.svg' alt='')
 
@@ -166,11 +171,14 @@ html
           text#username_turn.player-round(x='980', y='29')
 
         button.dice-log.game-action-button(type='button' aria-label='Open dice log' title='Open dice log')
-          img(src='/img/game/icons/dice.svg' alt='')
+          svg(aria-hidden='true' focusable='false')
+            use(href='/img/game/icons/options.sprite.svg?v=1#dice')
         button#toggle_game_sound.game-action-button.game-sound-toggle(type='button' aria-pressed='false' aria-label='Mute game sounds' title='Mute game sounds')
-          i#game_sound_icon.fa.fa-volume-up(aria-hidden='true')
+          svg(aria-hidden='true' focusable='false')
+            use#game_sound_icon(href='/img/game/icons/options.sprite.svg?v=1#sound-on')
         button.surrender-flag.game-action-button(type='button' aria-label='Give up' title='Give up')
-          img(src='/img/game/icons/flag.svg' alt='')
+          svg(aria-hidden='true' focusable='false')
+            use(href='/img/game/icons/options.sprite.svg?v=1#flag')
         button#start_bots(type='button' style='display:none') Start with bots
     script
       if user

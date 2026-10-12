@@ -39,10 +39,20 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
     let phaseMessage;
     let nextPhase;
     let timer;
+    let phaseDeadline;
+    let actionHistory = [];
+    const actionHistoryLimit = 40;
     let gameOver = false;
     let phaseTimer = 122000;
     let GameStart;
     let gameInfra = io.of('/game_infra'); // The namespace
+
+    function recordAction(action) {
+        action.timestamp = Date.now();
+        actionHistory.push(action);
+        if (actionHistory.length > actionHistoryLimit) { actionHistory.shift(); }
+        gameInfra.in(room).emit('action_log', action);
+    }
 
     function Game() {
         nextPhase = Game.Phase.everyoneDeploy;
@@ -106,7 +116,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
     };
 
     this.getGameInfo = function () {
-        return {playerList: PlayerList, ap: ap, phase: phase, disabledCountries: disabledCountries, mapId: map.id};
+        return {playerList: PlayerList, ap: ap, phase: phase, phaseDeadline: phaseDeadline, actionHistory: actionHistory.slice(), disabledCountries: disabledCountries, mapId: map.id};
     };
 
     this.getMapInfo = function () {
@@ -207,13 +217,17 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
      */
     Game.prototype.nextTurn = function () {
         phase = nextPhase;
-
-        gameInfra.in(room).emit('start_countdown'); // Start timer in client
-
         clearTimeout(timer);
-        timer = setTimeout(() => {
-            return this.nextTurn();
-        }, phaseTimer);
+        phaseDeadline = phase === Game.Phase.gameOver ? null : Date.now() + phaseTimer;
+        if (phaseDeadline !== null) {
+            timer = setTimeout(() => {
+                return this.nextTurn();
+            }, phaseTimer);
+        }
+        gameInfra.in(room).emit('start_countdown', {
+            deadline: phaseDeadline,
+            serverTime: Date.now()
+        });
 
         switch (phase) {
             case Game.Phase.everyoneDeploy:
@@ -484,6 +498,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
             target.units += 1;
             this.renderGame();
             gameInfra.in(room).emit('bounce_country', country); // give deployed unit bounce effect
+            recordAction({type: 'deploy', player: PlayerList[id].username, color: PlayerList[id].color, country: country, units: 1});
             this.updateGold(id);
         }
     };
@@ -518,6 +533,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
 
                 this.renderGame();
                 gameInfra.in(room).emit('move_animation', moveFromCountry, moveToCountry, units);
+                recordAction({type: 'move', player: PlayerList[ap].username, color: PlayerList[ap].color, from: moveFromCountry, to: moveToCountry, units: units});
                 this.determineVictor();
                 return this.nextTurn();
             }
@@ -587,6 +603,9 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
 
                 let attackerLost = attackerUnits - unitsSent;
                 let defenderLost = getDefenderUnits - defenderUnits;
+                recordAction({type: 'attack', player: PlayerList[ap].username, color: PlayerList[ap].color,
+                    from: attackCountry, to: defendCountry, units: attackerUnits, attackerLost: attackerLost,
+                    defenderLost: defenderLost, captured: defenderUnits <= 0});
 
                 gameInfra.in(room).emit('message', {
                     type: 'attack',

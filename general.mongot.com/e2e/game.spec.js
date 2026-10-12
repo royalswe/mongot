@@ -2,6 +2,45 @@
 
 const {test, expect} = require('@playwright/test');
 
+test('countdown resumes with only the server-reported time remaining', async ({page}) => {
+    await page.goto('/game');
+    const countdown = await page.evaluate(() => {
+        const deadline = Date.now() + 65000;
+        startTimer({deadline: deadline, serverTime: Date.now()});
+        const initial = document.getElementById('countdown').textContent;
+        startTimer({deadline: deadline, serverTime: deadline - 4000});
+        const afterReconnect = document.getElementById('countdown').textContent;
+        return {initial: initial, afterReconnect: afterReconnect};
+    });
+    expect(countdown).toEqual({initial: '01:05', afterReconnect: '00:04'});
+});
+
+test('game action history replays and appends actions in an accessible panel', async ({page}) => {
+    await page.goto('/game');
+    const chatTab = page.getByRole('tab', {name: 'Chat'});
+    const activityTab = page.getByRole('tab', {name: 'Activity'});
+    const panel = page.getByRole('tabpanel', {name: 'Activity'});
+
+    await activityTab.click();
+    await expect(panel).toBeVisible();
+    await page.evaluate(() => {
+        const history = [{type: 'attack', player: 'Red player', color: 'red', from: 0, to: 1, units: 3,
+            attackerLost: 1, defenderLost: 2, captured: true}];
+        gameInfra.listeners('action_history').forEach((listener) => listener(history));
+        gameInfra.listeners('action_log').forEach((listener) => listener({
+            type: 'move', player: 'Blue player', color: 'blue', from: 2, to: 3, units: 4
+        }));
+    });
+
+    await expect(page.locator('#game_actions .activity-entry')).toHaveCount(2);
+    await expect(page.locator('#game_actions')).toContainText('attacked Territory 2 from Territory 1 with 3; losses 1/2; captured territory');
+    await expect(page.locator('#game_actions')).toContainText('moved 4 from Territory 3 to Territory 4');
+    await activityTab.press('ArrowLeft');
+    await expect(chatTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tabpanel', {name: 'Chat'})).toBeVisible();
+    await expect(activityTab).toHaveAttribute('tabindex', '-1');
+});
+
 test('map routes reveal hover previews and phase-legal selections', async ({page}) => {
     const roomName = await firstRoomName(page);
     await seatAs(page, roomName, null, 'red', 'Playing as a guest');
@@ -639,51 +678,46 @@ test('game room sound preference persists across reloads', async ({page}) => {
     for (const viewport of [{width: 320, height: 568}, {width: 1280, height: 800}]) {
         await page.setViewportSize(viewport);
         const soundControlPosition = await page.evaluate(() => {
-            const sound = document.getElementById('toggle_game_sound');
-            const dice = document.querySelector('.dice-log');
             const flag = document.querySelector('.surrender-flag');
-            const originalDisplay = flag.style.display;
             flag.classList.add('is-visible');
-            const diceBounds = dice.getBoundingClientRect();
-            const flagBounds = flag.getBoundingClientRect();
-            const soundBounds = sound.getBoundingClientRect();
+            const controls = ['.dice-log', '#toggle_game_sound', '.surrender-flag']
+                .map((selector) => document.querySelector(selector).getBoundingClientRect());
             const mapBounds = document.querySelector('.svg-container').getBoundingClientRect();
             flag.classList.remove('is-visible');
-            flag.style.display = originalDisplay;
             return {
-                inMapOverlay: sound.parentElement.classList.contains('svg-container'),
-                sharesControlRow: Math.abs(soundBounds.top - diceBounds.top) < 1 && Math.abs(soundBounds.top - flagBounds.top) < 1,
-                betweenIcons: soundBounds.left > diceBounds.right && soundBounds.right < flagBounds.left,
-                sameSize: Math.abs(soundBounds.width - diceBounds.width) < 1 && Math.abs(soundBounds.width - flagBounds.width) < 1
-                    && Math.abs(soundBounds.height - diceBounds.height) < 1 && Math.abs(soundBounds.height - flagBounds.height) < 1,
-                insideMap: soundBounds.left >= mapBounds.left && soundBounds.right <= mapBounds.right
+                inMapOverlay: document.getElementById('toggle_game_sound').parentElement.classList.contains('svg-container'),
+                sharesControlRow: controls.every((bounds) => Math.abs(bounds.top - controls[0].top) < 1),
+                inOrder: controls.every((bounds, index) => index === 0 || bounds.left > controls[index - 1].right),
+                sameSize: controls.every((bounds) => Math.abs(bounds.width - controls[0].width) < 1 && Math.abs(bounds.height - controls[0].width) < 1),
+                insideMap: controls.every((bounds) => bounds.left >= mapBounds.left && bounds.right <= mapBounds.right)
             };
         });
-        expect(soundControlPosition).toEqual({inMapOverlay: true, sharesControlRow: true, betweenIcons: true, sameSize: true, insideMap: true});
+        expect(soundControlPosition).toEqual({inMapOverlay: true, sharesControlRow: true, inOrder: true, sameSize: true, insideMap: true});
     }
+    const soundIcon = () => soundToggle.locator('use').getAttribute('href');
     await expect(page.getByRole('button', {name: 'Open dice log'})).toBeVisible();
     await expect(soundToggle).toHaveAttribute('aria-label', 'Mute game sounds');
-    await expect(soundToggle.locator('i')).toHaveClass(/fa-volume-up/);
+    expect(await soundIcon()).toMatch(/#sound-on$/);
     await expect(soundToggle).toHaveAttribute('aria-pressed', 'false');
     expect(await page.evaluate(() => Howler._muted)).toBe(false);
 
     await soundToggle.click();
     await expect(soundToggle).toHaveAttribute('aria-label', 'Unmute game sounds');
-    await expect(soundToggle.locator('i')).toHaveClass(/fa-volume-off/);
+    expect(await soundIcon()).toMatch(/#sound-off$/);
     await expect(soundToggle).toHaveAttribute('aria-pressed', 'true');
     expect(await page.evaluate(() => localStorage.getItem('general_game_room_sound_muted'))).toBe('true');
     expect(await page.evaluate(() => Howler._muted)).toBe(true);
 
     await page.reload();
     await expect(soundToggle).toHaveAttribute('aria-label', 'Unmute game sounds');
-    await expect(soundToggle.locator('i')).toHaveClass(/fa-volume-off/);
+    expect(await soundIcon()).toMatch(/#sound-off$/);
     await expect(soundToggle).toHaveAttribute('aria-pressed', 'true');
     expect(await page.evaluate(() => Howler._muted)).toBe(true);
 
     await soundToggle.click();
     await page.reload();
     await expect(soundToggle).toHaveAttribute('aria-label', 'Mute game sounds');
-    await expect(soundToggle.locator('i')).toHaveClass(/fa-volume-up/);
+    expect(await soundIcon()).toMatch(/#sound-on$/);
     await expect(soundToggle).toHaveAttribute('aria-pressed', 'false');
     expect(await page.evaluate(() => Howler._muted)).toBe(false);
 });
