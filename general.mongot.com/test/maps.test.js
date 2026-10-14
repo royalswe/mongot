@@ -104,6 +104,9 @@ test('a continent is owned only when every one of its territories is held', () =
 
 test('the original map retains its historic connections and map copies are isolated', () => {
     const original = countryHandler.getMap('original');
+    assert(original.countries.every((country) => typeof country.name === 'string' && country.name.length > 0));
+    assert.equal(original.positions.length, original.countries.length);
+    assert(original.positions.every((position) => Number.isFinite(position.x) && Number.isFinite(position.y)));
     assert.deepEqual(original.countries[20].neighbour, [17,18,19,21,22,15,16]);
     assert.deepEqual(original.countries[19].neighbour, [18,21]);
 

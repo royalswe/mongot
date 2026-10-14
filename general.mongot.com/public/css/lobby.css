@@ -87,6 +87,8 @@ section#lobby h1 {
     text-transform: uppercase;
     white-space: nowrap;
     cursor: pointer;
+    text-align: center;
+    text-decoration: none;
 }
 
 #allrooms .watch-btn {

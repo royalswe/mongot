@@ -130,6 +130,11 @@ text {
     border: 2px solid var(--ink)
 }
 
+.player-check label:focus-visible {
+    outline: 3px solid var(--mustard);
+    outline-offset: 3px;
+}
+
 input[type=checkbox] + label {
     width: 96%;
     margin-top: 2px
@@ -462,21 +467,35 @@ circle.disabled-country {
     stroke-dasharray: 4 3
 }
 
-.svg-content circle.marker-from {
-    stroke: var(--paper-light);
-    stroke-width: 5
+.svg-content > g.territory-marker:focus {
+    outline: none;
 }
 
-.svg-content circle.marker-to {
-    stroke-width: 5
+.svg-content.keyboard-navigation > g.territory-marker:focus circle {
+    stroke: var(--mustard);
+    stroke-width: 5;
+    filter: drop-shadow(0 0 4px var(--paper-light));
 }
 
-.svg-content circle.marker-to.marker-color-red { stroke: #d33a2c }
-.svg-content circle.marker-to.marker-color-blue { stroke: #2d5fa8 }
-.svg-content circle.marker-to.marker-color-orange { stroke: #ee9a1c }
-.svg-content circle.marker-to.marker-color-green { stroke: #3e8b3c }
-.svg-content circle.marker-to.marker-color-purple { stroke: #7c4b9e }
-.svg-content circle.marker-to.marker-color-black { stroke: #3b3632 }
+.svg-content > g.territory-marker.history-highlight circle {
+    stroke: var(--mustard);
+    stroke-width: 6;
+    filter: drop-shadow(0 0 4px var(--paper-light));
+}
+
+.svg-content .map-connection-casing.history-highlight {
+    display: inline !important;
+    stroke: var(--ink);
+    stroke-width: 9;
+    opacity: 1;
+}
+
+.svg-content .map-connection.history-highlight {
+    display: inline !important;
+    stroke: var(--mustard);
+    stroke-width: 5;
+    opacity: 1;
+}
 
 text {
     font-size: 22px;
@@ -541,11 +560,6 @@ text {
     display: block;
     width: 100%;
     pointer-events: none
-}
-
-button:focus-visible, input:focus-visible {
-    outline: 2px solid var(--mustard);
-    outline-offset: 2px
 }
 
 .slide-toggle:hover {
@@ -756,13 +770,17 @@ button:focus-visible, input:focus-visible {
     background-image: url('../img/game/maps/world.svg') !important;
 }
 
+.svg-content.map-original {
+    background-image: url('../img/game/maps/original.svg') !important;
+}
+
 .svg-content.map-quick {
     background-image: url('../img/game/maps/quick.svg') !important;
 }
 
 .map-connection-casing {
     stroke: var(--paper-light);
-    stroke-width: 6;
+    stroke-width: 2.5;
     stroke-linecap: round;
     pointer-events: none;
 }
@@ -982,11 +1000,6 @@ button:focus-visible, input:focus-visible {
     background: var(--mustard);
 }
 
-.sidebar-tab:focus-visible {
-    outline: 3px solid var(--red);
-    outline-offset: -3px;
-}
-
 .sidebar-panel {
     display: none;
     min-width: 0;
@@ -1033,6 +1046,24 @@ button:focus-visible, input:focus-visible {
     overflow-wrap: anywhere;
 }
 
+.activity-entry-button {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.activity-entry-button:hover strong {
+    text-decoration: underline;
+}
+
 .activity-entry strong {
     color: var(--action-color, var(--ink));
 }
@@ -1074,7 +1105,6 @@ button:focus-visible, input:focus-visible {
     min-height: 44px;
     padding: 6px;
     border: 2px solid var(--paper);
-    outline: 0;
     background: var(--paper);
     color: var(--ink);
     font-family: inherit;
@@ -1201,10 +1231,7 @@ button:focus-visible, input:focus-visible {
 .game-action-button:hover {
     background: var(--mustard)
 }
-.game-action-button:focus-visible {
-    outline: 3px solid var(--mustard);
-    outline-offset: 2px;
-}
+
 .game-action-button svg {
     display: block;
     width: 100%;
@@ -1425,6 +1452,7 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 50%;
     background: var(--mustard);
 }
+
 @container game-board (max-width:720px) {
     .input-unit-bar {
         position: static;

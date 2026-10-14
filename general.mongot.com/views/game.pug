@@ -6,7 +6,7 @@ html
     meta(name='viewport', content='width=device-width, initial-scale=1')
     link(rel='preload', href='/fonts/BarlowCondensed-700.woff2', as='font', type='font/woff2', crossorigin)
     link(rel='stylesheet', type='text/css', href='/css/retro.css?v=1.0')
-    link(rel='stylesheet', type='text/css', href='/css/game.board.css?v=2.3')
+    link(rel='stylesheet', type='text/css', href='/css/game.board.css?v=2.7')
 
   body
     section#chatroom
@@ -14,11 +14,11 @@ html
         ul#player_list
         div.sidebar-tabs(role='tablist' aria-label='Sidebar views')
           button#show_chat.sidebar-tab(type='button' role='tab' aria-selected='true' aria-controls='chat-panel' tabindex='0') Chat
-          button#show_activity.sidebar-tab(type='button' role='tab' aria-selected='false' aria-controls='activity-panel' aria-label='Activity' tabindex='-1') Activity
+          button#show_activity.sidebar-tab(type='button' role='tab' aria-selected='false' aria-controls='activity-panel' aria-label='Activity' aria-keyshortcuts='A' title='Activity (A)' tabindex='-1') Activity
         div#chat-panel.sidebar-panel.chat-panel.is-active(role='tabpanel' aria-labelledby='show_chat')
           div#messages
           .chat-composer
-            input#message(type='text' autocomplete="off" placeholder='Enter your message here' aria-label='Chat message')
+            input#message(type='text' autocomplete="off" placeholder='Chat (/)' aria-label='Chat message' aria-keyshortcuts='/')
             button#send(type='button' aria-label='Send chat message' title='Send chat message')
               img(src='/img/game/icons/send.svg' alt='')
         div#activity-panel.sidebar-panel.activity-panel(role='tabpanel' aria-labelledby='show_activity' aria-hidden='true')
@@ -31,9 +31,9 @@ html
       header#game_header
         img#phase_img(src='/img/game/icons/waiting.svg' alt='')
         div#header_buttons
-          button#next_turn Next turn
-          button#show_gold Show gold
-          button#mission Show mission
+          button#next_turn(type='button' aria-keyshortcuts='N' title='Next turn (N)') Next turn
+          button#show_gold(type='button' aria-keyshortcuts='G' title='Show gold (G)') Show gold
+          button#mission(type='button' aria-keyshortcuts='M' title='Show mission (M)') Show mission
         div#game_info
           div.phase-message Waiting for players
           div.phase-info #{!user ? "Choose a color to join. Guests play unranked." : (user.active ? "The game starts when all players have joined." : "Choose a color to join. Verify your email to earn rank.")}
@@ -47,111 +47,6 @@ html
 
       .svg-container
         svg.svg-content(version='2.0', viewbox='0 0 1147.148 859.25')
-          // Europe
-          g
-            circle(cx='470', cy='242', r='20')
-            text(x='470', y='249')
-          g
-            circle(cx='380', cy='225', r='20')
-            text(x='380', y='232')
-          g
-            circle(cx='625', cy='196', r='20')
-            text(x='625', y='203')
-          g
-            circle(cx='400', cy='400', r='20')
-            text(x='400', y='407')
-          g
-            circle(cx='237', cy='374', r='20')
-            text(x='237', y='381')
-          g
-            circle(cx='52', cy='174', r='20')
-            text(x='52', y='181')
-          g
-            circle(cx='296', cy='483', r='20')
-            text(x='296', y='490')
-          g
-            circle(cx='476', cy='568', r='20')
-            text(x='476', y='575')
-          g
-            circle(cx='207', cy='608', r='20')
-            text(x='207', y='615')
-          g
-            circle(cx='111', cy='614', r='20')
-            text(x='111', y='621')
-          // East Europe
-          g
-            circle(cx='543', cy='406', r='20')
-            text(x='543', y='413')
-          g
-            circle(cx='526', cy='481', r='20')
-            text(x='526', y='488')
-          g
-            circle(cx='587', cy='537', r='20')
-            text(x='587', y='544')
-          g
-            circle(cx='636', cy='642', r='20')
-            text(x='636', y='649')
-          g
-            circle(cx='672', cy='524', r='20')
-            text(x='672', y='531')
-          g
-            circle(cx='739', cy='442', r='20')
-            text(x='739', y='449')
-          g
-            circle(cx='664', cy='358', r='20')
-            text(x='664', y='365')
-          // Asia
-          g
-            circle(cx='748', cy='252', r='20')
-            text(x='748', y='259')
-          g
-            circle(cx='945', cy='179', r='20')
-            text(x='945', y='186')
-          g
-            circle(cx='1098', cy='172', r='20')
-            text(x='1098', y='179')
-          g
-            circle(cx='900', cy='348', r='20')
-            text(x='900', y='355')
-          g
-            circle(cx='1085', cy='335', r='20')
-            text(x='1085', y='342')
-          g
-            circle(cx='963', cy='500', r='20')
-            text(x='963', y='507')
-          g
-            circle(cx='1085', cy='451', r='20')
-            text(x='1085', y='458')
-          // Middle East
-          g
-            circle(cx='844', cy='626', r='20')
-            text(x='844', y='633')
-          g
-            circle(cx='1085', cy='708', r='20')
-            text(x='1085', y='715')
-          g
-            circle(cx='950', cy='717', r='20')
-            text(x='950', y='724')
-          g
-            circle(cx='955', cy='810', r='20')
-            text(x='955', y='817')
-          // Africa
-          g
-            circle(cx='758', cy='817', r='20')
-            text(x='758', y='824')
-          g
-            circle(cx='555', cy='817', r='20')
-            text(x='555', y='824')
-          g
-            circle(cx='426', cy='727', r='20')
-            text(x='426', y='734')
-          g
-            circle(cx='305', cy='780', r='20')
-            text(x='305', y='787')
-          g
-            circle(cx='144', cy='765', r='20')
-            text(x='144', y='772')
-
           defs
             radialgradient#radial_blue
               stop(offset='0%', stop-color='#2d5fa8')
@@ -189,7 +84,7 @@ html
     script(src='/resources/howler.min.js')
 
     if useBundles
-      script(src='/js/compress.js?v=2.1')
+      script(src='/js/compress.js?v=2.4')
     else
       script(src='/js/storage.js')
       script(src='/js/ranks.js')

@@ -37,7 +37,7 @@ gameInfra.on("rooms_list", function(rooms, players){
             + value.players + '/'+ value.startingPlayers +'</td><td>'
             + ({ original: 'Original Map', archipelago: 'Archipelago', frontier: 'The Marches', world: 'World', quick: 'Quick Test' }[value.mapId] || 'Original Map') + '</td><td>'
             + value.status +'</td><td>'
-            + '<a id="'+ value.name +'" class="join-room '+ btnClass +'">' + btnText +'</a></td></tr>';
+            + '<a href="/game?room='+ encodeURIComponent(value.name) +'" target="_blank" rel="noopener" id="'+ value.name +'" class="join-room '+ btnClass +'">' + btnText +'</a></td></tr>';
     });
     document.querySelector('#allrooms tbody').innerHTML = roomsTable;
 
@@ -46,12 +46,15 @@ gameInfra.on("rooms_list", function(rooms, players){
             var roomLink = document.getElementById(players[i].room);
             if (roomLink) { roomLink.classList.add('disable-join-link'); }
         }
-    }
+    }   
 });
     
 document.querySelector('#allrooms tbody').addEventListener('click', function (event) {
-    var joinLink = event.target.closest('.join-room');
-    if (joinLink) { redirectRoom(joinLink.id); }
+    const joinLink = event.target.closest('.join-room');
+    if (joinLink) {
+        event.preventDefault();
+        redirectRoom(joinLink.id);
+    }
 });
 
 var kickOutButton = document.getElementById('kick_out_btn');

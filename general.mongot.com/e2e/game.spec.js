@@ -41,6 +41,26 @@ test('game action history replays and appends actions in an accessible panel', a
     await expect(activityTab).toHaveAttribute('tabindex', '-1');
 });
 
+test('clicking an activity entry highlights its territories and route on the map', async ({page}) => {
+    const roomName = await firstRoomName(page);
+    await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+    await expect(page.locator('.popup')).toBeHidden();
+    await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
+
+    const targetId = await page.evaluate(() => mapData.countries[0].neighbour[0]);
+    await page.evaluate((to) => {
+        const action = {type: 'move', player: 'Red player', color: 'red', from: 0, to: to, units: 2};
+        gameInfra.listeners('action_log').forEach((listener) => listener(action));
+    }, targetId);
+    await page.getByRole('tab', {name: 'Activity'}).click();
+    await page.locator('.activity-entry-button').click();
+
+    await expect(page.locator('[id="0"]')).toHaveClass(/history-highlight/);
+    await expect(page.locator('[id="' + targetId + '"]')).toHaveClass(/history-highlight/);
+    await expect(page.locator('.map-connection.history-highlight')).toHaveCount(1);
+    await expect(page.locator('.history-highlight')).toHaveCount(0, {timeout: 3000});
+});
+
 test('map routes reveal hover previews and phase-legal selections', async ({page}) => {
     const roomName = await firstRoomName(page);
     await seatAs(page, roomName, null, 'red', 'Playing as a guest');
@@ -141,6 +161,118 @@ test('map routes reveal hover previews and phase-legal selections', async ({page
         moveSource:true,moveBar:true,movePair:true,moveCancel:true,
         activePairIsStrongest:true,
         activePair:true,clearsLand:true});
+});
+
+test('a tactical move can switch to another selected origin with one click', async ({page}) => {
+    const roomName = await firstRoomName(page);
+    await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+    await expect(page.locator('.popup')).toBeHidden();
+    await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
+    await page.waitForFunction(() => document.querySelectorAll('.svg-content > g.territory-marker').length >= 3);
+    await page.evaluate(() => {
+        const positions = [{x: 300, y: 300}, {x: 450, y: 300}, {x: 600, y: 300}];
+        const markers = Array.from(document.querySelectorAll('.svg-content > g.territory-marker')).slice(0, 3);
+        markers.forEach((marker, id) => {
+            marker.id = String(id);
+            const circle = marker.querySelector('circle');
+            circle.style.transition = 'none';
+            circle.setAttribute('cx', positions[id].x);
+            circle.setAttribute('cy', positions[id].y);
+        });
+        circles = [0, 1, 2].map((id) => ({
+            country: {id: id, units: id === 1 ? 2 : 5, neighbour: id === 1 ? [0, 2] : [1]},
+            owner: 1,
+            color: 'red'
+        }));
+        mapData = {id: 'quick', countries: circles.map(({country}) => country), positions: positions, seaLinks: [], wrapLinks: []};
+        ensureTerritoryMarkers(3);
+        activePlayer = 1;
+        playerEnabled = true;
+        updateTerritoryActionState();
+        phase = 'Tactical move';
+        drawMap();
+    });
+
+    await page.locator('[id="0"] circle').click();
+    await expect.poll(() => page.evaluate(() => countryFrom)).toBe(0);
+    await page.locator('[id="2"] circle').click();
+
+    await expect.poll(() => page.evaluate(() => countryFrom)).toBe(2);
+    await expect(page.locator('[id="0"] circle')).not.toHaveClass(/marker-from/);
+    await expect(page.locator('[id="2"] circle')).toHaveClass(/marker-from/);
+});
+
+test('territories support keyboard navigation and tactical-move activation', async ({page}) => {
+    const roomName = await firstRoomName(page);
+    await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+    await expect(page.locator('.popup')).toBeHidden();
+    await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
+    const targetId = await page.evaluate(() => {
+        circles = mapData.countries.map((country) => ({
+            country: Object.assign({}, country, {units: 5}),
+            owner: 1,
+            color: 'red'
+        }));
+        activePlayer = 1;
+        playerEnabled = true;
+        updateTerritoryActionState();
+        phase = 'Tactical move';
+        drawMap();
+        var sourceCircle = document.getElementById('0').querySelector('circle');
+        var sourceX = Number(sourceCircle.getAttribute('cx'));
+        var sourceY = Number(sourceCircle.getAttribute('cy'));
+        return territoryGroups().filter((marker) => marker.id !== '0').map((marker) => {
+            var circle = marker.querySelector('circle');
+            var dx = Number(circle.getAttribute('cx')) - sourceX;
+            var dy = Number(circle.getAttribute('cy')) - sourceY;
+            return {id: marker.id, dx: dx, dy: dy};
+        }).filter((point) => point.dx > 0).sort((a, b) =>
+            Math.hypot(a.dx, a.dy) + Math.abs(a.dy) * 1.5 - (Math.hypot(b.dx, b.dy) + Math.abs(b.dy) * 1.5))[0].id;
+    });
+
+    const first = page.locator('[id="0"].territory-marker');
+    const second = page.locator('[id="' + targetId + '"]');
+    await expect(first).toHaveAttribute('role', 'button');
+    await first.focus();
+    await expect(first).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(second).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect.poll(() => page.evaluate(() => countryFrom)).toBe(Number(targetId));
+    await page.keyboard.press('Space');
+    await expect.poll(() => page.evaluate(() => countryFrom)).toBe(null);
+});
+
+test('territory focus styling follows keyboard or pointer input', async ({page}) => {
+    const roomName = await firstRoomName(page);
+    await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+    await expect(page.locator('.popup')).toBeHidden();
+    await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
+
+    const svg = page.locator('.svg-content');
+    const first = page.locator('.territory-marker[id="0"]');
+    const targetId = await page.evaluate(() => {
+        var source = document.getElementById('0').querySelector('circle');
+        var sourceX = Number(source.getAttribute('cx'));
+        var sourceY = Number(source.getAttribute('cy'));
+        return territoryGroups().filter((marker) => marker.id !== '0').map((marker) => {
+            var circle = marker.querySelector('circle');
+            var dx = Number(circle.getAttribute('cx')) - sourceX;
+            var dy = Number(circle.getAttribute('cy')) - sourceY;
+            return {id: marker.id, dx: dx, dy: dy};
+        }).filter((point) => point.dx > 0).sort((a, b) =>
+            Math.hypot(a.dx, a.dy) + Math.abs(a.dy) * 1.5 - (Math.hypot(b.dx, b.dy) + Math.abs(b.dy) * 1.5))[0].id;
+    });
+    const second = page.locator('.territory-marker[id="' + targetId + '"]');
+    await first.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(second).toBeFocused();
+    await expect(svg).toHaveClass(/keyboard-navigation/);
+
+    const bounds = await first.boundingBox();
+    await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await expect(svg).not.toHaveClass(/keyboard-navigation/);
+    await expect(first).toHaveCSS('outline-style', 'none');
 });
 
 test('the attack tank follows the pointer, locks on the target, and fires into a blast', async ({page}) => {
@@ -369,7 +501,13 @@ async function seatAs(page, roomName, email, color, expectedNotice) {
     if (email) { await page.context().addCookies([sessionCookie(email)]); }
     await page.goto('/game?room=' + encodeURIComponent(roomName));
     await expect(page.locator('.popup .rank-notice')).toContainText(expectedNotice);
+    await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
+    await page.evaluate(() => {
+        window.__mapInfoUpdates = 0;
+        gameInfra.on('map_info', function () { window.__mapInfoUpdates += 1; });
+    });
     await page.locator('label#' + color).click();
+    await expect.poll(() => page.evaluate(() => window.__mapInfoUpdates)).toBeGreaterThan(0);
 }
 
 for (const width of [1280, 375]) {
@@ -413,6 +551,46 @@ test('a guest sees that open tables can be joined and that games are unranked', 
     await expect(page.locator('.flash-message.info a')).toHaveCount(2);
     const openRow = page.locator('#allrooms tbody tr').filter({hasText: 'open'}).first();
     await expect(openRow.locator('.join-room')).toHaveText('join game');
+});
+
+test('Tab reaches the color choices and Enter joins the selected color', async ({page}) => {
+    const roomName = await firstRoomName(page);
+    await page.goto('/game?room=' + encodeURIComponent(roomName));
+    await expect(page.locator('#map_choice')).toBeVisible();
+    await expect(page.locator('.popup')).toHaveAttribute('role', 'dialog');
+    await expect(page.locator('.popup')).toHaveAttribute('aria-modal', 'true');
+    await expect(page.locator('label#red')).toBeFocused();
+    await page.evaluate(() => {
+        window.__nextTurnClicks = 0;
+        document.getElementById('next_turn').addEventListener('click', () => window.__nextTurnClicks++);
+    });
+    await page.keyboard.press('n');
+    await expect.poll(() => page.evaluate(() => window.__nextTurnClicks)).toBe(0);
+    await page.keyboard.press('Tab');
+    await expect(page.locator('label#blue')).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(page.locator('label#red')).toBeFocused();
+    await page.locator('label#black').focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', {name: 'Close color selection'})).toBeFocused();
+    await page.locator('#allow_bots').focus();
+    await page.keyboard.press('Tab');
+    await expect(page.locator('label#red')).toBeFocused();
+    await expect(page.locator('label#red')).toHaveAttribute('role', 'button');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.popup')).toBeHidden();
+    await expect(page.locator('#player_list .player-username')).toContainText('Guest-');
+});
+
+test('Tab from the game header reaches a territory for keyboard play', async ({page}) => {
+    const roomName = await firstRoomName(page);
+    await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+    await expect(page.locator('.popup')).toBeHidden();
+    await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
+    await page.locator('#mission').focus();
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.territory-marker[id="0"]')).toBeFocused();
+    await expect(page.locator('.svg-content')).toHaveClass(/keyboard-navigation/);
 });
 
 test('a verified player sees ranked notices and their rating', async ({page}) => {
@@ -503,6 +681,9 @@ test('first seated player can choose an alternate map and allow bots', async ({p
     });
     expect(chipsInsidePopup).toBe(true);
     await page.locator('#map_choice').selectOption('archipelago');
+    await expect.poll(() => page.locator('.svg-content').evaluate((element) => getComputedStyle(element).backgroundImage))
+        .toContain('archipelago.svg');
+    await expect(page.locator('.svg-content')).toHaveClass(/map-archipelago/);
     await page.locator('#allow_bots').check();
     await page.locator('label#red').click();
 
@@ -545,6 +726,7 @@ test('the world map renders all 42 classic territories', async ({page}) => {
     await page.evaluate(() => {
         window.__clickedTerritories = [];
         window.playerEnabled = true;
+        updateTerritoryActionState();
         window.phase = 'Battle';
         window.battle = (id) => window.__clickedTerritories.push(id);
     });
@@ -628,6 +810,37 @@ test('rapid army purchases cannot overspend or drop unit updates', async ({page}
     await expect(marker.locator('text')).toHaveText(String(territory.units + purchaseCount), {timeout: 12000});
 });
 
+test('N advances the phase and slash focuses chat only outside text inputs', async ({page}) => {
+    await page.goto('/game');
+    await page.evaluate(() => {
+        window.__shortcutEvents = [];
+        gameInfra.emit = (eventName, ...args) => window.__shortcutEvents.push([eventName, ...args]);
+        ['show_gold', 'mission', 'show_activity'].forEach((id) => {
+            document.getElementById(id).addEventListener('click', () => window.__shortcutEvents.push([id]));
+        });
+    });
+
+    await expect(page.locator('#next_turn')).toHaveAttribute('aria-keyshortcuts', 'N');
+    await expect(page.locator('#show_gold')).toHaveAttribute('aria-keyshortcuts', 'G');
+    await expect(page.locator('#mission')).toHaveAttribute('aria-keyshortcuts', 'M');
+    await expect(page.locator('#show_activity')).toHaveAttribute('aria-keyshortcuts', 'A');
+    await expect(page.locator('#message')).toHaveAttribute('aria-keyshortcuts', '/');
+    await page.keyboard.press('n');
+    await expect.poll(() => page.evaluate(() => window.__shortcutEvents)).toEqual([['next_turn']]);
+    await page.keyboard.press('g');
+    await page.keyboard.press('m');
+    await page.keyboard.press('a');
+    await expect.poll(() => page.evaluate(() => window.__shortcutEvents)).toEqual([['next_turn'], ['show_gold'], ['mission']]);
+    await expect(page.getByRole('tab', {name: 'Activity'})).toHaveAttribute('aria-selected', 'true');
+
+    await page.keyboard.press('/');
+    await expect(page.locator('#message')).toBeFocused();
+    await expect(page.getByRole('tab', {name: 'Chat'})).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('n');
+    await expect(page.locator('#message')).toHaveValue('n');
+    await expect.poll(() => page.evaluate(() => window.__shortcutEvents)).toEqual([['next_turn'], ['show_gold'], ['mission']]);
+});
+
 test('battle and tactical move forms submit the selected troop counts', async ({page}) => {
     const roomName = await firstRoomName(page);
     await page.goto('/game?room=' + encodeURIComponent(roomName));
@@ -653,10 +866,30 @@ test('battle and tactical move forms submit the selected troop counts', async ({
     await page.locator('.territory-marker[id="0"]').click();
     await page.locator('.territory-marker[id="1"]').click();
     await expect(page.locator('#unit_bar')).toBeVisible();
-    await page.locator('.add').click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#unit_bar')).toHaveCount(0);
+    await expect(page.locator('.territory-marker[id="0"]')).toBeFocused();
+    await expect.poll(() => page.evaluate(() => window.__gameEvents)).toEqual([]);
+
+    await page.locator('.territory-marker[id="0"]').click();
+    await page.locator('.territory-marker[id="1"]').click();
+    await expect(page.locator('#unit_bar')).toBeVisible();
+    await expect(page.locator('.territory-marker[id="1"] circle')).toHaveClass(/marker-to/);
+    await expect.poll(() => page.locator('.territory-marker[id="1"] circle').evaluate((circle) => getComputedStyle(circle).strokeWidth)).toBe('2.5px');
+    await expect(page.locator('#unit_output')).toBeFocused();
+    expect(await page.locator('#unit_output').evaluate((input) => getComputedStyle(input).outlineStyle)).toBe('none');
+    await page.keyboard.press('ArrowUp');
     await expect(page.locator('#unit_output')).toHaveValue('2');
-    await page.locator('#send_units').click();
-    await expect.poll(() => page.evaluate(() => window.__gameEvents[0])).toEqual(['battle', 0, 1, 1, 2]);
+    await expect.poll(() => page.locator('#unit_output').evaluate((input) => getComputedStyle(input).outlineStyle)).toBe('solid');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('#unit_output')).toHaveValue('3');
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('#unit_output')).toHaveValue('2');
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('#unit_output')).toHaveValue('1');
+    await page.keyboard.press('Space');
+    await expect.poll(() => page.evaluate(() => window.__gameEvents[0])).toEqual(['battle', 0, 1, 1, 1]);
+    await expect(page.locator('.territory-marker[id="0"]')).toBeFocused();
 
     await page.evaluate(() => {
         circles[1].owner = 0;
@@ -666,9 +899,21 @@ test('battle and tactical move forms submit the selected troop counts', async ({
     await page.locator('.territory-marker[id="0"]').click();
     await page.locator('.territory-marker[id="1"]').click();
     await expect(page.locator('#unit_bar')).toBeVisible();
-    await page.locator('#unit_output').fill('2');
-    await page.locator('#send_units').click();
+    await expect.poll(() => page.locator('.territory-marker[id="1"] circle').evaluate((circle) => getComputedStyle(circle).strokeWidth)).toBe('2.5px');
+    await expect(page.locator('#unit_output')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#unit_bar')).toHaveCount(0);
+    await expect(page.locator('.territory-marker[id="1"]')).toBeFocused();
+
+    await page.locator('.territory-marker[id="0"]').click();
+    await page.locator('.territory-marker[id="1"]').click();
+    await expect(page.locator('#unit_bar')).toBeVisible();
+    await expect(page.locator('#unit_output')).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(page.locator('#unit_output')).toHaveValue('2');
+    await page.keyboard.press('Enter');
     await expect.poll(() => page.evaluate(() => window.__gameEvents[1])).toEqual(['tactical_move', 0, 1, 0, 2]);
+    await expect(page.locator('.territory-marker[id="1"]')).toBeFocused();
 });
 
 test('game room sound preference persists across reloads', async ({page}) => {

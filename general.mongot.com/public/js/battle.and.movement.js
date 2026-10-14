@@ -15,10 +15,14 @@ function markSelected(thisCountry, role, color) {
 function sendUnitsOnSubmit(eventName, fromId, toId, toOwner) {
     document.getElementById('unit_bar').addEventListener('submit', function (event) {
         event.preventDefault();
+        var form = event.currentTarget;
+        var returnFocusId = eventName === 'battle' ? form.dataset.originCountryId : form.dataset.countryId;
+        var keyboardFocus = form.classList.contains('keyboard-focus-visible');
         gameInfra.emit(eventName, parseInt(fromId, 10), parseInt(toId, 10), parseInt(toOwner, 10), parseInt(document.getElementById('unit_output').value, 10));
         document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); });
         clearActionSelection();
         drawMap();
+        focusTerritory(returnFocusId, keyboardFocus);
     });
 }
 
@@ -63,7 +67,7 @@ function selectActionOrigin(id, marker, action) {
  */
 var attackFrom;
 
-function battle(latestClickedCountry, thisCountry) {
+function battle(latestClickedCountry, thisCountry, keyboardActivation) {
     latestClickedCountry = Number(latestClickedCountry);
     var country = getCountry(latestClickedCountry);
     if (!country) { return; }
@@ -81,7 +85,7 @@ function battle(latestClickedCountry, thisCountry) {
     var attackersCountry = getCountry(attackFrom);
     if (!attackersCountry || actionTargets(attackFrom, 'battle').indexOf(latestClickedCountry) === -1) { return; }
     var fromId = attackFrom;
-    showUnitBar(attackersCountry.country.units, latestClickedCountry);
+    showUnitBar(attackersCountry.country.units, latestClickedCountry, keyboardActivation, fromId);
     markSelected(thisCountry, 'to', country.color);
     lockAimTank(latestClickedCountry);
     showRouteSelection(fromId, [latestClickedCountry], latestClickedCountry);
@@ -93,7 +97,7 @@ function battle(latestClickedCountry, thisCountry) {
  * Tactical movement
  */
 var countryFrom;
-function tacticalMove(latestClickedCountry, thisCountry) {
+function tacticalMove(latestClickedCountry, thisCountry, keyboardActivation) {
     latestClickedCountry = Number(latestClickedCountry);
     var country = getCountry(latestClickedCountry);
     if (!country || country.owner !== activePlayer) { return; }
@@ -109,18 +113,21 @@ function tacticalMove(latestClickedCountry, thisCountry) {
 
     var fromCountry = getCountry(countryFrom);
     if (actionTargets(countryFrom, 'tactical_move').indexOf(latestClickedCountry) === -1) {
+        if (actionTargets(latestClickedCountry, 'tactical_move').length) {
+            selectActionOrigin(latestClickedCountry, thisCountry, 'tactical_move');
+        }
         return;
     }
 
     var fromId = countryFrom;
-    showUnitBar(fromCountry.country.units, latestClickedCountry);
+    showUnitBar(fromCountry.country.units, latestClickedCountry, keyboardActivation, fromId);
     markSelected(thisCountry, 'to');
     showRouteSelection(fromId, [latestClickedCountry], latestClickedCountry);
     countryFrom = null;
     sendUnitsOnSubmit('tactical_move', fromId, latestClickedCountry, country.owner);
 }
 
-function showUnitBar(units, clickedCountry) {
+function showUnitBar(units, clickedCountry, keyboardActivation, originCountryId) {
     units -= 1;
     document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); });
 
@@ -136,15 +143,42 @@ function showUnitBar(units, clickedCountry) {
 
     var output = document.getElementById('unit_output');
     var slider = document.getElementById('unit_input');
+    var form = output.form;
     output.form.dataset.countryId = clickedCountry;
-    output.form.addEventListener('click', function (event) {
-        if (event.target.matches('.sub')) {
-            output.value = String(Number(output.value) > 1 ? Number(output.value) - 1 : units);
-        }
-        if (event.target.matches('.add')) {
-            output.value = String(Math.min(units, Number(output.value) + 1));
-        }
+    output.form.dataset.originCountryId = originCountryId;
+    form.classList.add(keyboardActivation ? 'keyboard-focus-visible' : 'suppress-focus-ring');
+    var changeUnits = function (amount) {
+        var current = Number(output.value) || 1;
+        output.value = String(amount > 0 ? Math.min(units, current + 1) : (current > 1 ? current - 1 : units));
         slider.value = output.value;
+    };
+    form.addEventListener('click', function (event) {
+        if (event.target.matches('.sub')) { changeUnits(-1); }
+        if (event.target.matches('.add')) { changeUnits(1); }
+    });
+    form.addEventListener('pointerdown', function () {
+        form.classList.remove('keyboard-focus-visible');
+        form.classList.add('suppress-focus-ring');
+    });
+    form.addEventListener('keydown', function (event) {
+        form.classList.remove('suppress-focus-ring');
+        form.classList.add('keyboard-focus-visible');
+        if (event.key === 'ArrowUp' || event.key === 'ArrowRight') {
+            event.preventDefault();
+            changeUnits(1);
+        }
+        else if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') {
+            event.preventDefault();
+            changeUnits(-1);
+        }
+        else if (event.key === 'Escape') {
+            event.preventDefault();
+            document.getElementById('cancel_units').click();
+        }
+        else if (event.key === ' ' || event.key === 'Enter') {
+            event.preventDefault();
+            form.requestSubmit();
+        }
     });
     output.addEventListener('input', function () {
         output.value = String(Math.max(1, Math.min(units, Number(output.value.replace(/\D/g, '')) || 1)));
@@ -154,6 +188,9 @@ function showUnitBar(units, clickedCountry) {
         output.value = slider.value;
     });
     positionUnitBar();
+    setTimeout(function () {
+        if (document.getElementById('unit_output') === output) { output.focus({preventScroll: true}); }
+    }, 0);
 }
 
 function positionUnitBar() {
@@ -175,7 +212,18 @@ function positionUnitBar() {
 
 document.getElementById('game_board').addEventListener('click', function (event) {
     if (!event.target.closest('#cancel_units')) { return; }
+    var form = document.getElementById('unit_bar');
+    var returnFocusId = form && (phase === 'Battle' ? form.dataset.originCountryId : form.dataset.countryId);
+    var keyboardFocus = form && form.classList.contains('keyboard-focus-visible');
     document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); });
     clearActionSelection();
     drawMap();
+    if (returnFocusId !== null && returnFocusId !== undefined) { focusTerritory(returnFocusId, keyboardFocus); }
+});
+
+document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape' || event.defaultPrevented) { return; }
+    if (!document.getElementById('unit_bar')) { return; }
+    event.preventDefault();
+    document.getElementById('cancel_units').click();
 });

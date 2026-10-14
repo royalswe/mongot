@@ -16,7 +16,7 @@ gameInfra.on('map_info', function (map) {
 
     var svg = document.querySelector('.svg-content');
     svg.dataset.mapId = map.id;
-    svg.classList.remove('map-archipelago', 'map-frontier', 'map-world', 'map-quick');
+    svg.classList.remove('map-archipelago', 'map-frontier', 'map-world', 'map-original', 'map-quick');
     ensureTerritoryMarkers(map.countries.length);
     if (map.positions) {
         svg.classList.add('map-' + map.theme);
@@ -63,6 +63,17 @@ function ensureTerritoryMarkers(count) {
     groups.forEach(function (group, id) {
         group.style.display = id < count ? '' : 'none';
         group.classList.remove('route-selected');
+        group.setAttribute('role', 'button');
+        group.setAttribute('tabindex', id === 0 ? '0' : '-1');
+        group.setAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown ArrowLeft ArrowRight Enter Space');
+        group.setAttribute('aria-label', mapData && mapData.countries[id] ? mapData.countries[id].name || 'Territory ' + (id + 1) : 'Territory ' + (id + 1));
+    });
+    updateTerritoryActionState();
+}
+
+function updateTerritoryActionState() {
+    territoryGroups().forEach(function (group) {
+        group.setAttribute('aria-disabled', String(!playerEnabled));
     });
 }
 
@@ -85,6 +96,7 @@ function applyMapPositions(map) {
         group.id = id;
         var title = group.querySelector('title') || document.createElementNS('http://www.w3.org/2000/svg', 'title');
         title.textContent = map.countries[id].name || 'Territory ' + (id + 1);
+        group.setAttribute('aria-label', title.textContent + ' territory');
         if (!title.parentNode) { group.insertBefore(title, group.firstChild); }
     });
 }
@@ -205,6 +217,35 @@ function highlightRoutes(id) {
 function clearRouteHighlight() {
     if (routeSelection) { return; }
     clearRouteElements();
+}
+
+var historyHighlightTimer;
+function highlightHistoryAction(action) {
+    clearTimeout(historyHighlightTimer);
+    document.querySelectorAll('.history-highlight').forEach(function (element) {
+        element.classList.remove('history-highlight');
+    });
+
+    var territoryIds = action.type === 'deploy' ? [action.country] : [action.from, action.to];
+    territoryIds.forEach(function (id) {
+        var marker = document.getElementById(String(id));
+        if (marker && marker.classList.contains('territory-marker')) { marker.classList.add('history-highlight'); }
+    });
+
+    if (action.from !== undefined && action.to !== undefined) {
+        document.querySelectorAll('.map-connection, .map-connection-casing').forEach(function (line) {
+            var a = Number(line.dataset.a), b = Number(line.dataset.b);
+            if ((a === Number(action.from) && b === Number(action.to)) || (a === Number(action.to) && b === Number(action.from))) {
+                line.classList.add('history-highlight');
+            }
+        });
+    }
+
+    historyHighlightTimer = setTimeout(function () {
+        document.querySelectorAll('.history-highlight').forEach(function (element) {
+            element.classList.remove('history-highlight');
+        });
+    }, 2000);
 }
 
 document.addEventListener('mouseover', function (event) {
@@ -511,6 +552,7 @@ function drawMap() {
         text.textContent = circles[i].country.units;
         text.setAttribute('fill', 'white');
         g.id = circles[i].country.id;
+        g.setAttribute('aria-label', (mapData && mapData.countries[circles[i].country.id] && mapData.countries[circles[i].country.id].name || 'Territory ' + (circles[i].country.id + 1)) + ', ' + circles[i].country.units + ' units');
     }
 
     if(circles.length !== countriesGold.length){
@@ -529,7 +571,92 @@ function drawMap() {
             g.id = circles[i].country.id;
         }
     }
+    updateTerritoryActionState();
 }
+
+function moveTerritoryFocus(current, key) {
+    var directions = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]};
+    var direction = directions[key];
+    var sourceCircle = current.querySelector('circle');
+    var sourceX = Number(sourceCircle.getAttribute('cx'));
+    var sourceY = Number(sourceCircle.getAttribute('cy'));
+    var best = null;
+    var bestScore = Infinity;
+
+    territoryGroups().forEach(function (candidate) {
+        if (candidate === current || candidate.style.display === 'none') { return; }
+        var circle = candidate.querySelector('circle');
+        var dx = Number(circle.getAttribute('cx')) - sourceX;
+        var dy = Number(circle.getAttribute('cy')) - sourceY;
+        var forward = dx * direction[0] + dy * direction[1];
+        if (forward <= 0) { return; }
+        var cross = Math.abs(dx * direction[1] - dy * direction[0]);
+        var score = Math.hypot(dx, dy) + cross * 1.5;
+        if (score < bestScore) {
+            best = candidate;
+            bestScore = score;
+        }
+    });
+
+    if (!best) { return; }
+    territoryGroups().forEach(function (group) { group.setAttribute('tabindex', group === best ? '0' : '-1'); });
+    best.focus();
+}
+
+const svgContent = document.querySelector('.svg-content');
+let keyboardNavigationPending = false;
+
+document.addEventListener('keydown', function (event) {
+    if (event.key === 'Tab') {
+        keyboardNavigationPending = true;
+        return;
+    }
+    if (event.target.closest && event.target.closest('.svg-content > g.territory-marker')) {
+        svgContent.classList.add('keyboard-navigation');
+    }
+});
+
+document.addEventListener('pointerdown', function () {
+    keyboardNavigationPending = false;
+    svgContent.classList.remove('keyboard-navigation');
+});
+
+function focusTerritory(id, keyboardFocus) {
+    var marker = document.getElementById(String(id));
+    if (!marker || !marker.classList.contains('territory-marker')) { return; }
+    svgContent.classList.toggle('keyboard-navigation', Boolean(keyboardFocus));
+    territoryGroups().forEach(function (group) { group.setAttribute('tabindex', group === marker ? '0' : '-1'); });
+    marker.focus({preventScroll: true});
+}
+
+document.querySelector('.svg-content').addEventListener('focusin', function (event) {
+    if (event.target === svgContent && keyboardNavigationPending) {
+        const firstMarker = territoryGroups().find(function (group) { return group.style.display !== 'none'; });
+        if (firstMarker) { focusTerritory(firstMarker.id, true); }
+        keyboardNavigationPending = false;
+        return;
+    }
+    const marker = event.target.closest('.svg-content > g.territory-marker');
+    if (marker) {
+        territoryGroups().forEach(function (group) { group.setAttribute('tabindex', group === marker ? '0' : '-1'); });
+        if (keyboardNavigationPending) { svgContent.classList.add('keyboard-navigation'); }
+    }
+    keyboardNavigationPending = false;
+});
+
+document.querySelector('.svg-content').addEventListener('keydown', function (event) {
+    const marker = event.target.closest('.svg-content > g.territory-marker');
+    if (!marker) { return; }
+    svgContent.classList.add('keyboard-navigation');
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        activateCountryMarker(marker, true);
+    }
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        moveTerritoryFocus(marker, event.key);
+    }
+});
 
 function drawGold() {
     for (var i = 0; i < countriesGold.length; i++) {

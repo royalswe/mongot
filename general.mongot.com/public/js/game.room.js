@@ -118,12 +118,18 @@ function appendGameAction(action) {
     if (typeof getPlayerColorHex === 'function') {
         entry.style.setProperty('--action-color', getPlayerColorHex(action.color));
     }
+    var actionButton = document.createElement('button');
+    actionButton.type = 'button';
+    actionButton.className = 'activity-entry-button';
+    actionButton.setAttribute('aria-label', 'Highlight ' + (action.player || 'Player') + ': ' + description);
     var player = document.createElement('strong');
     player.textContent = action.player || 'Player';
     var details = document.createElement('span');
     details.textContent = description;
-    entry.appendChild(player);
-    entry.appendChild(details);
+    actionButton.appendChild(player);
+    actionButton.appendChild(details);
+    actionButton.addEventListener('click', function () { highlightHistoryAction(action); });
+    entry.appendChild(actionButton);
     list.appendChild(entry);
     while (list.children.length > 40) { list.firstElementChild.remove(); }
     list.scrollTop = list.scrollHeight;
@@ -239,6 +245,7 @@ gameInfra.on('message', function (msg) {
             break;
         case "enable_player": // makes it possible for user to interact with the game
             playerEnabled = msg.bool;
+            if (typeof updateTerritoryActionState === 'function') { updateTerritoryActionState(); }
             if(phase !== 'Game over'){ yourTurnSound.play(); } // Notify player turn
             break;
         case "update_gold":
@@ -357,6 +364,7 @@ function startTimer(timerInfo) {
 
 function showActivePlayer(msg) {
     playerEnabled = msg.bool;
+    if (typeof updateTerritoryActionState === 'function') { updateTerritoryActionState(); }
     activePlayer = msg.player;
     var circle = document.getElementById('user_color');
     var text = document.getElementById('username_turn');
@@ -369,34 +377,35 @@ document.addEventListener('mouseover', function (event) {
     if (marker) { marker.style.cursor = playerEnabled ? 'pointer' : 'default'; }
 });
 
+function activateCountryMarker(marker, keyboardActivation) {
+    if (!playerEnabled) { return; }
+    var country = getCountry(marker.id);
+    var click = marker.id;
+    switch (phase) {
+        case "Everyone deploy":
+            if(Number.isInteger(Number(click)) && country && Number.isInteger(Number(country.owner))) {
+                gameInfra.emit("everyone_deploy", parseInt(click), country.owner);
+            }
+            break;
+        case "Deploy":
+            if(Number.isInteger(Number(click)) && country && Number.isInteger(Number(country.owner))) {
+                gameInfra.emit("deploy", parseInt(click), country.owner);
+            }
+            break;
+        case "Battle":
+            battle(click, marker, keyboardActivation);
+            break;
+        case "Tactical move":
+            tacticalMove(click, marker, keyboardActivation);
+            break;
+        default:
+            break;
+    }
+}
+
 document.addEventListener('mousedown', function (event) {
     var marker = event.target.closest('.svg-content > g.territory-marker');
-    if (!marker) { return; }
-    if (playerEnabled) {
-        var country = getCountry(marker.id);
-        var click = marker.id;
-        switch (phase) {
-            case "Everyone deploy":
-                if(Number.isInteger(Number(click)) && Number.isInteger(Number(country.owner))) {
-                    gameInfra.emit("everyone_deploy", parseInt(click), country.owner);
-                }
-                break;
-            case "Deploy":
-                if(Number.isInteger(Number(click)) && Number.isInteger(Number(country.owner))) {
-                    gameInfra.emit("deploy", parseInt(click), country.owner);
-                }
-                break;
-            case "Battle":
-                battle(click, marker);
-                break;
-            case "Tactical move":
-                tacticalMove(click, marker);
-                break;
-            default:
-                break;
-        }
-    }
-    return;
+    if (marker) { activateCountryMarker(marker, false); }
 });
 
 function getCountry(country) {
@@ -458,9 +467,9 @@ gameInfra.on("list_of_players", function (playerList) {
 gameInfra.on("choose_color", function (usedColors, colors, roomSettings) {
     document.querySelectorAll('.popup').forEach(function (popup) { popup.remove(); });
 
-    var popup = '<div class="modal-overlay"></div><div class="popup">'+
-        '  <span class="close-popup" aria-label="Close">X</span>' +
-        '  <div class="pophead">Choose your side</div>'+
+    let popup = '<div class="modal-overlay" aria-hidden="true"></div><div class="popup" role="dialog" aria-modal="true" aria-labelledby="choose-side-heading" tabindex="-1">'+
+        '  <button type="button" class="close-popup" aria-label="Close color selection">X</button>' +
+        '  <div class="pophead" id="choose-side-heading">Choose your side</div>'+
         '  <p class="rank-notice' + (identityKind === 'verified' ? '' : ' unranked') + '">' + rankNotice() + '</p>'+
         (roomSettings.isHost ? '<div class="host-settings"><label for="map_choice">Map</label><select id="map_choice"></select>'+
             '<label class="bot-choice"><input id="allow_bots" type="checkbox" ' + (roomSettings.allowBots ? 'checked' : '') + '> Allow bot opponents</label></div>' :
@@ -468,10 +477,10 @@ gameInfra.on("choose_color", function (usedColors, colors, roomSettings) {
         '  <div class="color-prompt">Choose a color</div>'+
         '  <div class="popbody">'+
         '    <ul>';
-    for (var i = 0; i < colors.length; i += 1) {
+    for (const color of colors) {
         popup +='<div class="player-check">'+
-            ' <input id="'+ colors[i] +'_player" type="checkbox"/>'+
-            ' <label id="'+ colors[i] +'" for="'+ colors[i] +'_player"></label>'+
+            ' <input id="'+ color +'_player" type="checkbox" tabindex="-1"/>'+
+            ' <label id="'+ color +'" for="'+ color +'_player" role="button" tabindex="0" aria-label="Join as '+ color +'" aria-keyshortcuts="Enter Space"></label>'+
             ' </div>';
     }
         popup += '</ul></div></div>';
@@ -490,11 +499,44 @@ gameInfra.on("choose_color", function (usedColors, colors, roomSettings) {
             option.textContent = map.name;
             document.getElementById('map_choice').appendChild(option);
         });
-        document.getElementById('map_choice').value = roomSettings.mapId;
+        var mapChoice = document.getElementById('map_choice');
+        mapChoice.value = roomSettings.mapId;
+        mapChoice.addEventListener('change', function () {
+            gameInfra.emit('preview_map', roomName, mapChoice.value);
+        });
     }
     else {
         document.querySelector('.room-map-name').textContent = (roomSettings.maps.find(function(map) { return map.id === roomSettings.mapId; }) || {}).name || 'Original Map';
     }
+
+    const popupDialog = document.querySelector('.popup');
+    const popupFocusable = function () {
+        return Array.from(popupDialog.querySelectorAll('button:not([disabled]), select:not([disabled]), input:not([disabled]), [tabindex="0"]'))
+            .filter(function (element) { return getComputedStyle(element).visibility !== 'hidden' && element.getClientRects().length > 0; });
+    };
+    popupDialog.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            popupDialog.querySelector('.close-popup').click();
+            return;
+        }
+        if (event.key !== 'Tab') { return; }
+        const focusable = popupFocusable();
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!first || !last) { event.preventDefault(); return; }
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        }
+        else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+    const initialColor = popupDialog.querySelector('.player-check label[role="button"]');
+    const firstFocusable = initialColor || popupFocusable()[0];
+    if (firstFocusable) { firstFocusable.focus(); }
 });
 // if player choosed color remove it
 gameInfra.on("remove_color_popup", function (usedColors) {
@@ -523,6 +565,37 @@ document.getElementById('next_turn').addEventListener('click', function () {
         gameInfra.emit("next_turn");
     });
 
+document.addEventListener('keydown', function (event) {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) { return; }
+    if (event.target.closest && event.target.closest('input, textarea, select, [contenteditable="true"]')) { return; }
+    if (document.querySelector('.popup')) { return; }
+
+    const key = event.key.toLowerCase();
+    if (key === 'n') {
+        event.preventDefault();
+        document.getElementById('next_turn').click();
+    }
+    else if (key === 'g') {
+        event.preventDefault();
+        document.getElementById('show_gold').click();
+    }
+    else if (key === 'm') {
+        event.preventDefault();
+        document.getElementById('mission').click();
+    }
+    else if (key === 'a') {
+        event.preventDefault();
+        selectSidebarTab(activityTab, false);
+    }
+    else if (event.key === '/') {
+        event.preventDefault();
+        if (activityPanel.classList.contains('is-active')) { selectSidebarTab(chatTab, false); }
+        const chatroom = document.getElementById('chatroom');
+        if (chatroom.classList.contains('hidden')) { document.querySelector('.slide-toggle').click(); }
+        document.getElementById('message').focus();
+    }
+});
+
 document.getElementById('start_bots').addEventListener('click', function () {
         gameInfra.emit('start_with_bots', roomName);
         this.disabled = true;
@@ -548,6 +621,13 @@ document.getElementById('game_board').addEventListener('click', function (event)
             document.querySelectorAll('.modal-overlay').forEach(function (overlay) { overlay.style.display = 'none'; });
         }
     }
+});
+
+document.getElementById('game_board').addEventListener('keydown', function (event) {
+    const colorChoice = event.target.closest('.player-check label[role="button"]');
+    if (!colorChoice || (event.key !== 'Enter' && event.key !== ' ')) { return; }
+    event.preventDefault();
+    colorChoice.click();
 });
 
 document.getElementById('mission').addEventListener('click', function () {
