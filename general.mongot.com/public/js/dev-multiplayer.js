@@ -1,15 +1,15 @@
 'use strict';
 
-var roomSelect = document.getElementById('room_select');
-var playerCount = document.getElementById('player_count');
-var openButton = document.getElementById('open_players');
-var workspace = document.getElementById('workspace');
-var statusLabel = document.getElementById('cockpit_status');
-var availableRooms = [];
-var windows = [];
-var defaultLayoutOpened = false;
+window.roomSelect = document.getElementById('room_select');
+window.playerCount = document.getElementById('player_count');
+window.openButton = document.getElementById('open_players');
+window.workspace = document.getElementById('workspace');
+window.statusLabel = document.getElementById('cockpit_status');
+window.availableRooms = [];
+window.windows = [];
+window.defaultLayoutOpened = false;
 
-var lobbySocket = io(location.host + '/game_infra', {
+window.lobbySocket = io(location.host + '/game_infra', {
     reconnection: true,
     reconnectionAttempts: Infinity,
     transports: ['websocket', 'polling']
@@ -42,14 +42,14 @@ openButton.addEventListener('click', openPlayers);
 document.getElementById('clear_players').addEventListener('click', closeAllPlayers);
 
 function renderRooms() {
-    var previousRoom = roomSelect.value;
+    const previousRoom = roomSelect.value;
     roomSelect.textContent = '';
     availableRooms.sort(function (first, second) {
         return first.startingPlayers - second.startingPlayers || second.players - first.players;
     });
 
     availableRooms.forEach(function (room) {
-        var option = document.createElement('option');
+        const option = document.createElement('option');
         option.value = room.name;
         option.textContent = room.name + ' (' + room.players + '/' + room.startingPlayers + ')';
         roomSelect.appendChild(option);
@@ -62,7 +62,7 @@ function renderRooms() {
 }
 
 function updatePlayerCounts() {
-    var room = selectedRoom();
+    const room = selectedRoom();
     playerCount.textContent = '';
     if (!room) {
         playerCount.disabled = true;
@@ -70,9 +70,9 @@ function updatePlayerCounts() {
         return;
     }
 
-    var count = Math.min(2, room.startingPlayers);
-    for (var number = 2; number <= room.startingPlayers; number += 1) {
-        var option = document.createElement('option');
+    const count = Math.min(2, room.startingPlayers);
+    for (let number = 2; number <= room.startingPlayers; number += 1) {
+        let option = document.createElement('option');
         option.value = String(number);
         option.textContent = String(number);
         playerCount.appendChild(option);
@@ -87,12 +87,12 @@ function selectedRoom() {
 }
 
 function openPlayers() {
-    var room = selectedRoom();
+    const room = selectedRoom();
     if (!room) { return; }
 
     closeAllPlayers();
-    var count = Number(playerCount.value);
-    for (var index = 0; index < count; index += 1) {
+    const count = Number(playerCount.value);
+    for (let index = 0; index < count; index += 1) {
         addPlayerWindow(index + 1, room.name);
     }
     layoutWindows();
@@ -100,16 +100,16 @@ function openPlayers() {
 }
 
 function addPlayerWindow(number, roomName) {
-    var panel = document.createElement('article');
+    const panel = document.createElement('article');
     panel.className = 'player-window';
 
-    var titlebar = document.createElement('div');
+    const titlebar = document.createElement('div');
     titlebar.className = 'window-titlebar';
-    var title = document.createElement('span');
+    const title = document.createElement('span');
     title.className = 'window-title';
     title.textContent = 'Player ' + number;
 
-    var actions = document.createElement('div');
+    const actions = document.createElement('div');
     actions.className = 'window-actions';
     actions.appendChild(makeWindowButton('Reload', 'R', function () {
         frame.src = frame.src;
@@ -121,9 +121,9 @@ function addPlayerWindow(number, roomName) {
     titlebar.appendChild(title);
     titlebar.appendChild(actions);
 
-    var frame = document.createElement('iframe');
+    const frame = document.createElement('iframe');
     frame.title = 'Player ' + number + ' game';
-    var gameUrl = new URL('/game', location.origin);
+    const gameUrl = new URL('/game', location.origin);
     gameUrl.searchParams.set('room', roomName);
     gameUrl.searchParams.set('devGuestId', createGuestId());
     gameUrl.searchParams.set('devMapId', 'quick');
@@ -137,7 +137,7 @@ function addPlayerWindow(number, roomName) {
 }
 
 function makeWindowButton(label, text, onClick) {
-    var button = document.createElement('button');
+    const button = document.createElement('button');
     button.type = 'button';
     button.title = label;
     button.setAttribute('aria-label', label);
@@ -151,12 +151,12 @@ function createGuestId() {
 }
 
 function enableDragging(panel, titlebar) {
-    var dragOffsetX;
-    var dragOffsetY;
+    let dragOffsetX;
+    let dragOffsetY;
 
     titlebar.addEventListener('pointerdown', function (event) {
         if (event.target.closest('button')) { return; }
-        var panelBounds = panel.getBoundingClientRect();
+        const panelBounds = panel.getBoundingClientRect();
         dragOffsetX = event.clientX - panelBounds.left;
         dragOffsetY = event.clientY - panelBounds.top;
         titlebar.setPointerCapture(event.pointerId);
@@ -164,21 +164,21 @@ function enableDragging(panel, titlebar) {
 
     titlebar.addEventListener('pointermove', function (event) {
         if (!titlebar.hasPointerCapture(event.pointerId)) { return; }
-        var workspaceBounds = workspace.getBoundingClientRect();
+        const workspaceBounds = workspace.getBoundingClientRect();
         panel.style.left = Math.max(0, event.clientX - workspaceBounds.left + workspace.scrollLeft - dragOffsetX) + 'px';
         panel.style.top = Math.max(0, event.clientY - workspaceBounds.top + workspace.scrollTop - dragOffsetY) + 'px';
     });
 }
 
 function layoutWindows() {
-    var gap = 14;
-    var columns = workspace.clientWidth >= 900 ? 2 : 1;
-    var width = columns === 2 ? Math.min(620, Math.floor((workspace.clientWidth - 36 - gap) / 2)) : Math.min(620, workspace.clientWidth - 24);
+    const gap = 14;
+    const columns = workspace.clientWidth >= 900 ? 2 : 1;
+    let width = columns === 2 ? Math.min(620, Math.floor((workspace.clientWidth - 36 - gap) / 2)) : Math.min(620, workspace.clientWidth - 24);
     width = Math.max(420, width);
 
     windows.forEach(function (entry, index) {
-        var column = index % columns;
-        var row = Math.floor(index / columns);
+        const column = index % columns;
+        const row = Math.floor(index / columns);
         entry.panel.style.width = width + 'px';
         entry.panel.style.left = (12 + column * (width + gap)) + 'px';
         entry.panel.style.top = (12 + row * (468 + gap)) + 'px';

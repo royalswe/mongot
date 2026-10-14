@@ -1,5 +1,5 @@
 'use strict';
-var gameInfra = io(location.host + '/game_infra', {
+window.gameInfra = io(location.host + '/game_infra', {
     reconnection: true,
     reconnectionAttempts: Infinity,
     auth: user === 'guest' ? {guestId: getGuestId()} : {},
@@ -11,7 +11,7 @@ var gameInfra = io(location.host + '/game_infra', {
  * This way we can send url to a friend as an invite
  * @type {string}
  */
-var roomName = decodeURI((RegExp("room" + '=' + '(.+?)(&|$)').exec(location.search) || [, null])[1]);
+window.roomName = decodeURI((RegExp("room" + '=' + '(.+?)(&|$)').exec(location.search) || [, null])[1]);
 function enterRoom() {
     gameInfra.emit("player_ready");
     gameInfra.emit('join_room', (roomName));
@@ -25,7 +25,7 @@ if (roomName) {
 
 // Socket.IO reconnects with a brand-new server socket, so identity and room must be sent again.
 gameInfra.io.on('reconnect', function () {
-    var disconnectPopup = document.querySelector('.disconnect-popup');
+    const disconnectPopup = document.querySelector('.disconnect-popup');
     if (disconnectPopup) { disconnectPopup.closest('.modal-overlay').remove(); }
     if (roomName) { enterRoom(); }
 });
@@ -34,7 +34,7 @@ gameInfra.on('disconnect', function() {
     disconnectedSound.play();
     window.onbeforeunload = function () { }; // Dont prompt if user disconnect
 
-    var element = '<div class="modal-overlay"><div class="disconnect-popup"><span class="close-popup">X</span>';
+    let element = '<div class="modal-overlay"><div class="disconnect-popup"><span class="close-popup">X</span>';
     element += "<h1>Disconnected &#x2639;</h1><p>You drop connection and cannot see any activity anymore! Reload this window or reopen it to rejoin the game again.</p>";
     element += "</div></div>";
     document.body.insertAdjacentHTML('beforeend', element);
@@ -43,13 +43,13 @@ gameInfra.on('disconnect', function() {
 });
 
 gameInfra.on('bot_takeover', function (msg) {
-    var reason = msg.reason === 'surrender' ? 'surrendered' : 'did not return';
+    const reason = msg.reason === 'surrender' ? 'surrendered' : 'did not return';
     document.getElementById('messages').insertAdjacentHTML('beforeend', '<div class="server-message">' + msg.username + ' ' + reason + '. A bot now controls that faction.</div>');
 });
 
 // Guests and unverified accounts can play, but their matches are unranked.
 // The server decides who you are; this starts from the page and is corrected by its 'identity' message.
-var identityKind = user === 'guest' ? 'guest' : (user.active ? 'verified' : 'unverified');
+window.identityKind = user === 'guest' ? 'guest' : (user.active ? 'verified' : 'unverified');
 
 function rankNotice() {
     if (identityKind === 'guest') {
@@ -61,29 +61,29 @@ function rankNotice() {
     return '<strong>Ranked play.</strong> Your rating changes with the result when every player at the table is verified.';
 }
 
-var mission;
-var phase = 'Waiting for players';
-var phaseMessage;
-var activePlayer;
-var playerEnabled;
-var gameUsername = user === 'guest' ? null : user.username;
-var canRematch = false;
-var GAME_SOUND_MUTED_KEY = 'general_game_room_sound_muted';
-var gameSoundsMuted = false;
+window.mission = undefined;
+window.phase = 'Waiting for players';
+window.phaseMessage = undefined;
+window.activePlayer = undefined;
+window.playerEnabled = undefined;
+window.gameUsername = user === 'guest' ? null : user.username;
+window.canRematch = false;
+window.GAME_SOUND_MUTED_KEY = 'general_game_room_sound_muted';
+window.gameSoundsMuted = false;
 try {
     gameSoundsMuted = localStorage.getItem(GAME_SOUND_MUTED_KEY) === 'true';
 }
 catch (error) { }
 Howler.mute(gameSoundsMuted);
 
-var disconnectedSound = new Howl({src: ['sounds/disconnected.mp3']});
-var yourTurnSound = new Howl({src: ['sounds/notify-turn.mp3']});
-var gameOverSound = new Howl({src: ['sounds/game-over.mp3'], volume: 0.5});
-var joinGameSound = new Howl({src: ['sounds/player-joined.mp3'], volume: 0.5});
+window.disconnectedSound = new Howl({src: ['sounds/disconnected.mp3']});
+window.yourTurnSound = new Howl({src: ['sounds/notify-turn.mp3']});
+window.gameOverSound = new Howl({src: ['sounds/game-over.mp3'], volume: 0.5});
+window.joinGameSound = new Howl({src: ['sounds/player-joined.mp3'], volume: 0.5});
 
 function updateGameSoundToggle() {
-    var soundToggle = document.getElementById('toggle_game_sound');
-    var soundIcon = document.getElementById('game_sound_icon');
+    const soundToggle = document.getElementById('toggle_game_sound');
+    const soundIcon = document.getElementById('game_sound_icon');
     soundIcon.setAttribute('href', '/img/game/icons/options.sprite.svg?v=1#' + (gameSoundsMuted ? 'sound-off' : 'sound-on'));
     soundToggle.setAttribute('aria-pressed', String(gameSoundsMuted));
     soundToggle.setAttribute('aria-label', (gameSoundsMuted ? 'Unmute' : 'Mute') + ' game sounds');
@@ -91,7 +91,7 @@ function updateGameSoundToggle() {
 }
 
 function territoryLabel(id) {
-    var territory = mapData && mapData.countries[Number(id)];
+    const territory = mapData && mapData.countries[Number(id)];
     return territory && territory.name ? territory.name : 'Territory ' + (Number(id) + 1);
 }
 
@@ -107,24 +107,24 @@ function actionDescription(action) {
 }
 
 function appendGameAction(action) {
-    var list = document.getElementById('game_actions');
-    var description = actionDescription(action);
+    const list = document.getElementById('game_actions');
+    const description = actionDescription(action);
     if (!description) { return; }
-    var emptyMessage = list.querySelector('.activity-empty');
+    const emptyMessage = list.querySelector('.activity-empty');
     if (emptyMessage) { emptyMessage.remove(); }
 
-    var entry = document.createElement('li');
+    const entry = document.createElement('li');
     entry.className = 'activity-entry';
     if (typeof getPlayerColorHex === 'function') {
         entry.style.setProperty('--action-color', getPlayerColorHex(action.color));
     }
-    var actionButton = document.createElement('button');
+    const actionButton = document.createElement('button');
     actionButton.type = 'button';
     actionButton.className = 'activity-entry-button';
     actionButton.setAttribute('aria-label', 'Highlight ' + (action.player || 'Player') + ': ' + description);
-    var player = document.createElement('strong');
+    const player = document.createElement('strong');
     player.textContent = action.player || 'Player';
-    var details = document.createElement('span');
+    const details = document.createElement('span');
     details.textContent = description;
     actionButton.appendChild(player);
     actionButton.appendChild(details);
@@ -136,10 +136,10 @@ function appendGameAction(action) {
 }
 
 function setGameActionHistory(actions) {
-    var list = document.getElementById('game_actions');
+    const list = document.getElementById('game_actions');
     list.replaceChildren();
     if (!actions || !actions.length) {
-        var emptyMessage = document.createElement('li');
+        const emptyMessage = document.createElement('li');
         emptyMessage.className = 'activity-empty';
         emptyMessage.textContent = 'No actions recorded yet';
         list.appendChild(emptyMessage);
@@ -148,12 +148,12 @@ function setGameActionHistory(actions) {
     actions.forEach(appendGameAction);
 }
 
-var chatTab = document.getElementById('show_chat');
-var activityTab = document.getElementById('show_activity');
-var chatPanel = document.getElementById('chat-panel');
-var activityPanel = document.getElementById('activity-panel');
+window.chatTab = document.getElementById('show_chat');
+window.activityTab = document.getElementById('show_activity');
+window.chatPanel = document.getElementById('chat-panel');
+window.activityPanel = document.getElementById('activity-panel');
 function selectSidebarTab(selectedTab, moveFocus) {
-    var showActivity = selectedTab === activityTab;
+    const showActivity = selectedTab === activityTab;
     chatTab.setAttribute('aria-selected', String(!showActivity));
     chatTab.tabIndex = showActivity ? -1 : 0;
     activityTab.setAttribute('aria-selected', String(showActivity));
@@ -172,10 +172,10 @@ activityTab.addEventListener('click', function () {
     selectSidebarTab(activityTab, false);
 });
 document.querySelector('.sidebar-tabs').addEventListener('keydown', function (event) {
-    var tabs = [chatTab, activityTab];
-    var selectedIndex = tabs.indexOf(document.activeElement);
+    const tabs = [chatTab, activityTab];
+    const selectedIndex = tabs.indexOf(document.activeElement);
     if (selectedIndex < 0) { return; }
-    var nextIndex = event.key === 'ArrowRight' ? (selectedIndex + 1) % tabs.length :
+    const nextIndex = event.key === 'ArrowRight' ? (selectedIndex + 1) % tabs.length :
         event.key === 'ArrowLeft' ? (selectedIndex + tabs.length - 1) % tabs.length :
         event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : selectedIndex;
     if (nextIndex !== selectedIndex) {
@@ -215,8 +215,8 @@ gameInfra.on('message', function (msg) {
                     document.querySelector('.phase-message').innerHTML = '<div class="show-phase">Phase: ' + phase + '</div>';
                     document.querySelector('.phase-info').innerHTML = phaseMessage;
             }
-            var image = document.getElementById('phase_img');
-            var phaseIcon = {
+            const image = document.getElementById('phase_img');
+            const phaseIcon = {
                 'Everyone deploy': 'everyone-deploy',
                 'Deploy': 'deploy',
                 'Battle': 'battle',
@@ -269,7 +269,7 @@ gameInfra.on('message', function (msg) {
             mission = msg.mission;
             break;
         case "room_settings":
-            var tableIsWaiting = msg.status === 'open' || msg.status === 'waiting for players';
+            const tableIsWaiting = msg.status === 'open' || msg.status === 'waiting for players';
             document.getElementById('start_bots').style.display = tableIsWaiting && msg.host === gameUsername && msg.allowBots ? '' : 'none';
             break;
         case "game_over":
@@ -288,14 +288,14 @@ gameInfra.on('message', function (msg) {
 
 gameInfra.on('rematch_status', function (status) {
     document.getElementById('rematch-status').textContent = 'Rematch ready: ' + status.votes + ' of ' + status.required;
-    var hasVoted = status.voters.indexOf(gameUsername) !== -1;
-    var rematchButton = document.getElementById('rematch-button');
+    const hasVoted = status.voters.indexOf(gameUsername) !== -1;
+    const rematchButton = document.getElementById('rematch-button');
     rematchButton.disabled = hasVoted;
     rematchButton.textContent = hasVoted ? 'Waiting' : 'Rematch';
 });
 
 gameInfra.on('rematch_started', function () {
-    var rematchPanel = document.getElementById('rematch-panel');
+    const rematchPanel = document.getElementById('rematch-panel');
     if (rematchPanel) { rematchPanel.remove(); }
     document.getElementById('messages').replaceChildren();
     canRematch = true;
@@ -316,12 +316,12 @@ gameInfra.on("error", function (err) { // if there will be any errors then show 
     console.log(err);
 });
 
-var countInterval;
+window.countInterval = undefined;
 gameInfra.on("game_countdown", function (bool) {
     if(bool){
         document.querySelector('.phase-message').innerHTML = '<span style="color:#4bff00">Be ready!</span>';
         document.querySelector('.phase-info').innerHTML = '<span style="color:#4bff00">The game starts in <b style="margin: 0px; color: #ff0" id="start_countdown">5</b> seconds.</span>';
-        var i = 4;
+        let i = 4;
 
         countInterval = setInterval(function() {
             document.getElementById('start_countdown').textContent = i;
@@ -342,19 +342,19 @@ gameInfra.on("clear_game_countdown", function () { // clear game countdown for e
     clearInterval(countInterval);
 });
 
-var countdown
+window.countdown = undefined;
 function startTimer(timerInfo) {
-    var display = document.querySelector('#countdown');
+    const display = document.querySelector('#countdown');
     clearInterval(countdown);
     if (!timerInfo || timerInfo.deadline === null || timerInfo.deadline === undefined) {
         display.textContent = '';
         return;
     }
-    var localDeadline = Date.now() + Math.max(0, timerInfo.deadline - timerInfo.serverTime);
-    var renderCountdown = function () {
-        var remaining = Math.max(0, Math.ceil((localDeadline - Date.now()) / 1000));
-        var minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
-        var seconds = String(remaining % 60).padStart(2, '0');
+    const localDeadline = Date.now() + Math.max(0, timerInfo.deadline - timerInfo.serverTime);
+    const renderCountdown = function () {
+        const remaining = Math.max(0, Math.ceil((localDeadline - Date.now()) / 1000));
+        const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+        const seconds = String(remaining % 60).padStart(2, '0');
         display.textContent = minutes + ':' + seconds;
         if (remaining === 0) { clearInterval(countdown); }
     };
@@ -366,21 +366,21 @@ function showActivePlayer(msg) {
     playerEnabled = msg.bool;
     if (typeof updateTerritoryActionState === 'function') { updateTerritoryActionState(); }
     activePlayer = msg.player;
-    var circle = document.getElementById('user_color');
-    var text = document.getElementById('username_turn');
+    const circle = document.getElementById('user_color');
+    const text = document.getElementById('username_turn');
     circle.setAttribute('fill', 'url(#radial_' + msg.color + ')');
     text.textContent = msg.username;
 }
 
 document.addEventListener('mouseover', function (event) {
-    var marker = event.target.closest('.svg-content > g.territory-marker');
+    const marker = event.target.closest('.svg-content > g.territory-marker');
     if (marker) { marker.style.cursor = playerEnabled ? 'pointer' : 'default'; }
 });
 
 function activateCountryMarker(marker, keyboardActivation) {
     if (!playerEnabled) { return; }
-    var country = getCountry(marker.id);
-    var click = marker.id;
+    const country = getCountry(marker.id);
+    const click = marker.id;
     switch (phase) {
         case "Everyone deploy":
             if(Number.isInteger(Number(click)) && country && Number.isInteger(Number(country.owner))) {
@@ -404,34 +404,35 @@ function activateCountryMarker(marker, keyboardActivation) {
 }
 
 document.addEventListener('mousedown', function (event) {
-    var marker = event.target.closest('.svg-content > g.territory-marker');
+    const marker = event.target.closest('.svg-content > g.territory-marker');
     if (marker) { activateCountryMarker(marker, false); }
 });
 
 function getCountry(country) {
-    for (var i = 0; i < circles.length; i += 1) {
+    for (let i = 0; i < circles.length; i += 1) {
         if(circles[i].country.id === parseInt(country)){ return circles[i]; }
     }
 }
 
 gameInfra.on("list_of_players", function (playerList) {
-    var playerListElement = document.getElementById('player_list');
+    const playerListElement = document.getElementById('player_list');
     playerListElement.replaceChildren();
 
     Object.keys(playerList).forEach(function (key) {
-        var value = playerList[key];
-        var isUnranked = value.isGuest || value.isUnverified;
-        var points = isUnranked ? 'Unranked' : value.points;
+        const value = playerList[key];
+        const isUnranked = value.isGuest || value.isUnverified;
+        const points = isUnranked ? 'Unranked' : value.points;
 
-        var ipCounter = 0;
-        for(var i = 0; i<playerList.length; i+=1){
+        let ipCounter = 0;
+        for(let i = 0; i<playerList.length; i+=1){
             if(value.ip === playerList[i].ip){
                 ipCounter += 1;
             }
         }
 
+        let imgInfo;
         if (value.isGuest) {
-            var imgInfo = '<img src="img/users-icon.png" alt="guest" title="Guest (unranked)"/>';
+            imgInfo = '<img src="img/users-icon.png" alt="guest" title="Guest (unranked)"/>';
         }
         else if (value.isUnverified) {
             imgInfo = '<img src="img/users-icon.png" alt="unverified player" title="Email not verified (unranked)"/>';
@@ -449,15 +450,15 @@ gameInfra.on("list_of_players", function (playerList) {
             imgInfo = '<img src="img/moderator.png" alt="moderator" title="moderator"/>';
         }
 
-        var rankImage = isUnranked ? '' : '<img src="img/rankings/' + rankIcon(points) + '"/>';
-        var roomDiv = '<li class="player-name player-color-' + value.color + '">'+ imgInfo +'<span class="player-username">' + value.username + '</span>' +
+        const rankImage = isUnranked ? '' : '<img src="img/rankings/' + rankIcon(points) + '"/>';
+        const roomDiv = '<li class="player-name player-color-' + value.color + '">'+ imgInfo +'<span class="player-username">' + value.username + '</span>' +
             '<span class="player-points">' + points + rankImage + '</span></li>';
         playerListElement.insertAdjacentHTML('beforeend', roomDiv);
     });
 
     // The server decides this from everyone seated for the match, including players who have since left.
-    var matchIsUnranked = playerList.length > 0 && playerList[0].matchRanked === false;
-    var matchRank = document.getElementById('match_rank');
+    const matchIsUnranked = playerList.length > 0 && playerList[0].matchRanked === false;
+    const matchRank = document.getElementById('match_rank');
     matchRank.textContent = playerList.length === 0 ? '' : (matchIsUnranked ? 'Unranked match' : 'Ranked match');
     matchRank.classList.toggle('unranked', matchIsUnranked);
     matchRank.title = matchIsUnranked ? 'A guest or an unverified player is or was seated, so nobody\'s rating changes.' : 'Ratings change with the result.';
@@ -489,17 +490,17 @@ gameInfra.on("choose_color", function (usedColors, colors, roomSettings) {
     document.querySelector('.modal-overlay').style.display = 'block';
 
     usedColors.forEach(function (value) {
-        var usedColor = document.getElementById(value.color);
+        const usedColor = document.getElementById(value.color);
         if (usedColor) { usedColor.remove(); }
     });
     if (roomSettings.isHost) {
         roomSettings.maps.forEach(function (map) {
-            var option = document.createElement('option');
+            const option = document.createElement('option');
             option.value = map.id;
             option.textContent = map.name;
             document.getElementById('map_choice').appendChild(option);
         });
-        var mapChoice = document.getElementById('map_choice');
+        const mapChoice = document.getElementById('map_choice');
         mapChoice.value = roomSettings.mapId;
         mapChoice.addEventListener('change', function () {
             gameInfra.emit('preview_map', roomName, mapChoice.value);
@@ -541,7 +542,7 @@ gameInfra.on("choose_color", function (usedColors, colors, roomSettings) {
 // if player choosed color remove it
 gameInfra.on("remove_color_popup", function (usedColors) {
     usedColors.forEach(function (value) {
-        var usedColor = document.getElementById(value.color);
+        const usedColor = document.getElementById(value.color);
         if (usedColor) { usedColor.remove(); }
     });
     joinGameSound.play();
@@ -553,7 +554,7 @@ gameInfra.on("remove_color_popup_box", function () {
 });
 // Show withdrawing gold effect
 gameInfra.on("withdraw_gold_effect", function (gold) {
-    var fadingNumber = '<span class="user-gold-withdraw">-' + gold + '</span>';
+    const fadingNumber = '<span class="user-gold-withdraw">-' + gold + '</span>';
     document.querySelector('.user-gold').insertAdjacentHTML('beforeend', fadingNumber);
 });
 
@@ -610,9 +611,9 @@ document.getElementById('game_board').addEventListener('click', function (event)
     }
 
     if (event.target.closest('label')) {
-        var label = event.target.closest('label');
+        const label = event.target.closest('label');
         if (label.parentElement.classList.contains('player-check')) { // check if label has correct parent
-            var mapSettings = {
+            const mapSettings = {
                 mapId: (document.getElementById('map_choice') || {}).value || (mapData && mapData.id) || 'original',
                 allowBots: Boolean(document.getElementById('allow_bots') && document.getElementById('allow_bots').checked)
             };
@@ -654,7 +655,7 @@ document.querySelector('.dice-log').addEventListener('click', function () {
     });
 
 document.querySelector('.surrender-flag').addEventListener('click', function () {
-        var confirmSurrender = confirm('Do you really want to surrender and lose this game?');
+        const confirmSurrender = confirm('Do you really want to surrender and lose this game?');
         if(confirmSurrender){
             gameInfra.emit("surrender");
             this.remove();

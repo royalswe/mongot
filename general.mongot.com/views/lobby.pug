@@ -1,6 +1,6 @@
 extends base
 block head
-  - var title = 'General Lobby'
+  - const title = 'General Lobby'
 
 block styles
   link(rel='stylesheet', type='text/css', href='/css/lobby.css?v=2.0')
@@ -56,9 +56,9 @@ block body
 
   script
     if user
-      | var user = !{JSON.stringify(user)}
+      | window.user = !{JSON.stringify(user)}
     else
-      | var user = 'guest';
+      | window.user = 'guest';
   script(src='/socket.io/socket.io.js')
   script(src='/resources/howler.min.js')
   if useBundles

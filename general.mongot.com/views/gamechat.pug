@@ -1,6 +1,6 @@
 extends base
 block head
-  - var title = 'Game chat'
+  - const title = 'Game chat'
     title GameChat
     style.
       section#chatroom {
@@ -41,8 +41,8 @@ block body
 
     // messages.sort(compare);
 
-    var roomName = 'noname';
-    for (var i=0; i<messages.length; i++){
+    let roomName = 'noname';
+    for (let i=0; i<messages.length; i++){
         if (roomName !== messages[i].room) {
             roomName = messages[i].room
             document.getElementById('messages').insertAdjacentHTML('beforeend', '<h2>'+ messages[i].room +'</h2>');

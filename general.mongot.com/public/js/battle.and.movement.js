@@ -2,7 +2,7 @@
 
 // Highlights a marker as the origin ('from') or destination ('to') of an attack or move; drawMap clears it.
 function markSelected(thisCountry, role, color) {
-    var circle = thisCountry.querySelector('circle');
+    const circle = thisCountry.querySelector('circle');
     circle.classList.add('marker-' + role);
     if (role === 'to' && color) {
         circle.classList.add('marker-color-' + color);
@@ -15,9 +15,9 @@ function markSelected(thisCountry, role, color) {
 function sendUnitsOnSubmit(eventName, fromId, toId, toOwner) {
     document.getElementById('unit_bar').addEventListener('submit', function (event) {
         event.preventDefault();
-        var form = event.currentTarget;
-        var returnFocusId = eventName === 'battle' ? form.dataset.originCountryId : form.dataset.countryId;
-        var keyboardFocus = form.classList.contains('keyboard-focus-visible');
+        const form = event.currentTarget;
+        const returnFocusId = eventName === 'battle' ? form.dataset.originCountryId : form.dataset.countryId;
+        const keyboardFocus = form.classList.contains('keyboard-focus-visible');
         gameInfra.emit(eventName, parseInt(fromId, 10), parseInt(toId, 10), parseInt(toOwner, 10), parseInt(document.getElementById('unit_output').value, 10));
         document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); });
         clearActionSelection();
@@ -34,17 +34,17 @@ function clearActionSelection() {
 }
 
 function actionTargets(sourceId, action) {
-    var source = getCountry(sourceId);
+    const source = getCountry(sourceId);
     if (!source || source.country.units <= 1) { return []; }
     return source.country.neighbour.filter(function (neighborId) {
-        var neighbor = getCountry(neighborId);
+        const neighbor = getCountry(neighborId);
         if (!neighbor) { return false; }
         return action === 'battle' ? neighbor.owner !== activePlayer : neighbor.owner === activePlayer;
     });
 }
 
 function selectActionOrigin(id, marker, action) {
-    var targets = actionTargets(id, action);
+    const targets = actionTargets(id, action);
     if (!targets.length) {
         clearActionSelection();
         drawMap();
@@ -65,11 +65,11 @@ function selectActionOrigin(id, marker, action) {
 /**
  * Battle
  */
-var attackFrom;
+window.attackFrom = undefined;
 
 function battle(latestClickedCountry, thisCountry, keyboardActivation) {
     latestClickedCountry = Number(latestClickedCountry);
-    var country = getCountry(latestClickedCountry);
+    const country = getCountry(latestClickedCountry);
     if (!country) { return; }
     if (country.owner === activePlayer) {
         if (attackFrom === latestClickedCountry) {
@@ -82,9 +82,9 @@ function battle(latestClickedCountry, thisCountry, keyboardActivation) {
     }
     if (attackFrom == null) { return; }
 
-    var attackersCountry = getCountry(attackFrom);
+    const attackersCountry = getCountry(attackFrom);
     if (!attackersCountry || actionTargets(attackFrom, 'battle').indexOf(latestClickedCountry) === -1) { return; }
-    var fromId = attackFrom;
+    const fromId = attackFrom;
     showUnitBar(attackersCountry.country.units, latestClickedCountry, keyboardActivation, fromId);
     markSelected(thisCountry, 'to', country.color);
     lockAimTank(latestClickedCountry);
@@ -96,10 +96,10 @@ function battle(latestClickedCountry, thisCountry, keyboardActivation) {
 /**
  * Tactical movement
  */
-var countryFrom;
+window.countryFrom = undefined;
 function tacticalMove(latestClickedCountry, thisCountry, keyboardActivation) {
     latestClickedCountry = Number(latestClickedCountry);
-    var country = getCountry(latestClickedCountry);
+    const country = getCountry(latestClickedCountry);
     if (!country || country.owner !== activePlayer) { return; }
     if (countryFrom == null) {
         selectActionOrigin(latestClickedCountry, thisCountry, 'tactical_move');
@@ -111,7 +111,7 @@ function tacticalMove(latestClickedCountry, thisCountry, keyboardActivation) {
         return;
     }
 
-    var fromCountry = getCountry(countryFrom);
+    const fromCountry = getCountry(countryFrom);
     if (actionTargets(countryFrom, 'tactical_move').indexOf(latestClickedCountry) === -1) {
         if (actionTargets(latestClickedCountry, 'tactical_move').length) {
             selectActionOrigin(latestClickedCountry, thisCountry, 'tactical_move');
@@ -119,7 +119,7 @@ function tacticalMove(latestClickedCountry, thisCountry, keyboardActivation) {
         return;
     }
 
-    var fromId = countryFrom;
+    const fromId = countryFrom;
     showUnitBar(fromCountry.country.units, latestClickedCountry, keyboardActivation, fromId);
     markSelected(thisCountry, 'to');
     showRouteSelection(fromId, [latestClickedCountry], latestClickedCountry);
@@ -141,14 +141,14 @@ function showUnitBar(units, clickedCountry, keyboardActivation, originCountryId)
         + '<button type="button" id="cancel_units" aria-label="Cancel">X</button>'
         + '</form>');
 
-    var output = document.getElementById('unit_output');
-    var slider = document.getElementById('unit_input');
-    var form = output.form;
+    const output = document.getElementById('unit_output');
+    const slider = document.getElementById('unit_input');
+    const form = output.form;
     output.form.dataset.countryId = clickedCountry;
     output.form.dataset.originCountryId = originCountryId;
     form.classList.add(keyboardActivation ? 'keyboard-focus-visible' : 'suppress-focus-ring');
-    var changeUnits = function (amount) {
-        var current = Number(output.value) || 1;
+    const changeUnits = function (amount) {
+        const current = Number(output.value) || 1;
         output.value = String(amount > 0 ? Math.min(units, current + 1) : (current > 1 ? current - 1 : units));
         slider.value = output.value;
     };
@@ -194,27 +194,27 @@ function showUnitBar(units, clickedCountry, keyboardActivation, originCountryId)
 }
 
 function positionUnitBar() {
-    var form = document.getElementById('unit_bar');
+    const form = document.getElementById('unit_bar');
     if (!form) { return; }
-    var board = document.getElementById('game_board');
-    var map = document.querySelector('.svg-container');
+    const board = document.getElementById('game_board');
+    const map = document.querySelector('.svg-container');
     if (board.getBoundingClientRect().width <= 720) {
         if (form.parentNode !== board) { board.appendChild(form); }
         return;
     }
     if (form.parentNode !== map) { map.appendChild(form); }
-    var target = document.getElementById(form.dataset.countryId).querySelector('circle').getBoundingClientRect();
-    var container = map.getBoundingClientRect();
-    var bounds = form.getBoundingClientRect();
+    const target = document.getElementById(form.dataset.countryId).querySelector('circle').getBoundingClientRect();
+    const container = map.getBoundingClientRect();
+    const bounds = form.getBoundingClientRect();
     form.style.setProperty('--unit-bar-top', Math.max(0, Math.min(container.height - bounds.height, target.top - container.top - bounds.height - 8)) + 'px');
     form.style.setProperty('--unit-bar-left', Math.max(0, Math.min(container.width - bounds.width, target.left - container.left - bounds.width / 2 + 12)) + 'px');
 }
 
 document.getElementById('game_board').addEventListener('click', function (event) {
     if (!event.target.closest('#cancel_units')) { return; }
-    var form = document.getElementById('unit_bar');
-    var returnFocusId = form && (phase === 'Battle' ? form.dataset.originCountryId : form.dataset.countryId);
-    var keyboardFocus = form && form.classList.contains('keyboard-focus-visible');
+    const form = document.getElementById('unit_bar');
+    const returnFocusId = form && (phase === 'Battle' ? form.dataset.originCountryId : form.dataset.countryId);
+    const keyboardFocus = form && form.classList.contains('keyboard-focus-visible');
     document.querySelectorAll('.remove_unit_bar').forEach(function (bar) { bar.remove(); });
     clearActionSelection();
     drawMap();

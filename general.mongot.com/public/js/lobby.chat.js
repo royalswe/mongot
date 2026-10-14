@@ -1,5 +1,5 @@
 'use strict';
-var lobbyChat = io(location.host + '/lobby_com', {
+window.lobbyChat = io(location.host + '/lobby_com', {
     reconnection: true,
     reconnectionAttempts: Infinity,
     forceNew: true,
@@ -8,15 +8,15 @@ var lobbyChat = io(location.host + '/lobby_com', {
 });
 
 lobbyChat.on('users_online', function (users, guests) {
-    var onlineList = document.getElementById("users_online");
+    const onlineList = document.getElementById("users_online");
     onlineList.innerHTML = '<p id="user_online_list">'+ users.length +' Player'+ (users.length === 1 ? "":"s") +' and '+ guests +' guest'+ (guests === 1 ? "":"s") +' in lobby</p>';
       
     document.title = "Lobby (" + users.length + ")";
     
-    for (var i = 0; i < users.length; i++) {
-      var points = users[i].points;
-      var img = "rankings/";
-      var title = points + " points";
+    for (let i = 0; i < users.length; i++) {
+      const points = users[i].points;
+      let img = "rankings/";
+      let title = points + " points";
       if (MODS.indexOf(users[i].username) > -1) {
         img += "moderator.png";
         title = "moderator";
@@ -74,17 +74,17 @@ function getNotificationPermissions() {
 }
 
 function escapeHtml(value) {
-    var element = document.createElement('div');
+    const element = document.createElement('div');
     element.textContent = String(value == null ? '' : value);
     return element.innerHTML;
 }
 
 
 function chatMessageHtml(message, removeId) {
-    var date = new Date(message.timeStamp);
-    var timeStamp = date.getDate() + '/' + (date.getMonth() + 1) + ' ' +
+    const date = new Date(message.timeStamp);
+    const timeStamp = date.getDate() + '/' + (date.getMonth() + 1) + ' ' +
         ('0' + date.getHours()).slice(-2) + ':' + ('0' + date.getMinutes()).slice(-2);
-    var html = '<div class="new-message ' + message.type + '">' +
+    let html = '<div class="new-message ' + message.type + '">' +
         '<span class="chat-timeStamp">' + timeStamp + '</span> ' +
         '<span class="name">' + escapeHtml(message.username) + ':</span> ' +
         '<span class="chat-message">' + escapeHtml(message.message) + '</span> ';
@@ -95,12 +95,12 @@ function chatMessageHtml(message, removeId) {
 }
 
 function scrollChatToBottom() {
-    var messagesElement = document.getElementById('messages');
+    const messagesElement = document.getElementById('messages');
     messagesElement.scrollTop = messagesElement.scrollHeight;
 }
 
 lobbyChat.on('message', function (json) {
-    var message = JSON.parse(json);
+    const message = JSON.parse(json);
     document.getElementById('messages').insertAdjacentHTML('beforeend', chatMessageHtml(message, message.index));
     scrollChatToBottom();
 });
@@ -112,16 +112,16 @@ lobbyChat.on('render_messages', function (messages) {
 
 lobbyChat.emit('player_joined');
 
-var timeStamp = Date.now();
+let lastMessageSentAt = Date.now();
 document.getElementById('send').addEventListener('click', function () {
-    var messageElement = document.getElementById('message');
-    var messagesElement = document.getElementById('messages');
+    const messageElement = document.getElementById('message');
+    const messagesElement = document.getElementById('messages');
     //Dont allow guest to chat
     // if(user === 'guest'){
     //     return messagesElement.insertAdjacentHTML('beforeend', '<div class="new-message">' +
     //         '<span class="chat-message"><a href="/login">Login</a> to use the chat</span></div>');
     // }
-    var message = messageElement.value;
+    let message = messageElement.value;
     
     if(message.length > 400){
         return messagesElement.insertAdjacentHTML('beforeend', '<div class="new-message">' +
@@ -130,19 +130,19 @@ document.getElementById('send').addEventListener('click', function () {
     }
 
     // iterate over all words
-    for(var i=0; i<WORDFILTER.length; i+= 1){
+    for(let i=0; i<WORDFILTER.length; i+= 1){
         // Create a regular expression and make it global
-        var pattern = new RegExp('\\b' + WORDFILTER[i] + '\\b', 'i');
+        let pattern = new RegExp('\\b' + WORDFILTER[i] + '\\b', 'i');
         // Create a new string filled with '*'
-        var replacement = '*'.repeat(WORDFILTER[i].length);
+        let replacement = '*'.repeat(WORDFILTER[i].length);
         message = message.replace(pattern, replacement);
     }
-    var cleanMessage = message.replace(/(<([^>]+)>)/ig,""); // remove scripts
+    const cleanMessage = message.replace(/(<([^>]+)>)/ig,""); // remove scripts
 
     if(cleanMessage !== ''){ // Prevent sending blank messages
-        if(timeStamp < Date.now()){
-            timeStamp = Date.now()+2000;
-            var data = { message: cleanMessage, type: 'userMessage' };
+        if(lastMessageSentAt < Date.now()){
+            lastMessageSentAt = Date.now()+2000;
+            const data = { message: cleanMessage, type: 'userMessage' };
             lobbyChat.send(JSON.stringify(data));
             messageElement.value = '';
         }
@@ -161,9 +161,9 @@ document.getElementById('message').addEventListener('keydown', function (event) 
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-    var PlayerArrivedSound = new Howl({src: ['sounds/join-lobby.mp3']});
+    const PlayerArrivedSound = new Howl({src: ['sounds/join-lobby.mp3']});
 
-    var arrivedTimestamp = Date.now();
+    let arrivedTimestamp = Date.now();
     lobbyChat.on('user_notification', function (data) {
         if (getNotificationPermissions() === 'granted' && arrivedTimestamp < Date.now()) {
             arrivedTimestamp = Date.now()+60000;
@@ -172,17 +172,17 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function spawnNotification(theIcon, theTitle) {
-        var options = {
+        const options = {
             icon: theIcon,
         }
-        var n = new Notification(theTitle, options);
+        const n = new Notification(theTitle, options);
         PlayerArrivedSound.play();
         setTimeout(n.close.bind(n), 3000);
     }
 
     document.getElementById('messages').addEventListener('click', function (event) {
         if (!event.target.closest('.remove-message')) { return; }
-        var removeMsg = confirm('Do you want to remove this message?');
+        const removeMsg = confirm('Do you want to remove this message?');
         if(removeMsg){
             lobbyChat.emit('remove_message', parseInt(event.target.closest('.remove-message').id, 10));
         }

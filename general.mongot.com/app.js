@@ -49,7 +49,7 @@ app.locals.useBundles = process.env.NODE_ENV === 'production';
 app.locals.rankIcon = require('./public/js/ranks');
 
 const port = process.env.PORT || 5100;
-var server = http.createServer(app).listen(port);
+const server = http.createServer(app).listen(port);
 
 /**
  * Makes it possible to get static files from view

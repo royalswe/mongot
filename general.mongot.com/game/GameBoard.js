@@ -386,8 +386,8 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
     Game.prototype.everyoneDeploy = function (player = 'all') {
         this.refreshGoldIncome();
 
+        let count = 0;
         if(player === 'all'){
-            var count = 0;
             setTimeout(() => { // Collect gold if player wait out the time
                 if (count < Object.keys(PlayerList).length) {
                     for (let i = 0; i < Object.keys(PlayerList).length; i += 1) {

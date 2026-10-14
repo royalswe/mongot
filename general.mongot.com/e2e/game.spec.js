@@ -218,13 +218,13 @@ test('territories support keyboard navigation and tactical-move activation', asy
         updateTerritoryActionState();
         phase = 'Tactical move';
         drawMap();
-        var sourceCircle = document.getElementById('0').querySelector('circle');
-        var sourceX = Number(sourceCircle.getAttribute('cx'));
-        var sourceY = Number(sourceCircle.getAttribute('cy'));
+        const sourceCircle = document.getElementById('0').querySelector('circle');
+        const sourceX = Number(sourceCircle.getAttribute('cx'));
+        const sourceY = Number(sourceCircle.getAttribute('cy'));
         return territoryGroups().filter((marker) => marker.id !== '0').map((marker) => {
-            var circle = marker.querySelector('circle');
-            var dx = Number(circle.getAttribute('cx')) - sourceX;
-            var dy = Number(circle.getAttribute('cy')) - sourceY;
+            const circle = marker.querySelector('circle');
+            const dx = Number(circle.getAttribute('cx')) - sourceX;
+            const dy = Number(circle.getAttribute('cy')) - sourceY;
             return {id: marker.id, dx: dx, dy: dy};
         }).filter((point) => point.dx > 0).sort((a, b) =>
             Math.hypot(a.dx, a.dy) + Math.abs(a.dy) * 1.5 - (Math.hypot(b.dx, b.dy) + Math.abs(b.dy) * 1.5))[0].id;
@@ -252,13 +252,13 @@ test('territory focus styling follows keyboard or pointer input', async ({page})
     const svg = page.locator('.svg-content');
     const first = page.locator('.territory-marker[id="0"]');
     const targetId = await page.evaluate(() => {
-        var source = document.getElementById('0').querySelector('circle');
-        var sourceX = Number(source.getAttribute('cx'));
-        var sourceY = Number(source.getAttribute('cy'));
+        const source = document.getElementById('0').querySelector('circle');
+        const sourceX = Number(source.getAttribute('cx'));
+        const sourceY = Number(source.getAttribute('cy'));
         return territoryGroups().filter((marker) => marker.id !== '0').map((marker) => {
-            var circle = marker.querySelector('circle');
-            var dx = Number(circle.getAttribute('cx')) - sourceX;
-            var dy = Number(circle.getAttribute('cy')) - sourceY;
+            const circle = marker.querySelector('circle');
+            const dx = Number(circle.getAttribute('cx')) - sourceX;
+            const dy = Number(circle.getAttribute('cy')) - sourceY;
             return {id: marker.id, dx: dx, dy: dy};
         }).filter((point) => point.dx > 0).sort((a, b) =>
             Math.hypot(a.dx, a.dy) + Math.abs(a.dy) * 1.5 - (Math.hypot(b.dx, b.dy) + Math.abs(b.dy) * 1.5))[0].id;

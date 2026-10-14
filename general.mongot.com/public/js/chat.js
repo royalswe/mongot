@@ -1,17 +1,17 @@
 'use strict';
-var chatCom = io(location.host + '/chat_com', {
+window.chatCom = io(location.host + '/chat_com', {
     reconnection: true,
     reconnectionAttempts: Infinity,
     transports: ['websocket', 'polling']
 });
 
 chatCom.on('message', function (message) {
-    var message = JSON.parse(message);
-    var messages = document.getElementById('messages');
+    const parsedMessage = JSON.parse(message);
+    const messages = document.getElementById('messages');
     messages.insertAdjacentHTML('beforeend', '<div class="' +
-        message.type + '"><span class="name-'+message.color+'" >' +
-        message.username + ':</span> ' +
-        message.message + '</div>');
+        parsedMessage.type + '"><span class="name-'+parsedMessage.color+'" >' +
+        parsedMessage.username + ':</span> ' +
+        parsedMessage.message + '</div>');
     chatNotifier();
 
     // Scroll down chatt automaticly
@@ -23,17 +23,17 @@ chatCom.on('player_left', function (username) {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-    var timeStamp = Date.now();
+    let timeStamp = Date.now();
 
     document.getElementById('send').addEventListener('click', function (event) {
         event.preventDefault();
         if(timeStamp < Date.now()) {
             timeStamp = Date.now() + 1000;
-            var message = document.getElementById('message').value;
-            var cleanMessage = message.replace(/(<([^>]+)>)/ig,""); // remove scripts
+            const message = document.getElementById('message').value;
+            const cleanMessage = message.replace(/(<([^>]+)>)/ig,""); // remove scripts
 
             if (cleanMessage !== '') { // Prevent sending blank messages
-                var data = {message: cleanMessage, type: 'userMessage'};
+                const data = {message: cleanMessage, type: 'userMessage'};
                 chatCom.send(JSON.stringify(data));
                 document.getElementById('message').value = '';
             }
@@ -47,8 +47,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     // show and hide toggle for chat
     document.querySelector('.slide-toggle').addEventListener('click', function () {
-        var chatroom = document.getElementById('chatroom');
-        var hidden = chatroom.classList.contains('hidden');
+        const chatroom = document.getElementById('chatroom');
+        const hidden = chatroom.classList.contains('hidden');
         chatroom.classList.toggle('hidden', !hidden);
         this.setAttribute('aria-expanded', String(hidden));
 
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function chatNotifier() {
     if (document.getElementById('chatroom').classList.contains('hidden')) {
-        var toggle = document.querySelector('.slide-toggle');
+        const toggle = document.querySelector('.slide-toggle');
         toggle.classList.add('chat-notifier');
         setTimeout(function () { // timeout is high to prevent spamming notifications
             toggle.classList.remove('chat-notifier');

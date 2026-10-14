@@ -1,6 +1,6 @@
 extends base
 block head
-  - var title = 'High score'
+  - const title = 'High score'
 
 block body
   main.site-page
@@ -15,7 +15,7 @@ block body
             th Rating
             th Won / Lost
         tbody
-          - for (var i=0; i<highscores.length; i++)
+          - for (let i=0; i<highscores.length; i++)
             tr
               td
                 span.rank #{i+1}

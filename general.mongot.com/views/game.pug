@@ -77,9 +77,9 @@ html
         button#start_bots(type='button' style='display:none') Start with bots
     script
       if user
-        | var user = !{JSON.stringify(user)}
+        | window.user = !{JSON.stringify(user)}
       else
-        | var user = 'guest';
+        | window.user = 'guest';
     script(src='/socket.io/socket.io.js')
     script(src='/resources/howler.min.js')
 

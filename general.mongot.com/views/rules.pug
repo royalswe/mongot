@@ -1,6 +1,6 @@
 extends base
 block head
-  - var title = 'How to play'
+  - const title = 'How to play'
 
 block styles
   link(rel='stylesheet', type='text/css', href='/css/rules.css?v=2.0')
@@ -141,7 +141,7 @@ block body
   script.
     'use strict';
     function showRulesPage() {
-      var hash = document.location.hash || '#english';
+      const hash = document.location.hash || '#english';
       document.querySelectorAll('.page').forEach(function(page) {
         page.hidden = '#' + page.id !== hash;
       });
