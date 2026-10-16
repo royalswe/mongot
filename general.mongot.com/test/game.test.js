@@ -57,6 +57,7 @@ test('a turn goes deploy, battle, tactical move, then passes to the next player'
     table.sockets[attacker].act('deploy', country.id, attacker);
     assert.equal(country.units, units + 1);
     assert.equal(table.player(attacker).gold, 3);
+    assert.equal(table.broadcasts.filter((entry) => entry.event === 'action_log').pop().args[0].type, 'deploy');
     assert.equal(table.phase(), 'Deploy');
 
     table.sockets[attacker].act('deploy', country.id, attacker);
@@ -77,6 +78,21 @@ test('waiting out the phase timer moves the game on', (t) => {
     assert.equal(table.phase(), 'Battle');
 });
 
+test('rejoining does not reset the active phase deadline', (t) => {
+    const {table, attacker} = startTurn(t);
+    const deadline = table.info().phaseDeadline;
+    assert.equal(deadline, table.clock.now() + 122000);
+
+    table.clock.advance(45000);
+    const returning = fakeSocket(attacker);
+    table.board.returningPlayer(returning);
+
+    assert.equal(table.info().phaseDeadline, deadline);
+    table.clock.advance(77000);
+    assert.equal(table.phase(), 'Battle');
+    assert.equal(table.info().phaseDeadline, table.clock.now() + 122000);
+});
+
 test('a won battle takes the territory, which stays inactive until the attacker\'s turn ends', (t) => {
     const {table, attacker, defender} = startTurn(t);
     table.pass();
@@ -94,6 +110,7 @@ test('a won battle takes the territory, which stays inactive until the attacker\
     assert.equal(table.broadcasts.filter((entry) => entry.event === 'render_disabled_countries').pop().args[0][0].defeatedColor, table.player(defender).color);
     assert.deepEqual(table.broadcasts.filter((entry) => entry.event === 'dice_log').pop().args, [[[6, 6, 6]], [[1]]]);
     assert.equal(table.messages('attack').pop().message, 'Attacker lost 0 troops<br>Defender lost 1 troops');
+    assert.equal(table.broadcasts.filter((entry) => entry.event === 'action_log').pop().args[0].captured, true);
     const income = table.sockets[attacker].sent.filter((message) => message.type === 'update_gold_income').pop();
     assert.match(String(income.goldIncome), /^\d+\+\d+$/, 'the conquest shows as bonus income');
 
@@ -147,6 +164,11 @@ test('a tactical move shifts troops between own neighbours and ends the turn', (
 
     assert.equal(table.territory(from).units, 2);
     assert.equal(table.territory(to).units, arriving + 3);
+    assert.deepEqual(table.broadcasts.filter((entry) => entry.event === 'move_animation').pop().args, [from, to, 3]);
+    assert.deepEqual(table.broadcasts.filter((entry) => entry.event === 'action_log').pop().args[0], {
+        type: 'move', player: table.player(attacker).username, color: table.player(attacker).color,
+        from: from, to: to, units: 3, timestamp: table.clock.now()
+    });
     assert.equal(table.phase(), 'Deploy');
     assert.equal(table.active(), defender);
 });
@@ -263,18 +285,21 @@ test('an active player who reconnects can act in the current turn phase', (t) =>
     let socket = reconnect();
     assert(socket.can('deploy'));
     assert(socket.can('next_turn'));
+    assert(socket.sent.some((message) => message.type === 'current_player' && message.bool));
 
     socket.act('next_turn');
     socket = reconnect();
     assert.equal(table.phase(), 'Battle');
     assert(socket.can('battle'));
     assert(socket.can('next_turn'));
+    assert(socket.sent.some((message) => message.type === 'current_player' && message.bool));
 
     socket.act('next_turn');
     socket = reconnect();
     assert.equal(table.phase(), 'Tactical move');
     assert(socket.can('tactical_move'));
     assert(socket.can('next_turn'));
+    assert(socket.sent.some((message) => message.type === 'current_player' && message.bool));
 });
 
 test('an admin can kick a player out of the game', (t) => {

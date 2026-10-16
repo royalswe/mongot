@@ -1,4 +1,4 @@
-var gameInfra = io(location.host + '/game_infra', {
+window.gameInfra = io(location.host + '/game_infra', {
     reconnection: true,
     reconnectionAttempts: Infinity,
     transports: ['websocket', 'polling']
@@ -7,54 +7,59 @@ var gameInfra = io(location.host + '/game_infra', {
 gameInfra.on("connect", function(){
     gameInfra.emit("get_rooms", {});
 });
-var playersArr;
+let playersArr;
 gameInfra.on("rooms_list", function(rooms, players){
-    var roomsTable = '';
+    let roomsTable = '';
     playersArr = players;
     document.querySelectorAll('#kick_out_room option:not(:first-child)').forEach(function (option) { option.remove(); });
 
     rooms.forEach(function (value) {
 
-       var kickOutRoom = document.getElementById('kick_out_room');
+       const kickOutRoom = document.getElementById('kick_out_room');
        if(value.status === 'game in progress' && kickOutRoom){
-           var option = document.createElement('option');
+           const option = document.createElement('option');
            option.value = value.name;
            option.textContent = value.name;
            kickOutRoom.appendChild(option);
        }
 
-        var tableIsOpen = value.status === 'open' || value.status === 'waiting for players';
+        const tableIsOpen = value.status === 'open' || value.status === 'waiting for players';
+        let btnText;
+        let btnClass;
         if(!tableIsOpen){
-            var btnText = value.status === 'rematch' ? 'watch / rematch' : 'watch game';
-            var btnClass = 'watch-btn';
+            btnText = value.status === 'rematch' ? 'watch / rematch' : 'watch game';
+            btnClass = 'watch-btn';
         }
         else{
-            var btnText = 'join game';
-            var btnClass = 'join-btn';
+            btnText = 'join game';
+            btnClass = 'join-btn';
         }
         roomsTable +='<tr><td>'
             + value.name + '</td><td>'
             + value.players + '/'+ value.startingPlayers +'</td><td>'
             + ({ original: 'Original Map', archipelago: 'Archipelago', frontier: 'The Marches', world: 'World', quick: 'Quick Test' }[value.mapId] || 'Original Map') + '</td><td>'
             + value.status +'</td><td>'
-            + '<a id="'+ value.name +'" class="join-room '+ btnClass +'">' + btnText +'</a></td></tr>';
+            + '<a href="/game?room='+ encodeURIComponent(value.name) +'" target="_blank" rel="noopener" id="'+ value.name +'" class="join-room '+ btnClass +'">' + btnText +'</a></td></tr>';
     });
     document.querySelector('#allrooms tbody').innerHTML = roomsTable;
 
-    for(var i=0; i < players.length; i += 1){
+    for(let i=0; i < players.length; i += 1){
         if(user.username === players[i].username){
-            var roomLink = document.getElementById(players[i].room);
+            const roomLink = document.getElementById(players[i].room);
             if (roomLink) { roomLink.classList.add('disable-join-link'); }
         }
-    }
+    }   
 });
     
 document.querySelector('#allrooms tbody').addEventListener('click', function (event) {
-    var joinLink = event.target.closest('.join-room');
-    if (joinLink) { redirectRoom(joinLink.id); }
+    const joinLink = event.target.closest('.join-room');
+    if (joinLink) {
+        event.preventDefault();
+        redirectRoom(joinLink.id);
+    }
 });
 
-var kickOutButton = document.getElementById('kick_out_btn');
+const kickOutButton = document.getElementById('kick_out_btn');
 if (kickOutButton) {
     kickOutButton.addEventListener('click', function () {
         gameInfra.emit("god_mode", {
@@ -65,13 +70,13 @@ if (kickOutButton) {
     });
 }
 // change players selection after room name
-var kickOutRoom = document.getElementById('kick_out_room');
+const kickOutRoom = document.getElementById('kick_out_room');
 if (kickOutRoom) { kickOutRoom.addEventListener('change', function () {
-    var playerSelect = document.getElementById('kick_out_player');
+    const playerSelect = document.getElementById('kick_out_player');
     playerSelect.querySelectorAll('option:not(:first-child)').forEach(function (option) { option.remove(); });
-    for(var i=0; i < playersArr.length; i += 1){
+    for(let i=0; i < playersArr.length; i += 1){
         if(this.value === playersArr[i].room){
-            var option = document.createElement('option');
+            const option = document.createElement('option');
             option.value = playersArr[i].username;
             option.textContent = playersArr[i].username;
             playerSelect.appendChild(option);
@@ -80,7 +85,7 @@ if (kickOutRoom) { kickOutRoom.addEventListener('change', function () {
 }); }
 
 gameInfra.on("flash_message", function(message){
-    var flashMessage = document.querySelector('.flash_message');
+    const flashMessage = document.querySelector('.flash_message');
     flashMessage.textContent = message;
     flashMessage.style.display = 'block';
     flashMessage.style.opacity = '1';
@@ -95,9 +100,9 @@ gameInfra.on("flash_message", function(message){
 });
 
 // show and hide toggle for godmode
-var adminToggle = document.querySelector('.admin-toggle');
+const adminToggle = document.querySelector('.admin-toggle');
 if (adminToggle) { adminToggle.addEventListener('click', function () {
-    var adminPanel = document.getElementById('admin_panel');
+    const adminPanel = document.getElementById('admin_panel');
     adminPanel.hidden = !adminPanel.hidden;
     this.classList.toggle('active-btn');
 }); }

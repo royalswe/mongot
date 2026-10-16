@@ -1,39 +1,39 @@
 'use strict';
 
 const originalCountries = [
-    { id: 0, gold: 2, units: 1, neighbour: [1,2,3] },
-    { id: 1, gold: 2, units: 1, neighbour: [0,2,4,17] },
-    { id: 2, gold: 2, units: 1, neighbour: [0,1,17] },
-    { id: 3, gold: 2, units: 1, neighbour: [0,6,7,10,11] },
-    { id: 4, gold: 2, units: 1, neighbour: [5,1,6] },
-    { id: 5, gold: 1, units: 1, neighbour: [4] },
-    { id: 6, gold: 2, units: 1, neighbour: [4,3,7,8] },
-    { id: 7, gold: 5, units: 1, neighbour: [3,11,6,30] },
-    { id: 8, gold: 2, units: 1, neighbour: [9,6,32] },
-    { id: 9, gold: 1, units: 1, neighbour: [8] },
-    { id: 10, gold: 2, units: 1, neighbour: [3,11,15,16] },
-    { id: 11, gold: 2, units: 1, neighbour: [3,7,12,14,15,10] },
-    { id: 12, gold: 2, units: 1, neighbour: [13,14,11] },
-    { id: 13, gold: 2, units: 1, neighbour: [12,14,24,29] },
-    { id: 14, gold: 2, units: 1, neighbour: [13,12,11,15] },
-    { id: 15, gold: 5, units: 1, neighbour: [14,11,10,16,20] },
-    { id: 16, gold: 2, units: 1, neighbour: [15,10,17,20] },
-    { id: 17, gold: 2, units: 1, neighbour: [16,20,18,2,1] },
-    { id: 18, gold: 2, units: 1, neighbour: [17,20,21,19] },
-    { id: 19, gold: 2, units: 1, neighbour: [18,21] },
-    { id: 20, gold: 5, units: 1, neighbour: [17,18,19,21,22,15,16] },
-    { id: 21, gold: 2, units: 1, neighbour: [20,19,18,22,23] },
-    { id: 22, gold: 2, units: 1, neighbour: [20,21,23,24,25] },
-    { id: 23, gold: 2, units: 1, neighbour: [22,21,25] },
-    { id: 24, gold: 5, units: 1, neighbour: [25,22,13,26] },
-    { id: 25, gold: 2, units: 1, neighbour: [23,22,24,26] },
-    { id: 26, gold: 2, units: 1, neighbour: [25,27,24] },
-    { id: 27, gold: 2, units: 1, neighbour: [26,28] },
-    { id: 28, gold: 2, units: 1, neighbour: [27,29] },
-    { id: 29, gold: 2, units: 1, neighbour: [28,13,30,31] },
-    { id: 30, gold: 5, units: 1, neighbour: [29,7,31] },
-    { id: 31, gold: 2, units: 1, neighbour: [30,29,32] },
-    { id: 32, gold: 1, units: 1, neighbour: [31,8] }
+    { id: 0, name: 'Sweden', gold: 2, units: 1, neighbour: [1,2,3] },
+    { id: 1, name: 'Norway', gold: 2, units: 1, neighbour: [0,2,4,17] },
+    { id: 2, name: 'Finland', gold: 2, units: 1, neighbour: [0,1,17] },
+    { id: 3, name: 'Germany', gold: 2, units: 1, neighbour: [0,6,7,10,11] },
+    { id: 4, name: 'Great Britain', gold: 2, units: 1, neighbour: [5,1,6] },
+    { id: 5, name: 'Iceland', gold: 1, units: 1, neighbour: [4] },
+    { id: 6, name: 'France', gold: 2, units: 1, neighbour: [4,3,7,8] },
+    { id: 7, name: 'Italy', gold: 5, units: 1, neighbour: [3,11,6,30] },
+    { id: 8, name: 'Spain', gold: 2, units: 1, neighbour: [9,6,32] },
+    { id: 9, name: 'Portugal', gold: 1, units: 1, neighbour: [8] },
+    { id: 10, name: 'Poland', gold: 2, units: 1, neighbour: [3,11,15,16] },
+    { id: 11, name: 'Austria', gold: 2, units: 1, neighbour: [3,7,12,14,15,10] },
+    { id: 12, name: 'Hungary', gold: 2, units: 1, neighbour: [13,14,11] },
+    { id: 13, name: 'Greece', gold: 2, units: 1, neighbour: [12,14,24,29] },
+    { id: 14, name: 'Romania', gold: 2, units: 1, neighbour: [13,12,11,15] },
+    { id: 15, name: 'Ukraine', gold: 5, units: 1, neighbour: [14,11,10,16,20] },
+    { id: 16, name: 'Belarus', gold: 2, units: 1, neighbour: [15,10,17,20] },
+    { id: 17, name: 'Russia', gold: 2, units: 1, neighbour: [16,20,18,2,1] },
+    { id: 18, name: 'Siberia', gold: 2, units: 1, neighbour: [17,20,21,19] },
+    { id: 19, name: 'Mongolia', gold: 2, units: 1, neighbour: [18,21] },
+    { id: 20, name: 'Kazakhstan', gold: 5, units: 1, neighbour: [17,18,19,21,22,15,16] },
+    { id: 21, name: 'China', gold: 2, units: 1, neighbour: [20,19,18,22,23] },
+    { id: 22, name: 'Afghanistan', gold: 2, units: 1, neighbour: [20,21,23,24,25] },
+    { id: 23, name: 'India', gold: 2, units: 1, neighbour: [22,21,25] },
+    { id: 24, name: 'Turkey', gold: 5, units: 1, neighbour: [25,22,13,26] },
+    { id: 25, name: 'Iran', gold: 2, units: 1, neighbour: [23,22,24,26] },
+    { id: 26, name: 'Saudi Arabia', gold: 2, units: 1, neighbour: [25,27,24] },
+    { id: 27, name: 'Yemen', gold: 2, units: 1, neighbour: [26,28] },
+    { id: 28, name: 'Egypt', gold: 2, units: 1, neighbour: [27,29] },
+    { id: 29, name: 'Libya', gold: 2, units: 1, neighbour: [28,13,30,31] },
+    { id: 30, name: 'Algeria', gold: 5, units: 1, neighbour: [29,7,31] },
+    { id: 31, name: 'Mali', gold: 2, units: 1, neighbour: [30,29,32] },
+    { id: 32, name: 'Morocco', gold: 1, units: 1, neighbour: [31,8] }
 ];
 
 const originalContinents = [
@@ -53,7 +53,17 @@ const maps = {
         theme: 'original',
         countries: originalCountries,
         continents: originalContinents,
-        positions: null
+        positions: [
+            {x: 470, y: 242}, {x: 380, y: 225}, {x: 625, y: 196}, {x: 400, y: 400},
+            {x: 237, y: 374}, {x: 52, y: 174}, {x: 296, y: 483}, {x: 476, y: 568},
+            {x: 207, y: 608}, {x: 111, y: 614}, {x: 543, y: 406}, {x: 526, y: 481},
+            {x: 587, y: 537}, {x: 636, y: 642}, {x: 672, y: 524}, {x: 739, y: 442},
+            {x: 664, y: 358}, {x: 748, y: 252}, {x: 945, y: 179}, {x: 1098, y: 172},
+            {x: 900, y: 348}, {x: 1085, y: 335}, {x: 963, y: 500}, {x: 1085, y: 451},
+            {x: 844, y: 626}, {x: 1085, y: 708}, {x: 950, y: 717}, {x: 955, y: 810},
+            {x: 758, y: 817}, {x: 555, y: 817}, {x: 426, y: 727}, {x: 305, y: 780},
+            {x: 144, y: 765}
+        ]
     },
     archipelago: createArchipelago(),
     frontier: createFrontier(),
@@ -70,16 +80,16 @@ function createWorld() {
         'Ural', 'Siberia', 'Yakutsk', 'Kamchatka', 'Irkutsk', 'Mongolia', 'Japan', 'Afghanistan', 'Middle East', 'India', 'Siam', 'China',
         'Indonesia', 'New Guinea', 'Western Australia', 'Eastern Australia'
     ];
-    // Hand-tuned so markers, labels and routes never overlap each other or the board icons.
+    // Centers favor the widest interior of each reference territory.
     const coordinatePairs = [
-        [70,118],[180,118],[355,92],[150,218],[250,218],[350,205],[160,318],[275,318],[215,418],
-        [265,505],[220,612],[345,598],[265,718],
-        [470,112],[590,100],[700,190],[470,220],[585,212],[470,322],[595,318],
-        [495,462],[625,440],[680,548],[560,580],[590,700],[730,692],
-        [800,138],[895,98],[990,78],[1092,108],[985,185],[965,305],[1085,315],[815,288],[725,440],[850,478],[965,478],[905,385],
-        [960,590],[1075,598],[965,728],[1075,738]
+        [91,134],[179,132],[402,88],[183,201],[247,217],[333,211],[183,287],[272,316],[179,364],
+        [265,467],[295,577],[366,546],[304,658],
+        [489,178],[565,187],[690,208],[484,287],[576,280],[487,400],[602,358],
+        [526,527],[622,479],[657,546],[614,621],[633,719],[730,718],
+        [788,200],[837,122],[932,112],[1030,121],[919,198],[935,296],[1046,306],[774,313],[701,415],[837,437],[916,463],[933,382],
+        [942,597],[1042,577],[983,722],[1046,681]
     ];
-    const positions = coordinatePairs.map(([x, y]) => ({x, y}));
+    const positions = coordinatePairs.map(([x, y]) => ({x, y, radius: 20}));
     const countries = names.map((name, id) => ({id, name, gold: 2, units: 1, neighbour: []}));
     const id = Object.fromEntries(names.map((name, index) => [name, index]));
     const links = [
@@ -345,7 +355,7 @@ function cloneMap(map) {
             gold: region.gold,
             countries: region.countries.slice()
         })),
-        positions: map.positions && map.positions.map((position) => ({ x: position.x, y: position.y })),
+        positions: map.positions && map.positions.map((position) => ({ x: position.x, y: position.y, radius: position.radius })),
         seaLinks: map.seaLinks && map.seaLinks.map((link) => link.slice()),
         wrapLinks: map.wrapLinks && map.wrapLinks.map((link) => link.slice())
     };

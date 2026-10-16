@@ -32,26 +32,32 @@ function jsLobby(){
 
 // Config and chat history (config.json, *Chat.json) stay as they are on the server.
 function moveServerJs(){
-    return src(['package.json', 'app.js', 'sockets.js', 'serviceworker.js', 'routes/*.js', 'game/*.js', 'public/js/ranks.js'], {base: '.'})
+    return src(['app.js', 'sockets.js', 'serviceworker.js', 'routes/*.js', 'game/*.js', 'public/js/ranks.js'], {base: '.'})
     .pipe(dest(PROD))
 };
 
 // Minify and concate scripts
-// Dont forget to add: g circle{r:25} in game.board.css, before the last }
 function css(){
-    return src('public/css/*.css')
+    return src(['public/css/*.css', '!public/css/game.board.css', '!public/css/dev-*.css'])
+        .pipe(cleanCSS())
+        .pipe(dest(PROD + '/public/css'));
+};
+
+// The cleanCSS for game.board.css is set to level 0 to avoid altering specific styles such as SVG circle radius.
+function cssGameBoard(){
+    return src('public/css/game.board.css')
         .pipe(cleanCSS({ level: 0 }))
         .pipe(dest(PROD + '/public/css'));
 };
 
 function fonts(){
-    return src('public/fonts/*')
+    return src('public/fonts/*', { encoding: false })
         .pipe(dest(PROD + '/public/fonts'));
 };
 
 // Copy All HTML files
 function views(){
-    return src('views/*.pug')
+    return src(['views/*.pug', '!views/dev-*.pug'])
         .pipe(dest(PROD + '/views'));
 };
 
@@ -84,7 +90,8 @@ exports.jsGame = jsGame;
 exports.jsLobby = jsLobby;
 exports.moveServerJs = moveServerJs;
 exports.css = css;
+exports.cssGameBoard = cssGameBoard;
 exports.fonts = fonts;
 exports.views = views;
 exports.img = img;
-exports.default = parallel(jsGame, jsLobby, moveServerJs, css, fonts, views, img);
+exports.default = parallel(jsGame, jsLobby, moveServerJs, css, cssGameBoard, fonts, views, img);

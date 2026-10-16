@@ -10,7 +10,7 @@ let Mission = function (sockets, mapId) {
     let missions = [1,2,3,4,5];
 
     function Init() {
-        for(var i = 0; i < sockets.length; i += 1){ players.push(i); }
+        for(let i = 0; i < sockets.length; i += 1){ players.push(i); }
         numOfPlayers = sockets.length;
     }
 
@@ -84,7 +84,7 @@ let Mission = function (sockets, mapId) {
 
     function conquerPlayer(id) {
         let opponents = [];
-        for(var i = 0; i < players.length; i += 1){
+        for(let i = 0; i < players.length; i += 1){
             if(players[i] === id){
                 continue; // The current player
             }

@@ -48,30 +48,30 @@ html
   script(src='/socket.io/socket.io.js')
   script.
     'use strict';
-    var gameInfra = io(location.host + '/game_infra', {
+    window.gameInfra = io(location.host + '/game_infra', {
       reconnection: true,
       reconnectionAttempts: Infinity,
     });
 
-    var roomName = decodeURI((RegExp("room" + '=' + '(.+?)(&|$)').exec(location.search) || [, null])[1]);
+    const roomName = decodeURI((RegExp("room" + '=' + '(.+?)(&|$)').exec(location.search) || [, null])[1]);
     if (roomName) {
       document.title = roomName;
       gameInfra.emit('dice_log_room', roomName);
     }
 
     gameInfra.on("dice_log", function (attackerDice, defenderDice) {
-      var diceRole = '<ul>';
+      let diceRole = '<ul>';
       diceRole += '<div>'+ new Date().toLocaleString() +'</div>';
-      for(var i = 0; i < attackerDice.length; i++){
+      for(let i = 0; i < attackerDice.length; i++){
         attackerDice[i].sort().reverse();
         defenderDice[i].sort().reverse();
         diceRole += '<li><div class="dice red">';
-        for(var j = 0; j < attackerDice[i].length; j++){
+        for(let j = 0; j < attackerDice[i].length; j++){
           diceRole += attackerDice[i][j];
         }
         diceRole +='</div><div class="dice blue">';
 
-        for(var j = 0; j < defenderDice[i].length; j++){
+        for(let j = 0; j < defenderDice[i].length; j++){
           diceRole += defenderDice[i][j];
         }
         diceRole += '</div></li>';

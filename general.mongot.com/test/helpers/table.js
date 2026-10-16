@@ -35,9 +35,11 @@ function fakeSocket(id, flags) {
 function installClock() {
     const originalSetTimeout = global.setTimeout;
     const originalClearTimeout = global.clearTimeout;
+    const originalDateNow = Date.now;
     const timers = new Map();
     let now = 0;
     let nextId = 1;
+    Date.now = () => now;
     global.setTimeout = (callback, delay = 0) => {
         const id = nextId++;
         timers.set(id, {at: now + delay, callback: callback});
@@ -57,9 +59,11 @@ function installClock() {
             }
             now = end;
         },
+        now() { return now; },
         restore() {
             global.setTimeout = originalSetTimeout;
             global.clearTimeout = originalClearTimeout;
+            Date.now = originalDateNow;
         }
     };
 }

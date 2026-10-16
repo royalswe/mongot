@@ -1,4 +1,4 @@
-var WORDFILTER = [
+window.WORDFILTER = [
     "kuk",
     "kuken",
     "hora",
@@ -19,14 +19,14 @@ var WORDFILTER = [
     "ashole"
 ];
 
-var MODS = ["roYal", "svabben", "mlinde"];
+window.MODS = ["roYal", "svabben", "mlinde"];
 
 // Random id kept in the browser; the server turns it into a stable guest name.
 function getGuestId() {
-    var devGuestId = new URLSearchParams(window.location.search).get('devGuestId');
+    const devGuestId = new URLSearchParams(window.location.search).get('devGuestId');
     if (devGuestId) { return devGuestId; }
 
-    var guestId;
+    let guestId;
     try {
         guestId = localStorage.getItem('general_guest_id');
         if (!guestId) {

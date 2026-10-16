@@ -107,6 +107,7 @@ exports.initialize = (server) => {
         socket.on('player_ready', () => greetPlayer(socket));
         socket.on('dice_log_room', (room) => socket.join(room));
         socket.on('join_room', (room) => joinRoom(socket, room));
+        socket.on('preview_map', (room, mapId) => previewMap(socket, room, mapId));
         socket.on('join_game', (room, color, settings) => joinGame(socket, room, color, settings));
         socket.on('countdown_finished', (room) => startCountedDownGame(room));
         socket.on('start_with_bots', (room) => startWithBots(socket, room));
@@ -182,6 +183,16 @@ function joinRoom(socket, room) {
         comSocket.playerName = socket.username;
     }
     socket.to(room).emit('message', {type: 'serverMessage', message: socket.username + ' has joined the room.'});
+}
+
+function previewMap(socket, room, mapId) {
+    const roomInfo = findRoom(room);
+    const tableIsWaiting = roomInfo && (roomInfo.status === 'open' || roomInfo.status === 'waiting for players');
+    const isHost = roomInfo && (roomInfo.host === null || roomInfo.host === socket.username);
+    if (!tableIsWaiting || !isHost || !socket.rooms.has(room)) { return; }
+
+    const map = countryHandler.list().find((candidate) => candidate.id === mapId);
+    if (map) { socket.emit('map_info', countryHandler.getMap(map.id)); }
 }
 
 function joinGame(socket, room, color, settings) {
@@ -319,8 +330,12 @@ function showGameToVisitor(socket, room) {
     if (board === undefined) { return; }
     const game = board.getGameInfo();
 
-    socket.emit('start_countdown');
+    socket.emit('start_countdown', {
+        deadline: game.phaseDeadline,
+        serverTime: Date.now()
+    });
     socket.emit('map_info', board.getMapInfo());
+    socket.emit('action_history', game.actionHistory);
     if (game.phase === 'Everyone deploy') {
         socket.emit('render_no_army_map', game.playerList);
     }

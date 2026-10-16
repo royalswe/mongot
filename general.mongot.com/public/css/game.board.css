@@ -130,6 +130,11 @@ text {
     border: 2px solid var(--ink)
 }
 
+.player-check label:focus-visible {
+    outline: 3px solid var(--mustard);
+    outline-offset: 3px;
+}
+
 input[type=checkbox] + label {
     width: 96%;
     margin-top: 2px
@@ -425,7 +430,7 @@ section#chatroom {
 
 .chat-content {
     display: grid;
-    grid-template-rows: minmax(70px, 1fr) minmax(0, 4fr) auto;
+    grid-template-rows: minmax(70px, 1fr) auto minmax(0, 4fr);
     gap: 8px;
     height: 100%;
     box-sizing: border-box;
@@ -462,21 +467,35 @@ circle.disabled-country {
     stroke-dasharray: 4 3
 }
 
-.svg-content circle.marker-from {
-    stroke: var(--paper-light);
-    stroke-width: 5
+.svg-content > g.territory-marker:focus {
+    outline: none;
 }
 
-.svg-content circle.marker-to {
-    stroke-width: 5
+.svg-content.keyboard-navigation > g.territory-marker:focus circle {
+    stroke: var(--mustard);
+    stroke-width: 5;
+    filter: drop-shadow(0 0 4px var(--paper-light));
 }
 
-.svg-content circle.marker-to.marker-color-red { stroke: #d33a2c }
-.svg-content circle.marker-to.marker-color-blue { stroke: #2d5fa8 }
-.svg-content circle.marker-to.marker-color-orange { stroke: #ee9a1c }
-.svg-content circle.marker-to.marker-color-green { stroke: #3e8b3c }
-.svg-content circle.marker-to.marker-color-purple { stroke: #7c4b9e }
-.svg-content circle.marker-to.marker-color-black { stroke: #3b3632 }
+.svg-content > g.territory-marker.history-highlight circle {
+    stroke: var(--mustard);
+    stroke-width: 6;
+    filter: drop-shadow(0 0 4px var(--paper-light));
+}
+
+.svg-content .map-connection-casing.history-highlight {
+    display: inline !important;
+    stroke: var(--ink);
+    stroke-width: 9;
+    opacity: 1;
+}
+
+.svg-content .map-connection.history-highlight {
+    display: inline !important;
+    stroke: var(--mustard);
+    stroke-width: 5;
+    opacity: 1;
+}
 
 text {
     font-size: 22px;
@@ -541,11 +560,6 @@ text {
     display: block;
     width: 100%;
     pointer-events: none
-}
-
-button:focus-visible, input:focus-visible {
-    outline: 2px solid var(--mustard);
-    outline-offset: 2px
 }
 
 .slide-toggle:hover {
@@ -756,32 +770,53 @@ button:focus-visible, input:focus-visible {
     background-image: url('../img/game/maps/world.svg') !important;
 }
 
+.svg-content.map-original {
+    background-image: url('../img/game/maps/original.svg') !important;
+}
+
 .svg-content.map-quick {
     background-image: url('../img/game/maps/quick.svg') !important;
 }
 
 .map-connection-casing {
     stroke: var(--paper-light);
-    stroke-width: 8;
+    stroke-width: 2.5;
     stroke-linecap: round;
     pointer-events: none;
 }
 
 .map-connection {
     stroke: var(--ink);
-    stroke-width: 3;
+    stroke-width: 2.5;
     stroke-linecap: round;
     pointer-events: none;
 }
 
+.map-connection-casing.map-land,
+.map-connection.map-land {
+    display: none;
+}
+
+.svg-content.route-selection .map-connection:not(.route-legal),
+.svg-content.route-selection .map-connection-casing:not(.route-legal) {
+    display: none;
+}
+
 .map-connection.map-sea {
-    stroke-width: 3.5;
+    stroke-width: 2;
     stroke-dasharray: 2 8;
 }
 
-.svg-content.route-focus .map-connection,
-.svg-content.route-focus .map-connection-casing {
-    opacity: .3;
+.svg-content.route-focus .map-connection-casing.map-land.route-preview,
+.svg-content.route-focus .map-connection.map-land.route-preview {
+    display: inline;
+    opacity: .18;
+}
+
+.svg-content.route-focus .map-connection-casing.route-legal,
+.svg-content.route-focus .map-connection.route-legal {
+    display: inline;
+    opacity: .55;
 }
 
 .svg-content.route-focus .map-connection.active,
@@ -791,17 +826,17 @@ button:focus-visible, input:focus-visible {
 
 .map-connection.active {
     stroke: var(--red);
-    stroke-width: 4.5;
+    stroke-width: 4;
 }
 
 .map-connection-casing.active {
-    stroke-width: 11;
+    stroke-width: 6;
 }
 
 .map-reach-ring {
     fill: none;
     stroke: var(--paper-light);
-    stroke-width: 5;
+    stroke-width: 3;
     pointer-events: none;
 }
 
@@ -811,6 +846,232 @@ button:focus-visible, input:focus-visible {
 
 .map-reach-ring.friendly {
     stroke: var(--green);
+}
+
+.attack-tank, .map-blast, .muzzle-flash, .tank-shell {
+    pointer-events: none;
+}
+
+.attack-tank rect, .attack-tank circle {
+    stroke: var(--ink);
+    stroke-width: 2;
+    transition: none;
+}
+
+.attack-tank .tank-tread {
+    fill: var(--ink);
+}
+
+.attack-tank .tank-hull, .attack-tank .tank-dome {
+    fill: var(--tank-color, var(--paper-light));
+}
+
+.attack-tank .tank-barrel {
+    fill: var(--paper-light);
+}
+
+/* Scale effect circles around their own centre, not the map's. */
+.svg-content .map-blast circle, .svg-content .muzzle-flash {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: none;
+}
+
+.svg-content .muzzle-flash, .map-blast .blast-core {
+    fill: #fff3b0;
+    stroke: none;
+}
+
+.svg-content .tank-shell {
+    fill: var(--ink);
+    stroke: var(--mustard);
+    stroke-width: 1.5;
+    transition: none;
+}
+
+.map-blast .blast-ring {
+    fill: none;
+    stroke: var(--paper-light);
+    stroke-width: 3;
+}
+
+.map-blast .blast-fire {
+    fill: var(--mustard);
+    stroke: var(--red);
+    stroke-width: 4;
+}
+
+.map-blast .blast-smoke {
+    fill: #5b5249;
+    stroke: none;
+}
+
+.map-blast .blast-debris {
+    fill: var(--mustard);
+    stroke: var(--ink);
+    stroke-width: 1.5;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.map-blast .blast-burst {
+    fill: var(--red);
+    stroke: var(--ink);
+    stroke-width: 3;
+    stroke-linejoin: round;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.convoy-vehicle, .unit-change {
+    pointer-events: none;
+}
+
+.convoy-vehicle {
+    transform-box: view-box;
+    transform-origin: 0 0;
+}
+
+.convoy-vehicle rect, .convoy-vehicle path, .convoy-vehicle circle {
+    stroke: var(--ink);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+    transition: none;
+}
+
+.convoy-vehicle .convoy-body {
+    fill: var(--convoy-color, var(--paper-light));
+}
+
+.convoy-vehicle .convoy-cab {
+    fill: var(--paper-light);
+}
+
+.convoy-vehicle .convoy-wheel {
+    fill: var(--ink);
+}
+
+.svg-content .unit-change {
+    font-size: 20px;
+    stroke: var(--ink);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+    paint-order: stroke;
+}
+
+.unit-change.gain {
+    fill: var(--mustard);
+}
+
+.unit-change.loss {
+    fill: var(--paper-light);
+}
+
+#activity-panel {
+    display: none;
+}
+
+.sidebar-tabs {
+    display: flex;
+    min-width: 0;
+    border: 3px solid var(--ink);
+    background: var(--paper-light);
+}
+
+.sidebar-tab {
+    flex: 1 1 50%;
+    min-width: 0;
+    min-height: 38px;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.sidebar-tab + .sidebar-tab {
+    border-left: 2px solid var(--ink);
+}
+
+.sidebar-tab[aria-selected="true"] {
+    background: var(--mustard);
+}
+
+.sidebar-panel {
+    display: none;
+    min-width: 0;
+    min-height: 0;
+}
+
+.sidebar-panel.is-active {
+    display: block;
+}
+
+#chat-panel.is-active {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+#activity-panel.is-active {
+    display: flex;
+    flex-direction: column;
+    border: 3px solid var(--ink);
+    background: var(--paper-light);
+}
+
+#game_actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0;
+    margin: 0;
+    padding: 8px;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.activity-entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 5px 7px;
+    border-left: 3px solid var(--action-color, var(--ink));
+    background: var(--paper);
+    font-size: 14px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.activity-entry-button {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.activity-entry-button:hover strong {
+    text-decoration: underline;
+}
+
+.activity-entry strong {
+    color: var(--action-color, var(--ink));
+}
+
+.activity-empty {
+    padding: 8px;
+    color: var(--ink);
+    font-size: 14px;
 }
 
 #username_turn {
@@ -844,7 +1105,6 @@ button:focus-visible, input:focus-visible {
     min-height: 44px;
     padding: 6px;
     border: 2px solid var(--paper);
-    outline: 0;
     background: var(--paper);
     color: var(--ink);
     font-family: inherit;
@@ -892,6 +1152,21 @@ button:focus-visible, input:focus-visible {
 .show-gold {
     line-height: 1.25;
     color: var(--mustard)
+}
+
+.gold-region-label {
+    display: none;
+    pointer-events: none;
+    fill: var(--paper);
+    stroke: var(--ink);
+    stroke-width: 5px;
+    paint-order: stroke;
+    font-size: 24px;
+    letter-spacing: 0;
+}
+
+body:has(.show-gold) .gold-region-label {
+    display: block;
 }
 /*Withdraw gold effect*/
 .user-gold-withdraw
@@ -946,26 +1221,48 @@ button:focus-visible, input:focus-visible {
     letter-spacing: .06em
 }
 
-.dice-log, .surrender-flag {
+.svg-container {
+    --game-control-size: clamp(32px, 5%, 48px);
+}
+
+.game-action-button {
     position: absolute;
     top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     box-sizing: border-box;
-    padding: .35%;
+    width: var(--game-control-size);
+    aspect-ratio: 1;
+    padding: 4px;
     background: var(--paper);
     border: 3px solid var(--ink);
     box-shadow: 3px 3px 0 var(--ink);
+    color: var(--ink);
+    font-size: 20px;
+    line-height: 1;
     cursor: pointer;
 }
-.dice-log:hover, .surrender-flag:hover {
+.game-action-button:hover {
     background: var(--mustard)
 }
+
+.game-action-button svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
 .dice-log {
-    width: 5%;
     left: 10px;
 }
+.game-sound-toggle {
+    left: calc(18px + var(--game-control-size));
+}
 .surrender-flag {
-    width: 5%;
-    left: calc(20px + 5%);
+    left: calc(26px + 2 * var(--game-control-size));
+}
+.surrender-flag:not(.is-visible) {
     display: none;
 }
 
@@ -1087,6 +1384,10 @@ button:focus-visible, input:focus-visible {
     outline: none;
     color: var(--ink);
 }
+.input-unit-bar.keyboard-focus-visible #unit_output:focus {
+    outline: 3px solid var(--red);
+    outline-offset: 2px;
+}
 .input-unit-bar .sub,
 .input-unit-bar .add {
     min-width: 0;
@@ -1170,6 +1471,7 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 50%;
     background: var(--mustard);
 }
+
 @container game-board (max-width:720px) {
     .input-unit-bar {
         position: static;

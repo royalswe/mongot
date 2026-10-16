@@ -1,6 +1,6 @@
 extends base
 block head
-  - var title = 'General Lobby'
+  - const title = 'General Lobby'
 
 block styles
   link(rel='stylesheet', type='text/css', href='/css/lobby.css?v=2.0')
@@ -34,8 +34,8 @@ block body
           tbody
 
       #news_box
-        p.news-heading Browsers ordered by best game compability
-        img.browsers(src='/img/browsers.png', alt='Chrome works best in game', title='Chrome works best in game')
+        p.news-heading Game under construction
+        p.news-text The game is currently in beta. Expect unfinished features and changes while we continue building.
         p.news-heading Help us grow
         a.facebook-link(href='https://www.facebook.com/blipmini/', target='_blank', rel='noopener noreferrer') Visit us on Facebook
 
@@ -56,9 +56,9 @@ block body
 
   script
     if user
-      | var user = !{JSON.stringify(user)}
+      | window.user = !{JSON.stringify(user)}
     else
-      | var user = 'guest';
+      | window.user = 'guest';
   script(src='/socket.io/socket.io.js')
   script(src='/resources/howler.min.js')
   if useBundles

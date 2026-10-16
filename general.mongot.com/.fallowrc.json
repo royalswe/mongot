@@ -1,0 +1,46 @@
+{
+  "entry": [
+    "gulpfile.js",
+    "public/js/battle.and.movement.js",
+    "public/js/chat.js",
+    "public/js/dev-multiplayer.js",
+    "public/js/game.room.js",
+    "public/js/lobby.chat.js",
+    "public/js/lobby.js",
+    "public/js/map.js",
+    "public/js/notifications.js",
+    "public/js/ranks.js",
+    "public/js/service-worker.js",
+    "public/js/storage.js",
+    "public/css/dev-multiplayer.css",
+    "public/css/game.board.css",
+    "public/css/home.css",
+    "public/css/lobby.css",
+    "public/css/retro.css",
+    "public/css/rules.css",
+    "public/css/site.css"
+  ],
+  "ignorePatterns": [
+    "public/resources/**"
+  ],
+  "ignoreDependencies": [
+    "@babel/preset-env",
+    "client-sessions",
+    "express",
+    "express-flash",
+    "gulp",
+    "gulp-babel",
+    "gulp-clean-css",
+    "gulp-concat",
+    "gulp-terser",
+    "helmet",
+    "mongoose",
+    "pug"
+  ],
+  "ignoreExports": [
+    {
+      "file": "game/countryHandler.js",
+      "exports": ["list"]
+    }
+  ]
+}
