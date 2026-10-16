@@ -1153,6 +1153,21 @@ text {
     line-height: 1.25;
     color: var(--mustard)
 }
+
+.gold-region-label {
+    display: none;
+    pointer-events: none;
+    fill: var(--paper);
+    stroke: var(--ink);
+    stroke-width: 5px;
+    paint-order: stroke;
+    font-size: 24px;
+    letter-spacing: 0;
+}
+
+body:has(.show-gold) .gold-region-label {
+    display: block;
+}
 /*Withdraw gold effect*/
 .user-gold-withdraw
 {

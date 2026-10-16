@@ -51,7 +51,7 @@ function cssGameBoard(){
 };
 
 function fonts(){
-    return src('public/fonts/*')
+    return src('public/fonts/*', { encoding: false })
         .pipe(dest(PROD + '/public/fonts'));
 };
 

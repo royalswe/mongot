@@ -967,6 +967,39 @@ test('game room sound preference persists across reloads', async ({page}) => {
     expect(await page.evaluate(() => Howler._muted)).toBe(false);
 });
 
+for (const viewport of [{width: 1280, height: 800}, {width: 390, height: 844}]) {
+test('gold view labels island continents and Marches rows on the map at ' + viewport.width + 'px', async ({page}) => {
+    const maps = require('../game/maps');
+    await page.setViewportSize(viewport);
+    await page.goto('/game');
+    for (const mapId of ['archipelago', 'frontier']) {
+        const map = maps.get(mapId);
+        await page.evaluate((map) => {
+            gameInfra.listeners('map_info').forEach((listener) => listener(map));
+        }, map);
+        const labels = page.locator('.gold-region-label');
+        await expect(labels).toHaveCount(5);
+        await expect(labels.first()).toBeHidden();
+        await page.locator('#show_gold').click();
+        for (const [index, region] of map.continents.entries()) {
+            const name = mapId === 'frontier' ? 'Row ' + (index + 1) + ' - ' + region.continent : region.continent;
+            await expect(labels.nth(index)).toBeVisible();
+            await expect(labels.nth(index)).toHaveText(name + ': ' + region.gold + ' gold');
+            await expect(page.locator('.show-gold')).toContainText(name + ': ' + region.gold + ' gold');
+                const bounds = await labels.nth(index).evaluate((label, regionIndex) => {
+                const box = label.getBBox();
+                const board = label.ownerSVGElement.viewBox.baseVal;
+                return {inside: box.x >= 0 && box.y >= 0 && box.x + box.width <= board.width && box.y + box.height <= board.height,
+                    below: Number(label.getAttribute('y')) > Math.max(...mapContinents[regionIndex].countries.map((id) => mapData.positions[id].y)) + 20};
+                }, index);
+            expect(bounds).toEqual({inside: true, below: true});
+        }
+        await page.locator('#show_gold').click();
+        await expect(labels.first()).toBeHidden();
+    }
+});
+}
+
 test('game room controls switch views, toggle chat, and send a room message', async ({page}) => {
     const roomName = await firstRoomName(page);
     await page.context().addCookies([sessionCookie('verified@test.local')]);

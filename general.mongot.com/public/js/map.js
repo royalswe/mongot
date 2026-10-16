@@ -29,6 +29,8 @@ gameInfra.on('map_info', function (map) {
         document.querySelectorAll('.map-connection, .map-connection-casing').forEach(function (line) { line.remove(); });
     }
 
+    drawGoldRegionLabels();
+
     if (circles.length === 0) {
         drawGold();
     }
@@ -658,6 +660,27 @@ document.querySelector('.svg-content').addEventListener('keydown', function (eve
     }
 });
 
+function goldRegionName(region, index) {
+    return mapData && mapData.id === 'frontier' ? 'Row ' + (index + 1) + ' - ' + region.continent : region.continent;
+}
+
+function drawGoldRegionLabels() {
+    document.querySelectorAll('.gold-region-label').forEach(function (label) { label.remove(); });
+    if (!mapData || !mapData.positions || ['archipelago', 'frontier'].indexOf(mapData.id) === -1) { return; }
+    const svg = document.querySelector('.svg-content');
+    mapContinents.forEach(function (region, index) {
+        const positions = region.countries.map(function (id) { return mapData.positions[id]; });
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('class', 'gold-region-label');
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('x', (Math.min.apply(null, positions.map(function (position) { return position.x; })) +
+            Math.max.apply(null, positions.map(function (position) { return position.x; }))) / 2);
+        label.setAttribute('y', Math.max.apply(null, positions.map(function (position) { return position.y; })) + 52);
+        label.textContent = goldRegionName(region, index) + ': ' + region.gold + ' gold';
+        svg.appendChild(label);
+    });
+}
+
 function drawGold() {
     for (let i = 0; i < countriesGold.length; i++) {
         let circle = document.getElementsByTagName('circle')[countriesGold[i].id];
@@ -682,8 +705,8 @@ document.getElementById('show_gold').addEventListener('click', function () {
             drawGold();
             this.classList.add('clicked-btn');
             document.querySelector('.phase-info').replaceChildren();
-            const regionIncome = mapContinents.map(function (region) {
-                return '<p>' + region.continent + ': ' + region.gold + ' gold</p>';
+            const regionIncome = mapContinents.map(function (region, index) {
+                return '<p>' + goldRegionName(region, index) + ': ' + region.gold + ' gold</p>';
             }).join('');
             document.querySelector('.phase-message').innerHTML = '<div class="show-gold">' + regionIncome + '</div>';
         }
