@@ -635,7 +635,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
 
     Game.prototype.botBattle = function (id) {
         let attempts = 0;
-        const maxAttempts = (PlayerList[id] && PlayerList[id].countries ? PlayerList[id].countries.length : 10) * 3;
+        const maxAttempts = Math.max(15, (PlayerList[id] && PlayerList[id].countries ? PlayerList[id].countries.length : 10) * 3);
 
         const battleStep = () => {
             if (gameOver || phase !== Game.Phase.battle || ap !== id) { return; }

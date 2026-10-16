@@ -236,3 +236,51 @@ test('bot actions are spaced with delays so human players can track gameplay', (
     table.clock.advance(100);
     assert.equal(table.phase(), 'Battle', 'paces battle attacks so animations and dice log can be seen');
 });
+
+test('bot attacks multiple surrounding countries from a single army in a live battle phase', (t) => {
+    // 2-bot match on quick map where territory 0 borders both 1 and 2
+    const table = createTable({
+        mapId: 'quick',
+        seats: [
+            { bot: { aggression: 0.5 } },
+            { bot: { aggression: 0.5 } }
+        ],
+        seed: 123
+    });
+    t.after(table.close);
+
+    // Fast-forward initial deploy
+    table.clock.advance(150);
+
+    // Give active player a concentrated army on territory 0, with 1 and 2 owned by opponent with 1 unit each
+    const ap = table.active();
+    const opponent = ap === 0 ? 1 : 0;
+    const apPlayer = table.player(ap);
+    const opponentPlayer = table.player(opponent);
+
+    apPlayer.countries = [{ id: 0, units: 10, gold: 2, neighbour: [1, 2] }];
+    opponentPlayer.countries = [
+        { id: 1, units: 1, gold: 2, neighbour: [0, 3] },
+        { id: 2, units: 1, gold: 2, neighbour: [0, 3] }
+    ];
+
+    // Ensure we are in Battle phase
+    if (table.phase() === 'Deploy') {
+        table.clock.advance(1500);
+    }
+    assert.equal(table.phase(), 'Battle');
+
+    // Advance clock through the battle phase to let bot execute attacks
+    table.clock.advance(2000);
+
+    // Check attack actions recorded in action history
+    const history = table.info().actionHistory;
+    const attackActions = history.filter((a) => a.type === 'attack' && a.from === 0);
+    assert.ok(attackActions.length >= 2, 'bot executed at least 2 attacks from territory 0');
+
+    // The bot attacked both surrounding countries (1 and 2) rather than only one!
+    const targetsAttacked = new Set(attackActions.map((a) => a.to));
+    assert.ok(targetsAttacked.has(1), 'bot attacked surrounding country 1');
+    assert.ok(targetsAttacked.has(2), 'bot attacked surrounding country 2');
+});
+
