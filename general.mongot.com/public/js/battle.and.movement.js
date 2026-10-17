@@ -147,7 +147,16 @@ function showUnitBar(units, clickedCountry, keyboardActivation, originCountryId)
     output.form.dataset.countryId = clickedCountry;
     output.form.dataset.originCountryId = originCountryId;
     form.classList.add(keyboardActivation ? 'keyboard-focus-visible' : 'suppress-focus-ring');
+    let typed = '';
+    const typeUnits = function (key) {
+        typed = key === 'Backspace' ? typed.slice(0, -1) : typed + key;
+        if (Number(typed) > units) { typed = key === 'Backspace' ? '' : key; }
+        if (typed === '0') { typed = ''; }
+        output.value = String(Math.max(1, Math.min(units, Number(typed) || 1)));
+        slider.value = output.value;
+    };
     const changeUnits = function (amount) {
+        typed = '';
         const current = Number(output.value) || 1;
         output.value = String(amount > 0 ? Math.min(units, current + 1) : (current > 1 ? current - 1 : units));
         slider.value = output.value;
@@ -163,7 +172,11 @@ function showUnitBar(units, clickedCountry, keyboardActivation, originCountryId)
     form.addEventListener('keydown', function (event) {
         form.classList.remove('suppress-focus-ring');
         form.classList.add('keyboard-focus-visible');
-        if (event.key === 'ArrowUp' || event.key === 'ArrowRight') {
+        if (/^[0-9]$/.test(event.key) || event.key === 'Backspace') {
+            event.preventDefault();
+            typeUnits(event.key);
+        }
+        else if (event.key === 'ArrowUp' || event.key === 'ArrowRight') {
             event.preventDefault();
             changeUnits(1);
         }
@@ -185,6 +198,7 @@ function showUnitBar(units, clickedCountry, keyboardActivation, originCountryId)
         slider.value = output.value;
     });
     slider.addEventListener('input', function () {
+        typed = '';
         output.value = slider.value;
     });
     positionUnitBar();
