@@ -143,6 +143,8 @@ function showUnitBar(units, clickedCountry, keyboardActivation, originCountryId)
 
     const output = document.getElementById('unit_output');
     const slider = document.getElementById('unit_input');
+    output.readOnly = window.matchMedia('(pointer: coarse)').matches;
+    output.inputMode = output.readOnly ? 'none' : 'numeric';
     const form = output.form;
     output.form.dataset.countryId = clickedCountry;
     output.form.dataset.originCountryId = originCountryId;
@@ -203,7 +205,9 @@ function showUnitBar(units, clickedCountry, keyboardActivation, originCountryId)
     });
     positionUnitBar();
     setTimeout(function () {
-        if (document.getElementById('unit_output') === output) { output.focus({preventScroll: true}); }
+        if (document.getElementById('unit_output') === output && (!output.readOnly || keyboardActivation)) {
+            output.focus({preventScroll: true});
+        }
     }, 0);
 }
 

@@ -1564,7 +1564,7 @@ input[type="range"]::-moz-range-thumb {
     section#chatroom.hidden {
         width: 0
     }
-    g circle{
+    .svg-content > g.territory-marker > circle{
          r:25; /* gulp will remove this */
     }
 }

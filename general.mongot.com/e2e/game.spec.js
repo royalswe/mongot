@@ -350,6 +350,39 @@ test('tactical moves drive a convoy between territories and deploys float a +1',
     await expect(page.locator('.unit-change')).toHaveCount(0, {timeout: 2000});
 });
 
+test.describe('touch controls', () => {
+    test.use({viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true});
+
+    test('vehicle circles retain their own radii on mobile', async ({page}) => {
+        const roomName = await firstRoomName(page);
+        await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+        await expect(page.locator('.popup')).toBeHidden();
+        await page.evaluate(() => {
+            showAimTank(0, [1]);
+            document.querySelector('.svg-content').appendChild(createVehicle('land', '#d33a2c'));
+        });
+        await expect.soft(page.locator('.tank-dome')).toHaveCSS('r', '8px');
+        await expect.soft(page.locator('.convoy-wheel').first()).toHaveCSS('r', '2.6px');
+        await expect(page.locator('.territory-marker circle').first()).toHaveCSS('r', '25px');
+    });
+
+    test('unit selection avoids the touch keyboard while the slider still works', async ({page}) => {
+        const roomName = await firstRoomName(page);
+        await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+        await expect(page.locator('.popup')).toBeHidden();
+        await page.evaluate(() => showUnitBar(10, 0));
+        const output = page.locator('#unit_output');
+        await expect.soft(output).toHaveJSProperty('readOnly', true);
+        await expect.soft(output).toHaveAttribute('inputmode', 'none');
+        await expect(output).not.toBeFocused();
+        await output.tap();
+        await expect(output).toHaveJSProperty('readOnly', true);
+        await page.locator('#unit_input').fill('7');
+        await expect(output).toHaveValue('7');
+        await expect(page.locator('#send_units')).toBeEnabled();
+    });
+});
+
 test('troop selector stays within the board through resizing', async ({page}) => {
     const roomName = await firstRoomName(page);
     await seatAs(page, roomName, null, 'red', 'Playing as a guest');
