@@ -1,0 +1,47 @@
+name: Snake CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+      - run: npm ci
+      - run: pnpm install --frozen-lockfile
+        working-directory: server
+      - run: pnpm install --frozen-lockfile
+        working-directory: client
+      - run: pnpm test
+        working-directory: server
+      - run: pnpm build
+        working-directory: server
+      - run: pnpm check
+        working-directory: client
+      - run: pnpm lint
+        working-directory: client
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: client
+      - name: Install mkcert for local WebSocket TLS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3-tools
+          curl --fail --silent --show-error --location \
+            "https://dl.filippo.io/mkcert/v1.4.4?for=linux/amd64" \
+            --output /tmp/mkcert
+          sudo install -m 0755 /tmp/mkcert /usr/local/bin/mkcert
+      - run: pnpm test
+        working-directory: client
+      - run: pnpm build
+        working-directory: client

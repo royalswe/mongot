@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "dev": "node server/scripts/ensure-dev-certificate.mjs && concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "test": "npm run test:server && npm run test:client",
+    "test:server": "npm --prefix server run test",
+    "test:client": "npm --prefix client run test",
+    "test:load": "NODE_USE_SYSTEM_CA=1 node server/scripts/run-load-test.mjs",
+    "build:server": "npm --prefix server run build-stage",
+    "build:client": "npm --prefix client run build-stage",
+    "prod": "npm run build:server && npm run build:client"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}

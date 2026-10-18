@@ -1,0 +1,7 @@
+node_modules/
+server/dist
+highscores.json
+.DS_Store
+.local-certs/
+playwright-report/
+.playwright-mcp/

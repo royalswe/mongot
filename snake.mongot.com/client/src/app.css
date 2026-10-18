@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+@source "./";
+
+@theme {
+	--color-c-blue-200: #cffafe;
+	--color-c-blue-300: #527691;
+	--color-c-blue-400: #335c76;
+	--color-c-blue-500: #285979;
+	--color-c-blue-600: #165878;
+	--color-c-blue-700: #083653;
+	--color-c-blue-800: #072e4b;
+	--color-c-blue-900: #082d42;
+	--color-c-yellow-400: #fffb7c;
+	--color-c-yellow-900: #ed5a14;
+}
+
+:root {
+	--p-1: 0.5rem;
+	--p-2: 1rem;
+}
