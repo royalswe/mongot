@@ -55,6 +55,9 @@ export function gameMessageHandler(msg: any) {
 		case EVENT.roomStatus:
 			states.clients = msg.clients;
 			break;
+		case EVENT.ratingsUpdated:
+			states.clients = [...states.clients];
+			break;
 		case EVENT.chat:
 			chat.add({ sender: msg.clientId, message: msg.msg, datetime: msg.datetime });
 			break;

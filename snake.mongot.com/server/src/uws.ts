@@ -118,6 +118,31 @@ uws
         }
       }));
   })
+  .get('/api/ratings', (res, req) => {
+    const usernames = (req.getQuery('usernames') ?? '')
+      .split(',')
+      .map((username) => username.trim())
+      .filter(Boolean)
+      .slice(0, 100);
+    let aborted = false;
+    res.onAborted(() => {
+      aborted = true;
+    });
+    void highscoreStore.getRatings(usernames).then((ratings) => {
+      if (aborted) return;
+      res.cork(() => {
+        res
+          .writeHeader('content-type', 'application/json; charset=utf-8')
+          .end(JSON.stringify(ratings));
+      });
+    }).catch((error: unknown) => {
+      reportError({ message: `Could not load ratings: ${getErrorMessage(error)}` });
+      if (aborted) return;
+      res.cork(() => {
+        res.writeStatus('500 Internal Server Error').end('Could not load ratings');
+      });
+    });
+  })
   .get('/api/highscores', (res) => {
     let aborted = false;
     res.onAborted(() => {

@@ -7,6 +7,7 @@ export interface Client {
 	clientStatus: string;
 	color: string;
 	isBot: boolean;
+	isRegistered: boolean;
 }
 
 let gameStatus = $state<GameStatus>('waiting');

@@ -10,6 +10,26 @@ test('renders the Snake home page', async ({ page }) => {
 	await expect(page.getByRole('button', { name: /Quick game/i })).toHaveClass(/rounded-full/);
 });
 
+test('shows rating and the matching crown on the high-score table', async ({ page }) => {
+	await page.route('**/api/highscores', (route) =>
+		route.fulfill({
+			contentType: 'application/json',
+			body: JSON.stringify([{ username: 'Alice', wins: 5, losses: 2, rating: 1600 }])
+		})
+	);
+
+	await page.goto('/highscore');
+	await expect(page.getByRole('columnheader', { name: 'Rating' })).toBeVisible();
+	await expect(page.getByText('1600')).toBeVisible();
+	const crown = page.locator('tbody img').first();
+	await expect(crown).toHaveAttribute('src', '/images/rankings/crown3.png');
+	const crownResponse = await page.request.get('/images/rankings/crown3.png');
+	expect(crownResponse.status()).toBe(200);
+	const ratingsResponse = await page.request.get('/api/ratings?usernames=Alice');
+	expect(ratingsResponse.status()).toBe(200);
+	expect(await ratingsResponse.json()).toEqual({ alice: 1600 });
+});
+
 test('connects to the lobby WebSocket', async ({ page }) => {
 	test.setTimeout(10_000);
 	const framePromise = new Promise<string>((resolve, reject) => {

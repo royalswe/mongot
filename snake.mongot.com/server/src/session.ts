@@ -29,6 +29,7 @@ export default class Session {
   height!: number;
   playingClients!: Client[];
   matchParticipants: Client[] = [];
+  matchPlacements = new Map<Client, number>();
   matchWinner: Client | null = null;
   matchDraw = false;
   clients: Set<Client>;
@@ -230,12 +231,16 @@ export default class Session {
       if (collided) lostPlayers.add(client.color);
     }
 
+    const eliminatedPlayers = activePlayers.filter((client) =>
+      lostPlayers.has(client.color),
+    );
     for (const client of activePlayers) {
       const next = nextPositions.get(client)!;
       client.gameState.pos = next;
       client.gameState.snake.push({ ...next });
       if (lostPlayers.has(client.color)) client.status = PLAYER_STATUS.joined;
     }
+    this.recordEliminations(eliminatedPlayers);
 
     if (!lostPlayers.size) return;
 
@@ -257,6 +262,18 @@ export default class Session {
   }
   isOutsideBoard({ x, y }: Cell) {
     return x >= this.width || y >= this.height || x < 0 || y < 0;
+  }
+
+  recordEliminations(players: Client[]) {
+    const place =
+      this.playingClients.filter(
+        (client) => client.status === PLAYER_STATUS.ready,
+      ).length + 1;
+    for (const player of players) {
+      if (!this.matchPlacements.has(player)) {
+        this.matchPlacements.set(player, place);
+      }
+    }
   }
 
   isCollide({ y, x }: Cell, stateB: GameState) {

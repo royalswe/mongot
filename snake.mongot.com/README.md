@@ -1,6 +1,6 @@
 Multiplayer snake game made with uWebSockets.js and SvelteKit.
 
-The **High Score** page ranks registered players by completed match wins, with fewer losses as the tie-breaker. Match totals are persisted in `highscores.json` at the application root; the server process needs write access to that directory.
+The **High Score** page ranks players by persistent rating, then wins, fewer losses, and username. Ratings start at 1600 and use placement-based Elo updates with K=32; only matches with at least two distinct registered human players change ratings. Matches with guests or bots still record registered players' wins and losses, while draws update ratings as ties without changing those totals. Ratings and match totals are persisted in `highscores.json` at the application root; the server process needs write access to that directory. Crown tiers use the same images and thresholds as General and Blockwars.
 
 Requires Node.js 24 and pnpm 12.9.1 for the server and client packages.
 Install [mkcert](https://github.com/FiloSottile/mkcert#installation) for trusted local HTTPS/WebSocket certificates; the server creates or renews its local certificate when development starts.
@@ -18,7 +18,9 @@ Start the server and client separately, or run from the repository root to start
 npm run dev
 ```
 
-For local login to be shared with mongot.com, the `cookie` setting in `server/package.json` must match the `COOKIE_SECRET` used by the local mongot.com process. The Snake dev script passes that setting as `COOKIE_SECRET`; when starting the server another way, set the environment variable yourself. The server exits with an error if it is not set.
+Account registration and login are provided by the parent `mongot.com` application; Snake uses that shared `session` cookie for registered-player identity and does not maintain a separate account system. For local login, the `cookie` setting in `server/package.json` must match the `COOKIE_SECRET` used by the local mongot.com process. The Snake dev script passes that setting as `COOKIE_SECRET`; when starting the server another way, set the environment variable yourself. The server exits with an error if it is not set.
+
+The portal must also issue its cookie for the parent `mongot.com` domain for browsers to send it to `snake.mongot.com`. That domain option is currently commented out in `mongot.com/app.js`; matching secrets alone do not enable cross-subdomain browser login. See the workspace [`AGENTS.md`](../AGENTS.md) for the integration contract.
 
 ### Playing with bots
 

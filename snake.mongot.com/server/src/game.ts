@@ -11,6 +11,7 @@ import { EVENT, LOBBY_EVENT } from "./constants/events";
 import { GAME_STATUS, PLAYER_STATUS } from "./constants/status";
 import highscoreStore from "./highscores";
 import { getErrorMessage, reportError } from "./helpers/errorHandling";
+import { isRankedMatch } from "./rating";
 
 const decoder = new TextDecoder("utf-8");
 export const sessions = new Map<string, Session>();
@@ -284,6 +285,7 @@ export default new (class Game {
           (client) => client.status === PLAYER_STATUS.ready,
         );
         session.matchParticipants = [...session.playingClients];
+        session.matchPlacements.clear();
         session.matchWinner = null;
         session.matchDraw = false;
 
@@ -331,6 +333,7 @@ export default new (class Game {
       clientStatus: client.status,
       color: client.color,
       isBot: client.isBot,
+      isRegistered: Boolean(client.accountUsername),
     }));
   }
 
@@ -372,22 +375,34 @@ export default new (class Game {
     session.status = GAME_STATUS.waiting;
     session.botOnlyRun = false;
     session.resetPlayers();
-    if (!session.matchDraw) {
-      const results = session.matchParticipants
-        .filter((player) => player.accountUsername && !player.isBot)
-        .map((player) => ({
-          username: player.accountUsername!,
-          won: player === session.matchWinner
-        }));
-      if (results.length) {
-        void highscoreStore.recordMatch(results).catch((error: unknown) => {
+    const results = session.matchParticipants
+      .filter((player) => player.accountUsername && !player.isBot)
+      .map((player) => ({
+        username: player.accountUsername!,
+        won: player === session.matchWinner,
+        place:
+          session.matchPlacements.get(player) ??
+          (player === session.matchWinner ? 1 : session.matchPlacements.size + 1)
+      }));
+    const rated = isRankedMatch(session.matchParticipants);
+    if (results.length) {
+      void highscoreStore
+        .recordMatch(results, {
+          rated,
+          recordStats: !session.matchDraw
+        })
+        .then(() => {
+          ws.emitter.roomEmit(EVENT.ratingsUpdated, {});
+          ws.emitter.lobby(LOBBY_EVENT.ratingsUpdated, {});
+        })
+        .catch((error: unknown) => {
           reportError({
             message: `Could not save high scores: ${getErrorMessage(error)}`
           });
         });
-      }
     }
     session.matchParticipants = [];
+    session.matchPlacements.clear();
     session.matchWinner = null;
     session.matchDraw = false;
     ws.emitter.roomEmit(EVENT.gameOver, {
@@ -412,6 +427,9 @@ export default new (class Game {
     const wasCountingDown = session.status === GAME_STATUS.countDown;
     const wasBotOnlyRun = session.botOnlyRun;
     session.leave(ws.client);
+    if (wasPlaying && session.status === GAME_STATUS.running) {
+      session.recordEliminations([ws.client]);
+    }
     const cancelledCountdown =
       wasCountingDown && !wasBotOnlyRun && !isEveryPlayerReady(session.clients);
     if (cancelledCountdown) {

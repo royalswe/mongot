@@ -15,6 +15,9 @@ export function lobbyMessageHandler(msg: any) {
 		case EVENT.updateClients:
 			clients.list = msg.msg;
 			break;
+		case EVENT.ratingsUpdated:
+			clients.list = [...clients.list];
+			break;
 		case EVENT.chat:
 			chat.add({ sender: msg.clientId, message: msg.msg, datetime: msg.datetime });
 			break;

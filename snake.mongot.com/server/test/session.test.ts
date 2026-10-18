@@ -137,14 +137,16 @@ describe("Session simulation", () => {
     expect(session.snakeGrow()).toBe("The winner is blue");
     expect(red.status).toBe(PLAYER_STATUS.joined);
     expect(blue.status).toBe(PLAYER_STATUS.joined);
+    expect(session.matchPlacements.get(red)).toBe(2);
   });
 
   it("resolves simultaneous head-on collisions as a draw", () => {
     const session = createSession();
-    addPlayer(session, "red", "red", { x: 5, y: 5 }, { x: 1, y: 0 });
-    addPlayer(session, "blue", "blue", { x: 7, y: 5 }, { x: -1, y: 0 });
+    const red = addPlayer(session, "red", "red", { x: 5, y: 5 }, { x: 1, y: 0 });
+    const blue = addPlayer(session, "blue", "blue", { x: 7, y: 5 }, { x: -1, y: 0 });
 
     expect(session.snakeGrow()).toBe("It's a draw between red and blue");
+    expect(session.matchPlacements.get(red)).toBe(session.matchPlacements.get(blue));
   });
 
   it("bots turn away from a simultaneous head-on collision when an escape is available", () => {

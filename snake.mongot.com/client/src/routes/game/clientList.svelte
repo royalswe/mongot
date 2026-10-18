@@ -4,8 +4,25 @@
 	import { EVENT } from '$server/constants/events';
 	import { GAME_STATUS, PLAYER_STATUS } from '$server/constants/status';
 	import { PLAYER_COLORS } from '#lib/constants';
+	import { crownImage, fetchRatings } from '#lib/rankings';
 
 	const states = useState();
+	let ratings = $state<Record<string, number>>({});
+
+	$effect(() => {
+		const usernames = states.clients
+			.filter((client) => client.isRegistered)
+			.map((client) => client.displayName ?? client.clientId);
+		let current = true;
+		void fetchRatings(usernames)
+			.then((nextRatings) => {
+				if (current) ratings = nextRatings;
+			})
+			.catch((error: unknown) => console.error('Could not load player ratings:', error));
+		return () => {
+			current = false;
+		};
+	});
 
 	const waiting = $derived(states.gameStatus === GAME_STATUS.waiting);
 	const myParticipant = $derived(states.clients.find((client) => client.clientId === states.you));
@@ -30,7 +47,8 @@
 					clientId: client.clientId,
 					displayName: client.displayName,
 					status: client.clientStatus,
-					isBot: client.isBot
+					isBot: client.isBot,
+					isRegistered: client.isRegistered
 				};
 			}
 		});
@@ -46,6 +64,17 @@
 			<li class="my-1" class:ready={player?.status === PLAYER_STATUS.ready}>
 				<i class="circle {color}"></i>
 				{#if player}
+					{@const rating = player.isRegistered
+						? ratings[(player.displayName ?? player.clientId).toLowerCase()]
+						: undefined}
+					{#if rating !== undefined}
+						<img
+							class="mr-1 inline-block h-5 w-5 object-contain"
+							src={crownImage(rating)}
+							alt="Crown rank"
+							title={`Rating ${rating}`}
+						/>
+					{/if}
 					<span>{player.displayName ?? player.clientId}</span>
 					{#if player.isBot}
 						<span

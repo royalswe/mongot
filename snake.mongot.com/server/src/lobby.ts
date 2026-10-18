@@ -12,7 +12,19 @@ const decoder = new TextDecoder('utf-8');
 const lobbyChatPath = path.join(__dirname, 'snakeChat.json');
 
 export default new (class Lobby {
-  private onlineClients: Set<string> = new Set(); // Maintain a list of online clients by username
+  private onlineClients = new Map<
+    string,
+    { username: string; isRegistered: boolean; connections: number }
+  >();
+
+  private broadcastOnlineClients(ws: WebSocket) {
+    ws.emitter.roomEmit(EVENT.updateClients, {
+      msg: [...this.onlineClients.values()].map(({ username, isRegistered }) => ({
+        username,
+        isRegistered,
+      })),
+    });
+  }
 
   public open(ws: WebSocket) {
     ws.username = ws.user?.username || 'guest-' + Math.random().toString(36).substring(2, 6);
@@ -21,8 +33,17 @@ export default new (class Lobby {
     ws.emitter.room = 'lobby';
     ws.subscribe('lobby'); // subscribe to the room name
     ws.emitter.send(EVENT.updateRooms, { msg: getLobbyRooms(sessions) });
-    this.onlineClients.add(ws.username); // Add the client's username to the online clients list
-    ws.emitter.roomEmit(EVENT.updateClients, { msg: [...this.onlineClients] }); // Send the online clients list to all clients
+    const onlineClient = this.onlineClients.get(ws.username);
+    if (onlineClient) {
+      onlineClient.connections += 1;
+    } else {
+      this.onlineClients.set(ws.username, {
+        username: ws.username,
+        isRegistered: Boolean(ws.user?.username),
+        connections: 1,
+      });
+    }
+    this.broadcastOnlineClients(ws);
 
     fs.readFile(lobbyChatPath, (err, data) => {
       if (err) {
@@ -63,8 +84,13 @@ export default new (class Lobby {
   }
 
   close(ws: WebSocket) {
-    this.onlineClients.delete(ws.username); // Remove the client's username from the online clients list
-    ws.emitter.roomEmit(EVENT.updateClients, { msg: [...this.onlineClients] });
+    const onlineClient = this.onlineClients.get(ws.username);
+    if (onlineClient && onlineClient.connections > 1) {
+      onlineClient.connections -= 1;
+    } else {
+      this.onlineClients.delete(ws.username);
+    }
+    this.broadcastOnlineClients(ws);
   }
 
   // export function Lobby(ws: WebSocket, message: BufferSource, isBinary: boolean) {

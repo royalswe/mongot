@@ -3,6 +3,7 @@ interface PlayerColor {
 	clientId: string;
 	displayName?: string;
 	isBot?: boolean;
+	isRegistered?: boolean;
 }
 
 interface PlayerColors {

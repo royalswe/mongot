@@ -10,6 +10,15 @@ import { fileURLToPath } from 'node:url';
 const projectRoot = fileURLToPath(new URL('.', import.meta.url));
 
 const config: UserConfig = {
+	server: {
+		proxy: {
+			'/api': {
+				target: 'https://127.0.0.1:5300',
+				changeOrigin: true,
+				secure: false
+			}
+		}
+	},
 	resolve: {
 		alias: {
 			$models: resolve(projectRoot, '../server/src/models'),

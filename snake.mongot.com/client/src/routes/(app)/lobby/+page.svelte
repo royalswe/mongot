@@ -3,10 +3,27 @@
 	import { onMount } from 'svelte';
 	import { useRooms } from '#lib/stores/rooms.svelte';
 	import { useOnlineClients } from '#lib/stores/onlineClients.svelte';
+	import { crownImage, fetchRatings } from '#lib/rankings';
 	import Chat from '../../chat.svelte';
 
 	const rooms = useRooms();
 	const clients = useOnlineClients();
+	let ratings = $state<Record<string, number>>({});
+
+	$effect(() => {
+		const usernames = clients.list
+			.filter((client) => client.isRegistered)
+			.map((client) => client.username);
+		let current = true;
+		void fetchRatings(usernames)
+			.then((nextRatings) => {
+				if (current) ratings = nextRatings;
+			})
+			.catch((error: unknown) => console.error('Could not load player ratings:', error));
+		return () => {
+			current = false;
+		};
+	});
 
 	onMount(() => {
 		connect(
@@ -17,10 +34,10 @@
 		);
 	});
 
-	let boardWidth = '46';
-	let boardHeight = '30';
+	let boardWidth = $state('46');
+	let boardHeight = $state('30');
 
-	let showModal = false;
+	let showModal = $state(false);
 
 	// prettier-ignore
 	function generateRoomName() {
@@ -164,7 +181,8 @@
 								<button
 									type="button"
 									onclick={() => joinGame(room.name)}
-									class="inline-flex items-center justify-center rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-400 hover:shadow-md active:translate-y-px active:bg-sky-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300">Join</button
+									class="inline-flex items-center justify-center rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-400 hover:shadow-md active:translate-y-px active:bg-sky-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
+									>Join</button
 								>
 							</td>
 						</tr>
@@ -193,8 +211,19 @@
 		<div class="mt-6">
 			<h3 class="text-xl font-bold mb-4">Online Players</h3>
 			<ul>
-				{#each clients.list as client}
-					<li>{client}</li>
+				{#each clients.list as client (client.username)}
+					<li>
+						{#if client.isRegistered && ratings[client.username.toLowerCase()] !== undefined}
+							{@const rating = ratings[client.username.toLowerCase()]}
+							<img
+								class="mr-1 inline-block h-5 w-5 object-contain"
+								src={crownImage(rating)}
+								alt="Crown rank"
+								title={`Rating ${rating}`}
+							/>
+						{/if}
+						{client.username}
+					</li>
 				{/each}
 			</ul>
 		</div>
@@ -212,5 +241,4 @@
 	:global(.lobby-chat-container .chat-messages ul) {
 		@apply h-72 mb-4 border border-gray-700 p-2 rounded-sm;
 	}
-
 </style>

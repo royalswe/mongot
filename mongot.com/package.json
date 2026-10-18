@@ -4,6 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
+    "dev": "COOKIE_SECRET=s3cr3t node app.js",
     "gulp": "gulp",
     "test": "mocha && mocha test --require blanket --reporter html-cov > coverage.html"
   },

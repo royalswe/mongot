@@ -13,7 +13,8 @@ export const EVENT = {
     startBotMatch: 'start-bot-match',
     joinRoom: 'join-room',
     movement: 'movement',
-    playerReady: 'player-ready'
+    playerReady: 'player-ready',
+    ratingsUpdated: 'ratings-updated'
 } as const;
 
 export const LOBBY_EVENT = {
@@ -22,4 +23,5 @@ export const LOBBY_EVENT = {
     error: 'error',
     chat: 'chat',
     updateChat: 'update-chat',
+    ratingsUpdated: 'ratings-updated',
 } as const;

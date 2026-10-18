@@ -62,9 +62,9 @@ describe('Game.close high-score recording', () => {
 		Game.close(createSocket(departing));
 
 		expect(highscoreStore.recordMatch).toHaveBeenCalledWith([
-			{ username: 'alice', won: false },
-			{ username: 'bob', won: true }
-		]);
+			{ username: 'alice', won: false, place: 2 },
+			{ username: 'bob', won: true, place: 1 }
+		], { rated: true, recordStats: true });
 	});
 });
 
@@ -91,7 +91,8 @@ describe('Game.close during countdown', () => {
 				clientStatus: PLAYER_STATUS.ready,
 				color: 'remaining',
 				displayName: 'remaining',
-				isBot: false
+				isBot: false,
+				isRegistered: false
 			}]
 		});
 		expect(ws.emitter.roomEmit).not.toHaveBeenCalledWith(EVENT.gameStatus, {
@@ -125,14 +126,16 @@ describe('Game.close during countdown', () => {
 					clientStatus: PLAYER_STATUS.joined,
 					color: 'remaining',
 					displayName: 'remaining',
-					isBot: false
+					isBot: false,
+					isRegistered: false
 				},
 				{
 					clientId: 'not-ready',
 					clientStatus: PLAYER_STATUS.joined,
 					color: 'not-ready',
 					displayName: 'not-ready',
-					isBot: false
+					isBot: false,
+					isRegistered: false
 				}
 			]
 		});

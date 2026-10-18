@@ -65,3 +65,17 @@ _Avoid_: Tie (may also describe a score)
 **Solo game over**:
 The end of a one-player run when its player is eliminated.
 _Avoid_: Draw
+
+## Rating and rank
+
+**Rating**:
+A numeric measure of a player's competitive performance across ranked matches.
+_Avoid_: Score (when referring to competitive standing)
+
+**Ranked match**:
+A multiplayer match whose outcome can change the participating players' ratings.
+_Avoid_: Rated game
+
+**Crown tier**:
+A visual rank category associated with a player's rating.
+_Avoid_: Crown score

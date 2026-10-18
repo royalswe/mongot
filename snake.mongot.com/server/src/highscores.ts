@@ -1,21 +1,29 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { calculateRatingChanges, INITIAL_RATING } from './rating';
 
 export interface Highscore {
   username: string;
   wins: number;
   losses: number;
+  rating: number;
 }
 
 interface MatchResult {
   username: string;
   won: boolean;
+  place: number;
+}
+
+interface StoredHighscore extends Omit<Highscore, 'rating'> {
+  rating?: number;
 }
 
 type HighscoreData = Record<string, Highscore>;
+type StoredHighscoreData = Record<string, StoredHighscore>;
 
-function isHighscore(value: unknown): value is Highscore {
+function isHighscore(value: unknown): value is StoredHighscore {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -29,11 +37,14 @@ function isHighscore(value: unknown): value is Highscore {
     'losses' in value &&
     typeof value.losses === 'number' &&
     Number.isInteger(value.losses) &&
-    value.losses >= 0
+    value.losses >= 0 &&
+    (!('rating' in value) ||
+      (typeof value.rating === 'number' &&
+        Number.isSafeInteger(value.rating)))
   );
 }
 
-function isHighscoreData(value: unknown): value is HighscoreData {
+function isHighscoreData(value: unknown): value is StoredHighscoreData {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -62,6 +73,7 @@ export class HighscoreStore {
     return Object.values(data)
       .sort(
         (a, b) =>
+          b.rating - a.rating ||
           b.wins - a.wins ||
           a.losses - b.losses ||
           a.username.localeCompare(b.username)
@@ -69,7 +81,21 @@ export class HighscoreStore {
       .slice(0, limit);
   }
 
-  recordMatch(results: MatchResult[]): Promise<void> {
+  async getRatings(usernames: string[]): Promise<Record<string, number>> {
+    await this.writeQueue;
+    const data = await this.read();
+    return Object.fromEntries(
+      usernames.map((username) => {
+        const key = username.trim().toLowerCase();
+        return [key, data[key]?.rating ?? INITIAL_RATING];
+      })
+    );
+  }
+
+  recordMatch(
+    results: MatchResult[],
+    options: { rated: boolean; recordStats?: boolean },
+  ): Promise<void> {
     const update = this.writeQueue.then(async () => {
       const data = await this.read();
       for (const result of results) {
@@ -78,10 +104,29 @@ export class HighscoreStore {
         const key = username.toLowerCase();
         const score = Object.prototype.hasOwnProperty.call(data, key)
           ? data[key]
-          : { username, wins: 0, losses: 0 };
-        score[result.won ? 'wins' : 'losses'] += 1;
+          : { username, wins: 0, losses: 0, rating: INITIAL_RATING };
+        if (options.recordStats !== false) {
+          score[result.won ? 'wins' : 'losses'] += 1;
+        }
         data[key] = score;
       }
+
+      if (options.rated) {
+        const changes = calculateRatingChanges(
+          results.map((result) => {
+            const score = data[result.username.trim().toLowerCase()];
+            return {
+              username: result.username,
+              rating: score.rating,
+              place: result.place,
+            };
+          })
+        );
+        for (const change of changes) {
+          data[change.username.trim().toLowerCase()].rating = change.rating;
+        }
+      }
+
       await this.write(data);
     });
     this.writeQueue = update.then(
@@ -105,7 +150,9 @@ export class HighscoreStore {
       throw new Error('High score data contains an invalid record');
     }
     const data: HighscoreData = Object.create(null);
-    Object.assign(data, parsed);
+    for (const [key, score] of Object.entries(parsed)) {
+      data[key] = { ...score, rating: score.rating ?? INITIAL_RATING };
+    }
     return data;
   }
 
