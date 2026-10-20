@@ -2,12 +2,11 @@ import { expect, test } from '@playwright/test';
 
 test('renders the Snake home page', async ({ page }) => {
 	await page.goto('/');
-	await expect(page.getByRole('heading', { name: /Snake/ })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /One more square/ })).toBeVisible();
 	await expect(page.getByRole('button', { name: /Quick game/i })).toBeVisible();
-	await expect(page.getByRole('link', { name: /Go to lobby/i })).toBeVisible();
-	await expect(page.locator('main > div').first()).toHaveCSS('margin-left', '80px');
-	await expect(page.getByRole('button', { name: /Quick game/i })).toHaveCSS('padding', '16px 28px');
-	await expect(page.getByRole('button', { name: /Quick game/i })).toHaveClass(/rounded-full/);
+	await expect(page.getByRole('link', { name: /Browse lobby/i })).toBeVisible();
+	await expect(page.locator('.snake-art')).toBeVisible();
+	await expect(page.getByRole('button', { name: /Quick game/i })).toHaveCSS('min-height', '59.2px');
 });
 
 test('shows rating and the matching crown on the high-score table', async ({ page }) => {
@@ -50,17 +49,21 @@ test('connects to the lobby WebSocket', async ({ page }) => {
 
 test('allows editing board dimensions in the create-room dialog', async ({ page }) => {
 	await page.goto('/lobby');
-	await expect(page.locator('.bg-c-blue-600')).toHaveCSS('background-color', 'rgb(22, 88, 120)');
-	await expect(page.locator('.lobby-chat-container .mt-6 li').first()).toBeVisible();
-	const chatInput = page.getByPlaceholder('Type your message here');
-	await expect(chatInput).toHaveCSS('border-radius', '8px');
-	await expect(page.locator('.chat-submit')).toHaveCSS('padding', '8px 16px');
-	await page.getByRole('button', { name: 'Create New Room' }).first().click();
-	const dialog = page.getByRole('dialog');
+	await expect(page.locator('.lobby-layout')).toBeVisible();
+	await expect(page.locator('.room-browser')).toBeVisible();
+	const chatInput = page.getByRole('textbox', { name: 'Chat message' });
+	await expect(chatInput).toHaveAttribute('maxlength', '500');
+	await expect(page.getByRole('button', { name: 'Send chat message' })).toHaveCSS(
+		'min-height',
+		'44.8px'
+	);
+	await page.getByRole('button', { name: 'Create room' }).first().click();
+	const dialog = page.locator('dialog.create-dialog');
 	await expect(dialog).toBeVisible();
-	const backdropColor = await dialog
-		.locator('.fixed.inset-0')
-		.first()
+	await expect(dialog).toHaveAttribute('open', '');
+	await expect(dialog).toHaveAttribute('aria-modal', 'true');
+	const backdropColor = await page
+		.locator('.modal-backdrop')
 		.evaluate((element) => getComputedStyle(element).backgroundColor);
 	const backdropAlphaMatch =
 		backdropColor.match(/\/\s*([\d.]+)(%)?\s*\)$/) ??
@@ -68,18 +71,44 @@ test('allows editing board dimensions in the create-room dialog', async ({ page 
 	const backdropAlpha = backdropAlphaMatch
 		? Number(backdropAlphaMatch[1]) / (backdropAlphaMatch[2] ? 100 : 1)
 		: Number.NaN;
-	expect(backdropAlpha).toBe(0.75);
+	expect(backdropAlpha).toBe(0.78);
 
-	const width = dialog.getByLabel('Board Width');
+	const width = dialog.getByLabel('Width');
+	const height = dialog.getByLabel('Height');
+	const create = dialog.getByRole('button', { name: 'Create room', exact: true });
 	const receivesPointer = await width.evaluate((element) => {
 		const { x, y, width, height } = element.getBoundingClientRect();
 		return document.elementFromPoint(x + width / 2, y + height / 2) === element;
 	});
 	expect(receivesPointer).toBe(true);
-	await expect(dialog.getByRole('button', { name: 'Create' })).toHaveCSS('padding', '10px 16px');
+	await expect(create).toHaveCSS('min-height', '48px');
 	await width.focus();
-	const focusRing = await width.evaluate((element) => getComputedStyle(element).boxShadow);
-	expect(focusRing).not.toBe('none');
+	await expect(width).toBeFocused();
+	await expect(dialog.locator('.input-with-unit').first()).not.toHaveCSS('box-shadow', 'none');
+	await width.fill('9');
+	await expect(dialog.getByRole('alert')).toHaveText(
+		'Board width and height must be whole numbers of at least 10.'
+	);
+	await expect(create).toBeDisabled();
+	await width.fill('10.5');
+	await expect(create).toBeDisabled();
 	await width.fill('50');
 	await expect(width).toHaveValue('50');
+	await expect(create).toBeEnabled();
+	await height.fill('9');
+	await expect(create).toBeDisabled();
+	await page.keyboard.press('Escape');
+	await expect(dialog).toBeHidden();
+	await expect(page.getByRole('button', { name: 'Create room' }).first()).toBeFocused();
+});
+
+test('keeps the landing page and lobby within a phone viewport', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto('/');
+	await expect(page.locator('.hero-art')).toBeVisible();
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+	await page.goto('/lobby');
+	await expect(page.getByRole('heading', { name: 'Find your arena.' })).toBeVisible();
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

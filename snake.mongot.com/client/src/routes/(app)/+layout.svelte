@@ -1,60 +1,34 @@
-<svelte:head>
-	<link
-		href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
-		rel="stylesheet"
-	/>
-</svelte:head>
-
-<header class="shadow-md py-4">
-	<nav class="mx-auto flex justify-between px-4">
-		<ul class="flex gap-x-6">
+<header class="site-header">
+	<nav class="site-nav" aria-label="Main navigation">
+		<a class="brand-mark" href="/" aria-label="Snake home">
+			<span class="brand-icon" aria-hidden="true"><i class="fa fa-bolt"></i></span>
+			<span>BLIP.SE <b>SNAKE</b></span>
+		</a>
+		<ul class="site-links">
 			<li>
-				<a
-					href="https://mongot.com"
-					class="flex items-center text-white hover:text-blue-300 text-base font-bold transition"
+				<a href="/" aria-label="Home"
+					><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a
 				>
-					<i class="fa fa-home mr-2" aria-hidden="true" role="img" aria-label="Home Icon"></i>
-					Home
-				</a>
 			</li>
 			<li>
-				<a
-					href="/lobby"
-					class="flex items-center text-white hover:text-blue-300 text-base font-bold transition"
-				>
-					<i class="fa fa-globe mr-2" aria-hidden="true" role="img" aria-label="Globe Icon"></i>
-					Lobby
-				</a>
+				<a href="/lobby"><i class="fa fa-globe" aria-hidden="true"></i><span>Lobby</span></a>
 			</li>
 			<li>
-				<a
-					href="/highscore"
-					class="flex items-center text-white hover:text-blue-300 text-base font-bold transition"
+				<a href="/highscore"
+					><i class="fa fa-trophy" aria-hidden="true"></i><span>High scores</span></a
 				>
-					<i class="fa fa-trophy mr-2" aria-hidden="true" role="img" aria-label="Trophy Icon"></i>
-					High Score
-				</a>
 			</li>
 		</ul>
-		<ul class="flex gap-x-6">
+		<ul class="account-links">
 			<li>
-				<a
-					href="https://mongot.com/register"
-					class="flex items-center text-white hover:text-blue-300 text-base font-bold transition"
+				<a href="https://mongot.com/register"
+					><i class="fa fa-user-plus" aria-hidden="true"></i> Sign up</a
 				>
-					<i class="fa fa-user-plus mr-2" aria-hidden="true" role="img" aria-label="User Plus Icon"
-					></i>
-					Register
-				</a>
 			</li>
 			<li>
-				<a
-					href="https://mongot.com/login"
-					class="flex items-center text-white hover:text-blue-300 text-base font-bold transition"
+				<a href="https://mongot.com/login"
+					><i class="fa fa-sign-in" aria-hidden="true"></i> Log in</a
 				>
-					<i class="fa fa-sign-in mr-2" aria-hidden="true" role="img" aria-label="Sign In Icon"></i>
-					Login
-				</a>
 			</li>
 		</ul>
 	</nav>
@@ -67,11 +41,148 @@
 <slot />
 
 <style lang="postcss">
-	:global([data-theme='royal']) {
-		background-color: #48789b;
+	.site-header {
+		position: relative;
+		z-index: 5;
+		border-bottom: 2px solid var(--line);
+		background: rgb(10 21 18 / 88%);
+		box-shadow: 0 4px 0 rgb(5 11 9 / 70%);
+		backdrop-filter: blur(12px);
 	}
 
-	header {
-		font-family: 'Varela Round', 'Lucida Grande', Helvetica, Arial, sans-serif;
+	.site-nav {
+		display: flex;
+		min-height: 4.5rem;
+		max-width: 1440px;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin: 0 auto;
+		padding: 0.75rem clamp(1rem, 4vw, 3.5rem);
+	}
+
+	.brand-mark {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.7rem;
+		color: var(--paper);
+		font-size: 0.8rem;
+		font-weight: 900;
+		letter-spacing: 0.12em;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	.brand-mark b {
+		color: var(--lime);
+	}
+
+	.brand-icon {
+		display: grid;
+		width: 2rem;
+		height: 2rem;
+		place-items: center;
+		border: 2px solid var(--ink);
+		background: var(--lime);
+		box-shadow: 3px 3px 0 var(--mint);
+		color: var(--ink);
+	}
+
+	.site-links,
+	.account-links {
+		display: flex;
+		align-items: center;
+		gap: clamp(0.35rem, 2vw, 1.4rem);
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.site-links a,
+	.account-links a {
+		display: inline-flex;
+		min-height: 2.6rem;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.45rem 0.65rem;
+		border: 1px solid transparent;
+		color: var(--muted);
+		font-size: 0.875rem;
+		font-weight: 800;
+		text-decoration: none;
+		transition:
+			color 150ms ease,
+			background 150ms ease,
+			border-color 150ms ease,
+			transform 150ms ease;
+	}
+
+	.site-links a:hover,
+	.account-links a:hover {
+		transform: translateY(-2px);
+		border-color: var(--line);
+		background: var(--ink-raised);
+		color: var(--lime);
+	}
+
+	.site-links i,
+	.account-links i {
+		color: var(--mint);
+	}
+
+	.account-links a {
+		color: var(--paper);
+	}
+
+	.account-links li:first-child a {
+		color: var(--muted);
+	}
+
+	@media (max-width: 720px) {
+		.site-nav {
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+
+		.brand-mark {
+			margin-right: auto;
+		}
+
+		.account-links {
+			margin-left: auto;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.site-nav {
+			gap: 0.25rem 0.5rem;
+			padding: 0.6rem 0.75rem;
+		}
+
+		.brand-mark {
+			margin: 0 auto 0 0;
+		}
+
+		.site-links {
+			order: 3;
+			width: 100%;
+			justify-content: space-between;
+		}
+
+		.site-links a {
+			min-height: 2.25rem;
+			gap: 0.35rem;
+			padding: 0.25rem 0.4rem;
+			font-size: 0.78rem;
+		}
+
+		.account-links {
+			gap: 0.1rem;
+		}
+
+		.account-links a {
+			padding: 0.35rem;
+			font-size: 0.75rem;
+		}
 	}
 </style>

@@ -1,7 +1,10 @@
 type Rooms = {
 	name: string;
 	status: string;
-	clientIds: string[];
+	seatedCount: number;
+	botCount: number;
+	spectatorCount: number;
+	seatCapacity: number;
 };
 
 let list = $state<Rooms[]>([]);

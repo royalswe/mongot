@@ -6,6 +6,7 @@ export default {
 		postcssPresetEnv({
 			stage: 2,
 			features: {
+				'cascade-layers': false,
 				'nesting-rules': true,
 				'custom-media-queries': true,
 				'media-query-ranges': true

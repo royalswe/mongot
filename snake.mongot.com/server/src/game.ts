@@ -65,6 +65,15 @@ export default new (class Game {
           height: session.height,
         });
 
+        ws.emitter.send(EVENT.gameStatus, {
+          gameStatus: session.status,
+        });
+        if (session.status === GAME_STATUS.running) {
+          ws.emitter.send(EVENT.gameState, {
+            data: session.playingClients.map((player) => player.gameState),
+          });
+        }
+
         ws.emitter.roomEmit(EVENT.roomStatus, {
           clients: this.updateClientList(roomName),
         });
@@ -333,7 +342,7 @@ export default new (class Game {
       clientStatus: client.status,
       color: client.color,
       isBot: client.isBot,
-      isRegistered: Boolean(client.accountUsername),
+      ratingUsername: client.accountUsername,
     }));
   }
 

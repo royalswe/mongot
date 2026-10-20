@@ -1,5 +1,6 @@
 import type Session from '../session';
 import type Client from '../client';
+import { COLOR } from '../constants/constants';
 import { PLAYER_STATUS } from '../constants/status';
 
 export function makeId(random = Math.random) {
@@ -17,7 +18,6 @@ export const isEveryPlayerReady = (set: Set<Client>) => {
 	return players.length > 0 && players.every((client) => client.status === PLAYER_STATUS.ready);
 };
 
-
 export function startPosition(width: number, height: number, key: string) {
 	const map = {
 		red: { x: 3, y: 3 },
@@ -30,9 +30,17 @@ export function startPosition(width: number, height: number, key: string) {
 }
 
 export function getLobbyRooms(sessions: Map<string, Session>) {
-	return Array.from(sessions.values()).map(session => ({
-		name: session.room,
-		status: session.status,
-		clientIds: Array.from(session.clients).map(client => client.displayName)
-	}));
+	return Array.from(sessions.values()).map((session) => {
+		const clients = Array.from(session.clients);
+		const seatedPlayers = clients.filter((client) => Boolean(client.color));
+
+		return {
+			name: session.room,
+			status: session.status,
+			seatedCount: seatedPlayers.length,
+			botCount: seatedPlayers.filter((client) => client.isBot).length,
+			spectatorCount: clients.filter((client) => !client.isBot && !client.color).length,
+			seatCapacity: Object.keys(COLOR).length,
+		};
+	});
 }

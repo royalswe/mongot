@@ -1,7 +1,8 @@
 import { describe, expect, test } from '@jest/globals';
 import Client from '../src/client';
+import Session from '../src/session';
 import { PLAYER_STATUS } from '../src/constants/status';
-import { isEveryPlayerReady, makeId, startPosition } from '../src/helpers/utils';
+import { getLobbyRooms, isEveryPlayerReady, makeId, startPosition } from '../src/helpers/utils';
 
 describe('game helpers', () => {
 	test('generates a six-character client id', () => {
@@ -27,5 +28,28 @@ describe('game helpers', () => {
 		client.status = PLAYER_STATUS.joined;
 
 		expect(isEveryPlayerReady(new Set([client]))).toBe(false);
+	});
+
+	test('reports seated players, bots, and spectators separately in the lobby', () => {
+		const session = new Session({ room: 'lobby-room', width: 20, height: 20 });
+		const player = new Client('player');
+		player.color = 'red';
+		const bot = new Client('bot-blue', true);
+		bot.color = 'blue';
+		const spectator = new Client('spectator');
+		session.join(player);
+		session.join(bot);
+		session.join(spectator);
+
+		expect(getLobbyRooms(new Map([[session.room, session]]))).toEqual([
+			{
+				name: 'lobby-room',
+				status: 'waiting',
+				seatedCount: 2,
+				botCount: 1,
+				spectatorCount: 1,
+				seatCapacity: 4,
+			},
+		]);
 	});
 });

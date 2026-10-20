@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { useSnakes } from '#lib/stores/snakes.svelte';
 	import { BOARD } from '#lib/constants';
 	import { drawSnakeCell } from './snakeCanvas';
@@ -16,6 +16,8 @@
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
 	let backgroundCanvas: HTMLCanvasElement;
+	let resizeFrame: number | undefined;
+	let observedSize = { width: 0, height: 0 };
 
 	function calculateAspectRatioFit() {
 		const ratio = Math.min(
@@ -36,16 +38,29 @@
 		backgroundCanvas = document.createElement('canvas');
 		drawCanvas();
 
-		const resizeObserver = new ResizeObserver(drawCanvas);
+		const resizeObserver = new ResizeObserver(([entry]) => {
+			const { width, height } = entry.contentRect;
+			if (width === observedSize.width && height === observedSize.height) return;
+			observedSize = { width, height };
+			if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame);
+			resizeFrame = requestAnimationFrame(() => {
+				resizeFrame = undefined;
+				drawCanvas();
+			});
+		});
 		if (canvas.parentElement) resizeObserver.observe(canvas.parentElement);
 
 		return () => {
 			resizeObserver.disconnect();
+			if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame);
 		};
 	});
 	$effect(() => {
 		const currentSnakes = snakes.state;
 		drawSnakes(currentSnakes);
+	});
+	$effect(() => {
+		if (board.width && board.height) untrack(drawCanvas);
 	});
 
 	function drawCanvas() {
@@ -57,18 +72,18 @@
 		const h = Math.max(1, Math.round(grid.height));
 		grid = { width: w, height: h };
 
-		ctx.canvas.width = w;
-		ctx.canvas.height = h;
-		backgroundCanvas.width = w;
-		backgroundCanvas.height = h;
+		if (ctx.canvas.width !== w) ctx.canvas.width = w;
+		if (ctx.canvas.height !== h) ctx.canvas.height = h;
+		if (backgroundCanvas.width !== w) backgroundCanvas.width = w;
+		if (backgroundCanvas.height !== h) backgroundCanvas.height = h;
 		const background = backgroundCanvas.getContext('2d');
 		if (!background) throw new Error('Unable to get 2D background context');
 
-		background.fillStyle = '#1F2A39';
+		background.fillStyle = '#152c23';
 		background.fillRect(0, 0, w, h);
 
 		background.beginPath();
-		background.fillStyle = '#263445';
+		background.fillStyle = '#1b352b';
 		for (let column = 0; column < board.width; column++) {
 			for (let row = 0; row < board.height; row++) {
 				if ((row % 2 === 0 && column % 2 === 1) || (row % 2 === 1 && column % 2 === 0)) {

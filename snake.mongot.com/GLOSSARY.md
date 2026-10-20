@@ -8,6 +8,10 @@ Language for the multiplayer Snake game: who participates in a room, how a match
 A shared game space in which clients can chat, watch, and play a match.
 _Avoid_: Lobby (the lobby is where rooms are discovered)
 
+**Room presence**:
+A human participant's current connection to a room, either as a seated player or a spectator; bots alone do not keep a room occupied.
+_Avoid_: Seat occupancy (which counts players, not spectators)
+
 **Player**:
 A human or bot participant occupying one of a room's four active seats.
 _Avoid_: Client (a connected client may be a spectator)

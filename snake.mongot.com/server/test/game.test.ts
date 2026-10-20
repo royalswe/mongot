@@ -68,6 +68,28 @@ describe('Game.close high-score recording', () => {
 	});
 });
 
+describe('Game.updateClientList rating identity', () => {
+	it('exposes the account username separately from the display name', () => {
+		const session = new Session({ room: 'identity-test', width: 20, height: 20 });
+		const client = new Client('display-alias', false, 'account-name');
+		client.color = 'red';
+		client.status = PLAYER_STATUS.joined;
+		session.join(client);
+		sessions.set(session.room, session);
+
+		expect(Game.updateClientList(session.room)).toEqual([
+			{
+				clientId: 'display-alias',
+				displayName: 'display-alias',
+				clientStatus: PLAYER_STATUS.joined,
+				color: 'red',
+				isBot: false,
+				ratingUsername: 'account-name'
+			}
+		]);
+	});
+});
+
 describe('Game.close during countdown', () => {
 	it('continues the countdown when all remaining seated players are ready', () => {
 		jest.useFakeTimers();
@@ -92,7 +114,7 @@ describe('Game.close during countdown', () => {
 				color: 'remaining',
 				displayName: 'remaining',
 				isBot: false,
-				isRegistered: false
+				ratingUsername: null
 			}]
 		});
 		expect(ws.emitter.roomEmit).not.toHaveBeenCalledWith(EVENT.gameStatus, {
@@ -127,7 +149,7 @@ describe('Game.close during countdown', () => {
 					color: 'remaining',
 					displayName: 'remaining',
 					isBot: false,
-					isRegistered: false
+					ratingUsername: null
 				},
 				{
 					clientId: 'not-ready',
@@ -135,7 +157,7 @@ describe('Game.close during countdown', () => {
 					color: 'not-ready',
 					displayName: 'not-ready',
 					isBot: false,
-					isRegistered: false
+					ratingUsername: null
 				}
 			]
 		});

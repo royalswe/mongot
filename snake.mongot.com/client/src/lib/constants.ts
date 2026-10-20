@@ -3,17 +3,14 @@ interface PlayerColor {
 	clientId: string;
 	displayName?: string;
 	isBot?: boolean;
-	isRegistered?: boolean;
+	ratingUsername?: string | null;
 }
 
 interface PlayerColors {
 	[key: string]: PlayerColor | null;
 }
 
-export const BOARD = {
-	width: 0,
-	height: 0
-};
+export { BOARD } from './stores/state.svelte';
 
 export const PLAYER_COLORS: PlayerColors = {
 	red: null,

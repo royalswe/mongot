@@ -119,11 +119,77 @@ async function sendMessage(page: Page, id: string, message: ProtocolMessage) {
 async function closeClient(page: Page, id: string) {
 	await page.evaluate(
 		({ id }) => {
-			window.__gameSocketClients?.[id]?.socket.close();
+			const socket = window.__gameSocketClients?.[id]?.socket;
+			if (!socket || socket.readyState === WebSocket.CLOSED) return;
+			return new Promise<void>((resolve) => {
+				socket.addEventListener('close', () => resolve(), { once: true });
+				socket.close();
+			});
 		},
 		{ id }
 	);
 }
+
+test('a spectator joining a running match without board parameters sees live snakes', async ({
+	page
+}) => {
+	test.setTimeout(20_000);
+	await page.goto('/lobby');
+	await installSocketHarness(page);
+	const room = `late-spectator-${randomUUID()}`;
+	const spectator = await page.context().newPage();
+	let releaseMessages!: () => void;
+	const layoutReady = new Promise<void>((resolve) => {
+		releaseMessages = resolve;
+	});
+	await spectator.routeWebSocket('**/api/room', (socket) => {
+		const server = socket.connectToServer();
+		server.onMessage((message) => {
+			void layoutReady.then(() => socket.send(message));
+		});
+	});
+	try {
+		await connectClient(page, 'red', room);
+		await waitForMessage(page, 'red', 'join-room');
+		await sendMessage(page, 'red', { type: 'join-game', color: 'red' });
+		await waitForMessage(page, 'red', 'join-game', { playerStatus: 'joined' });
+		await sendMessage(page, 'red', { type: 'player-ready' });
+		await waitForMessage(page, 'red', 'game-status', { gameStatus: 'running' }, 12_000);
+
+		await spectator.goto(`/game?room=${room}`);
+		await expect(spectator.getByText(room, { exact: true })).toBeVisible();
+		await spectator.evaluate(
+			() =>
+				new Promise<void>((resolve) => {
+					requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+				})
+		);
+		releaseMessages();
+		await expect
+			.poll(
+				() =>
+					spectator.evaluate(() => {
+						const canvas = document.querySelector('canvas');
+						const context = canvas?.getContext('2d');
+						if (!canvas || !context) return false;
+						const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+						for (let offset = 0; offset < pixels.length; offset += 4) {
+							if (pixels[offset] === 255 && pixels[offset + 1] === 0 && pixels[offset + 2] === 0)
+								return true;
+						}
+						return false;
+					}),
+				{ timeout: 2_000 }
+			)
+			.toBe(true);
+		await expect(spectator.getByText('In progress', { exact: true })).toBeVisible();
+		await expect(spectator.getByText('Spectating', { exact: true })).toBeVisible();
+		await expect(spectator.getByRole('region', { name: 'Match result' })).toHaveCount(0);
+	} finally {
+		await spectator.close();
+		await closeClient(page, 'red');
+	}
+});
 
 test('two real WebSocket players share movement and reach a terminal outcome', async ({ page }) => {
 	test.setTimeout(30_000);
@@ -309,15 +375,24 @@ test('measures keyboard input through the rendered game-state update', async ({
 	});
 	await page.goto(`/game?room=${room}&board=20:20`);
 
-	await expect(page.getByText(`Room name: ${room}`)).toBeVisible();
+	await expect(page.getByText(room, { exact: true })).toBeVisible();
 	await page.getByRole('button', { name: 'Take seat' }).first().click();
-	await page.getByText('Click when ready!', { exact: false }).click();
-	await expect(page.getByText(/GameState: running/)).toBeVisible({ timeout: 12_000 });
+	await page.getByRole('button', { name: 'Ready up' }).click();
+	await expect(page.getByText('In progress', { exact: true })).toBeVisible({ timeout: 12_000 });
 
 	await page.evaluate(() => {
 		window.__snakeSentMessages = [];
 		window.__snakeInputCheckStartedAt = performance.now();
 	});
+	const chatInput = page.getByRole('textbox', { name: 'Chat message' });
+	await chatInput.fill('draft');
+	await page.keyboard.press('ArrowUp');
+	expect(
+		await page.evaluate(
+			() => window.__snakeSentMessages?.filter((message) => message.type === 'movement').length
+		)
+	).toBe(0);
+	await page.locator('canvas').click();
 	await page.keyboard.press('ArrowUp');
 	await page.keyboard.press('ArrowLeft');
 	await expect
@@ -362,12 +437,12 @@ test('keeps the snake on grid steps between authoritative game-state snapshots',
 	const room = `interpolation-${randomUUID()}`;
 	await page.goto(`/game?room=${room}&board=20:20`);
 
-	await expect(page.getByText(`Room name: ${room}`)).toBeVisible();
-	await expect(page.getByText('(You)')).toBeVisible();
+	await expect(page.getByText(room, { exact: true })).toBeVisible();
+	await expect(page.getByText('You', { exact: true })).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Take seat' }).first()).toBeVisible();
 	await page.getByRole('button', { name: 'Take seat' }).first().click();
-	await page.getByText('Click when ready!', { exact: false }).click();
-	await expect(page.getByText(/GameState: running/)).toBeVisible({ timeout: 12_000 });
+	await page.getByRole('button', { name: 'Ready up' }).click();
+	await expect(page.getByText('In progress', { exact: true })).toBeVisible({ timeout: 12_000 });
 	await expect
 		.poll(
 			() => page.evaluate(() => performance.getEntriesByName('snake-game-state-received').length),
@@ -418,6 +493,123 @@ test('keeps the snake on grid steps between authoritative game-state snapshots',
 
 	expect(stableSnapshotSamples).toBeGreaterThanOrEqual(3);
 	expect(movementStepObserved).toBe(true);
+});
+
+test('mobile touch controls send movement after a player readies up', async ({ page }) => {
+	test.setTimeout(20_000);
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.addInitScript(() => {
+		const send = WebSocket.prototype.send;
+		WebSocket.prototype.send = function (data) {
+			if (typeof data === 'string') {
+				try {
+					const message = JSON.parse(data);
+					window.__snakeSentMessages ??= [];
+					window.__snakeSentMessages.push({
+						type: message.type,
+						key: message.key,
+						sentAt: performance.now()
+					});
+				} catch {
+					// Keep malformed frames available to protocol tests.
+				}
+			}
+			send.call(this, data);
+		};
+	});
+
+	const room = `mobile-controls-${randomUUID()}`;
+	await page.goto(`/game?room=${room}&board=20:20`);
+	await installSocketHarness(page);
+	const touchControls = page.getByRole('group', { name: 'Touch movement controls' });
+	await expect(touchControls).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Move up' })).toBeDisabled();
+	try {
+		await connectClient(page, 'blue', room);
+		await waitForMessage(page, 'blue', 'join-room');
+		await sendMessage(page, 'blue', { type: 'join-game', color: 'blue' });
+		await waitForMessage(page, 'blue', 'join-game', { playerStatus: 'joined' });
+
+		await page.getByRole('button', { name: 'Take seat' }).first().click();
+		await page.getByRole('button', { name: 'Ready up' }).click();
+		await sendMessage(page, 'blue', { type: 'player-ready' });
+		await expect(page.getByText('In progress', { exact: true })).toBeVisible({ timeout: 12_000 });
+
+		await page.evaluate(() => {
+			window.__snakeSentMessages = [];
+		});
+		await page.getByRole('button', { name: 'Move up' }).click();
+		await expect
+			.poll(() =>
+				page.evaluate(() =>
+					window.__snakeSentMessages?.filter((message) => message.type === 'movement')
+				)
+			)
+			.toContainEqual(expect.objectContaining({ key: 'ArrowUp' }));
+	} finally {
+		await closeClient(page, 'blue');
+	}
+});
+
+test('game layout preserves spacing and fits desktop and mobile viewports', async ({ page }) => {
+	await page.goto(`/game?room=layout-${randomUUID()}&board=30:30`);
+	await expect(page.getByRole('button', { name: 'Take seat' }).first()).toBeVisible();
+	for (const viewport of [
+		{ width: 1440, height: 900 },
+		{ width: 390, height: 844 },
+		{ width: 320, height: 640 },
+		{ width: 844, height: 390 }
+	]) {
+		await page.setViewportSize(viewport);
+		await expect
+			.poll(() =>
+				page.evaluate(() => {
+					const topbar = document.querySelector<HTMLElement>('.game-topbar')!;
+					const button = document.querySelector<HTMLButtonElement>('.take-seat')!;
+					const canvas = document.querySelector('canvas')!;
+					const bounds = canvas.getBoundingClientRect();
+					return {
+						hasSpacing: parseFloat(getComputedStyle(topbar).paddingLeft) >= 12,
+						hasBorder: parseFloat(getComputedStyle(button).borderTopWidth) >= 1,
+						touchTarget: button.getBoundingClientRect().height >= 44,
+						fits: document.documentElement.scrollWidth <= innerWidth,
+						boardVisible:
+							bounds.width > 100 &&
+							bounds.height > 100 &&
+							bounds.left >= 0 &&
+							bounds.right <= innerWidth
+					};
+				})
+			)
+			.toEqual({
+				hasSpacing: true,
+				hasBorder: true,
+				touchTarget: true,
+				fits: true,
+				boardVisible: true
+			});
+	}
+});
+
+test('mobile round result opens the seats panel from chat and focuses an open seat', async ({
+	page
+}) => {
+	test.setTimeout(30_000);
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto(`/game?room=rematch-${randomUUID()}&board=20:20`);
+	await page.getByRole('button', { name: 'Take seat' }).first().click();
+	await page.getByRole('button', { name: 'Ready up' }).click();
+	await expect(page.getByRole('region', { name: 'Match result' })).toBeVisible({ timeout: 20_000 });
+	await page.getByRole('button', { name: 'Leave seat' }).click();
+	await page.getByRole('button', { name: 'Chat', exact: true }).click();
+	await expect(page.getByRole('region', { name: 'Players and seats' })).toHaveCount(0);
+	await page.getByRole('link', { name: 'Find a seat' }).click();
+	await expect(page.getByRole('region', { name: 'Players and seats' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Players', exact: true })).toHaveAttribute(
+		'aria-pressed',
+		'true'
+	);
+	await expect(page.getByRole('button', { name: 'Take seat' }).first()).toBeFocused();
 });
 
 test('an active player disconnect forfeits their seat and awards the remaining player', async ({
@@ -509,9 +701,7 @@ test('a seated human can manage a bot and start a mixed match with it auto-ready
 	}
 });
 
-test('a bot-only match keeps its countdown and simulation after its starter and watchers leave', async ({
-	page
-}) => {
+test('a running bot-only match survives its last spectator leaving', async ({ page }) => {
 	test.setTimeout(20_000);
 	await page.goto('/lobby');
 	await installSocketHarness(page);
@@ -557,8 +747,16 @@ test('a bot-only match keeps its countdown and simulation after its starter and 
 		await closeClient(page, 'watcher');
 		await connectClient(page, 'returning-watcher', room);
 		await waitForMessage(page, 'returning-watcher', 'join-room');
-		await waitForMessage(page, 'returning-watcher', 'room-status');
-		await waitForMessage(page, 'returning-watcher', 'game-state', undefined, 3_000);
+		const ongoingRoom = await waitForMessage(page, 'returning-watcher', 'room-status');
+		expect(ongoingRoom.clients).toEqual([
+			expect.objectContaining({ isBot: true, color: 'blue' }),
+			expect.objectContaining({ isBot: true, color: 'green' }),
+			expect.objectContaining({ isBot: false, clientStatus: 'spectating' })
+		]);
+		const ongoingState = await waitForMessage(page, 'returning-watcher', 'game-state');
+		expect(
+			(ongoingState.data as Array<{ color: string }>).map(({ color }) => color).sort()
+		).toEqual(['blue', 'green']);
 	} finally {
 		await Promise.all([
 			closeClient(page, 'starter'),

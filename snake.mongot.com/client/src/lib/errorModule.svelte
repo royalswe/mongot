@@ -7,82 +7,132 @@
 	};
 </script>
 
-<div class="overlay">
-	<div class="popup">
-		<h2>Ouch...</h2>
-		<button class="close" type="button" aria-label="Dismiss error" on:click={clearErrors}
-			>&times;</button
-		>
-		<div class="content text-gray-900">
-			{states.error}
+<div class="error-overlay">
+	<dialog
+		open
+		class="error-dialog"
+		aria-modal="true"
+		aria-labelledby="error-title"
+		aria-describedby="error-message"
+		tabindex="-1"
+	>
+		<div class="error-heading">
+			<span class="error-icon" aria-hidden="true"><i class="fa fa-exclamation"></i></span>
+			<div>
+				<p class="error-kicker">Something went wrong</p>
+				<h2 id="error-title">We hit a snag.</h2>
+			</div>
+			<button class="close-error" type="button" aria-label="Dismiss error" onclick={clearErrors}>
+				<i class="fa fa-times" aria-hidden="true"></i>
+			</button>
 		</div>
-	</div>
+		<p id="error-message" class="error-message">{states.error}</p>
+		<button class="dismiss-action" type="button" onclick={clearErrors}>
+			Got it <i class="fa fa-arrow-right" aria-hidden="true"></i>
+		</button>
+	</dialog>
 </div>
 
 <style>
-	.overlay {
+	.error-overlay {
 		position: fixed;
-		top: 0;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		background: rgba(0, 0, 0, 0.7);
-		transition: opacity 500ms;
+		z-index: 10;
+		inset: 0;
+		display: grid;
+		place-items: start center;
+		overflow-y: auto;
+		padding: max(1rem, 8vh) 1rem 1rem;
+		background: rgb(3 9 7 / 82%);
+		backdrop-filter: blur(5px);
 	}
 
-	.popup {
-		margin: 70px auto;
-		padding: 20px;
-		background: #fff;
-		border-radius: 5px;
-		width: 30%;
-		position: relative;
-		transition: all 5s ease-in-out;
+	.error-dialog {
+		position: static;
+		width: min(100%, 29rem);
+		margin: 0;
+		padding: 1.2rem;
+		border: 2px solid var(--ink);
+		background: var(--ink-raised);
+		box-shadow: 7px 7px 0 var(--coral);
+		color: var(--paper);
 	}
 
-	.popup h2 {
-		margin-top: 0;
-		color: #333;
-		font-family: Tahoma, Arial, sans-serif;
-	}
-	.popup .close {
-		display: inline-flex;
+	.error-heading {
+		display: flex;
 		align-items: center;
-		justify-content: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		position: absolute;
-		top: 0.75rem;
-		right: 0.75rem;
-		border: 0;
-		border-radius: 9999px;
-		background: #f3f4f6;
-		transition:
-			color 200ms,
-			background-color 200ms;
-		font-size: 24px;
-		line-height: 1;
-		font-weight: bold;
-		text-decoration: none;
-		color: #333;
+		gap: 0.85rem;
+	}
+
+	.error-icon {
+		display: grid;
+		width: 2.75rem;
+		height: 2.75rem;
+		flex: 0 0 auto;
+		place-items: center;
+		border: 2px solid var(--ink);
+		background: var(--coral);
+		color: var(--ink);
+	}
+
+	.error-kicker {
+		margin: 0 0 0.15rem;
+		color: var(--coral);
+		font-size: 0.65rem;
+		font-weight: 900;
+		letter-spacing: 0.13em;
+		text-transform: uppercase;
+	}
+
+	h2 {
+		margin: 0;
+		font-size: 1.3rem;
+		font-weight: 1000;
+		letter-spacing: -0.04em;
+	}
+
+	.close-error {
+		display: grid;
+		width: 2.5rem;
+		height: 2.5rem;
+		flex: 0 0 auto;
+		place-items: center;
+		margin-left: auto;
+		border: 1px solid var(--line);
+		background: var(--ink);
+		color: var(--paper);
 		cursor: pointer;
 	}
-	.popup .close:hover {
-		background: #e5e7eb;
-		color: #06d85f;
-	}
-	.popup .close:focus-visible {
-		outline: 2px solid #0ea5e9;
-		outline-offset: 2px;
-	}
-	.popup .content {
-		max-height: 30%;
-		overflow: auto;
+
+	.close-error:hover {
+		color: var(--coral);
 	}
 
-	@media screen and (max-width: 700px) {
-		.popup {
-			width: 70%;
-		}
+	.error-message {
+		margin: 1.15rem 0;
+		padding: 0.85rem;
+		border: 1px solid var(--line);
+		background: var(--ink);
+		color: var(--paper);
+		font-size: 0.9rem;
+		line-height: 1.55;
+		overflow-wrap: anywhere;
+	}
+
+	.dismiss-action {
+		display: inline-flex;
+		min-height: 2.7rem;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.55rem 0.8rem;
+		border: 2px solid var(--ink);
+		background: var(--lime);
+		box-shadow: 3px 3px 0 var(--mint);
+		color: var(--ink);
+		font-weight: 900;
+		cursor: pointer;
+	}
+
+	.dismiss-action:hover {
+		background: #c0ff8d;
 	}
 </style>

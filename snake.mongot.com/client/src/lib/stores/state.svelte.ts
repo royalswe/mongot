@@ -1,13 +1,15 @@
 type GameStatus = 'waiting' | 'running' | 'count-down';
 type PlayeStatus = 'spectating' | 'joined' | 'ready' | 'running';
 
+export const BOARD = $state({ width: 0, height: 0 });
+
 export interface Client {
 	clientId: string;
 	displayName?: string;
 	clientStatus: string;
 	color: string;
 	isBot: boolean;
-	isRegistered: boolean;
+	ratingUsername: string | null;
 }
 
 let gameStatus = $state<GameStatus>('waiting');
@@ -15,6 +17,7 @@ let playerStatus = $state<PlayeStatus>('spectating');
 let clients = $state<Client[]>([]);
 let you = $state('');
 let error = $state<string | undefined>('');
+let lastOutcome = $state<string | undefined>(undefined);
 
 export function useState() {
 	return {
@@ -47,6 +50,12 @@ export function useState() {
 		},
 		set error(value) {
 			error = value;
+		},
+		get lastOutcome() {
+			return lastOutcome;
+		},
+		set lastOutcome(value) {
+			lastOutcome = value;
 		}
 	};
 }

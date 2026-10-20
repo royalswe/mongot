@@ -46,6 +46,9 @@ export function gameMessageHandler(msg: any) {
 			states.playerStatus = msg.playerStatus;
 			break;
 		case EVENT.gameStatus:
+			if (msg.gameStatus !== GAME_STATUS.waiting) {
+				states.lastOutcome = undefined;
+			}
 			states.gameStatus = msg.gameStatus;
 			break;
 		case EVENT.joinRoom:
@@ -71,6 +74,7 @@ export function gameMessageHandler(msg: any) {
 				states.playerStatus = matchingPlayer.clientStatus;
 			}
 			states.gameStatus = GAME_STATUS.waiting;
+			states.lastOutcome = msg.winner;
 			chat.add({ message: msg.winner });
 			states.clients = msg.clients;
 			break;

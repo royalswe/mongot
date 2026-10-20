@@ -36,6 +36,131 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
+describe.each([
+  { colors: ["red", "blue"] },
+  { colors: ["red", "blue", "green"] },
+  { colors: ["red", "blue", "green", "yellow"] },
+])("Match outcomes with $colors", ({ colors }) => {
+  it.each(
+    colors.flatMap((winner) => [
+      { winner, reversed: false },
+      { winner, reversed: true },
+    ]),
+  )("declares $winner the winner (reversed order: $reversed)", ({ winner, reversed }) => {
+    const session = createSession();
+    const players = colors.map((color, index) =>
+      addPlayer(
+        session,
+        color,
+        color,
+        { x: color === winner ? 10 : 19, y: 2 + index * 3 },
+        { x: 1, y: 0 },
+      ),
+    );
+    if (reversed) session.playingClients.reverse();
+    const spectator = new Client("spectator");
+    session.join(spectator);
+    const winningPlayer = players.find((player) => player.color === winner)!;
+
+    expect(session.snakeGrow()).toBe(`The winner is ${winner}`);
+    expect(session.matchWinner).toBe(winningPlayer);
+    expect(session.matchDraw).toBe(false);
+    expect(session.matchPlacements.has(winningPlayer)).toBe(false);
+    for (const player of players.filter((player) => player !== winningPlayer)) {
+      expect(session.matchPlacements.get(player)).toBe(2);
+    }
+    expect(session.matchPlacements.has(spectator)).toBe(false);
+    expect(players.every((player) => player.status === PLAYER_STATUS.joined)).toBe(true);
+  });
+
+  it("waits for the last survivor and preserves elimination placements across turns", () => {
+    const session = createSession();
+    const players = colors.map((color, index) =>
+      addPlayer(
+        session,
+        color,
+        color,
+        { x: 19 - index, y: 2 + index * 3 },
+        { x: 1, y: 0 },
+      ),
+    );
+
+    for (let eliminatedIndex = 0; eliminatedIndex < players.length - 1; eliminatedIndex++) {
+      const outcome = session.snakeGrow();
+      expect(session.matchPlacements.get(players[eliminatedIndex])).toBe(
+        players.length - eliminatedIndex,
+      );
+      if (eliminatedIndex < players.length - 2) {
+        expect(outcome).toBeUndefined();
+        expect(session.matchWinner).toBeNull();
+        expect(players.filter((player) => player.status === PLAYER_STATUS.ready)).toHaveLength(
+          players.length - eliminatedIndex - 1,
+        );
+      } else {
+        expect(outcome).toBe(`The winner is ${colors.at(-1)}`);
+        expect(session.matchWinner).toBe(players.at(-1));
+      }
+      expect(session.matchDraw).toBe(false);
+    }
+    expect([...session.matchPlacements.values()]).toEqual(
+      colors.slice(1).map((_, index) => colors.length - index),
+    );
+  });
+
+  it("declares a draw when every remaining head enters the same cell", () => {
+    const session = createSession();
+    const approaches = [
+      { pos: { x: 9, y: 10 }, vel: { x: 1, y: 0 } },
+      { pos: { x: 11, y: 10 }, vel: { x: -1, y: 0 } },
+      { pos: { x: 10, y: 9 }, vel: { x: 0, y: 1 } },
+      { pos: { x: 10, y: 11 }, vel: { x: 0, y: -1 } },
+    ];
+    const players = colors.map((color, index) =>
+      addPlayer(session, color, color, approaches[index].pos, approaches[index].vel),
+    );
+
+    expect(session.snakeGrow()).toBe(`It's a draw between ${colors.join(" and ")}`);
+    expect(session.matchWinner).toBeNull();
+    expect(session.matchDraw).toBe(true);
+    expect([...session.matchPlacements.values()]).toEqual(colors.map(() => 1));
+    for (const player of players) {
+      expect(player.status).toBe(PLAYER_STATUS.joined);
+      expect(player.gameState.pos).toEqual({ x: 10, y: 10 });
+    }
+  });
+
+  it("declares a draw when all players hit separate walls on the same turn", () => {
+    const session = createSession();
+    const players = colors.map((color, index) =>
+      addPlayer(session, color, color, { x: 19, y: 2 + index * 3 }, { x: 1, y: 0 }),
+    );
+
+    expect(session.snakeGrow()).toBe(`It's a draw between ${colors.join(" and ")}`);
+    expect(session.matchWinner).toBeNull();
+    expect(session.matchDraw).toBe(true);
+    for (const player of players) {
+      expect(session.matchPlacements.get(player)).toBe(1);
+    }
+  });
+});
+
+describe("Solo match outcomes", () => {
+  it("does not declare a surviving solo player the winner and ends their collision as game over", () => {
+    const session = createSession();
+    const player = addPlayer(session, "solo", "red", { x: 18, y: 5 }, { x: 1, y: 0 });
+
+    expect(session.snakeGrow()).toBeUndefined();
+    expect(session.matchWinner).toBeNull();
+    expect(player.status).toBe(PLAYER_STATUS.ready);
+
+    expect(session.snakeGrow()).toBe("Game over");
+    expect(session.matchWinner).toBeNull();
+    expect(session.matchDraw).toBe(false);
+    expect(session.matchPlacements.get(player)).toBe(1);
+    expect(player.status).toBe(PLAYER_STATUS.joined);
+  });
+});
+
 describe("Session simulation", () => {
   it("does not run catch-up ticks back-to-back after a delayed timer", () => {
     jest.useFakeTimers();

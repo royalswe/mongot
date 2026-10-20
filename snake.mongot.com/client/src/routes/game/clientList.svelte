@@ -11,8 +11,8 @@
 
 	$effect(() => {
 		const usernames = states.clients
-			.filter((client) => client.isRegistered)
-			.map((client) => client.displayName ?? client.clientId);
+			.map((client) => client.ratingUsername)
+			.filter((username): username is string => Boolean(username));
 		let current = true;
 		void fetchRatings(usernames)
 			.then((nextRatings) => {
@@ -48,7 +48,7 @@
 					displayName: client.displayName,
 					status: client.clientStatus,
 					isBot: client.isBot,
-					isRegistered: client.isRegistered
+					ratingUsername: client.ratingUsername
 				};
 			}
 		});
@@ -57,129 +57,285 @@
 	});
 </script>
 
-<div class="client-list p-1">
-	<h3 class="font-bold mb-2">Players</h3>
+<div class="client-list">
+	<div class="seats-heading">
+		<h2><i class="fa fa-users" aria-hidden="true"></i> Players</h2>
+		<span class="seat-count">{states.clients.filter((client) => client.color).length} / 4</span>
+	</div>
 	<ul>
 		{#each Object.entries(seats) as [color, player]}
-			<li class="my-1" class:ready={player?.status === PLAYER_STATUS.ready}>
-				<i class="circle {color}"></i>
-				{#if player}
-					{@const rating = player.isRegistered
-						? ratings[(player.displayName ?? player.clientId).toLowerCase()]
-						: undefined}
-					{#if rating !== undefined}
-						<img
-							class="mr-1 inline-block h-5 w-5 object-contain"
-							src={crownImage(rating)}
-							alt="Crown rank"
-							title={`Rating ${rating}`}
-						/>
+			<li class="seat" class:own-seat={player?.clientId === states.you}>
+				<span class="seat-color {color}" aria-label={`${color} snake`}></span>
+				<div class="seat-copy">
+					{#if player}
+						{@const rating = player.ratingUsername
+							? ratings[player.ratingUsername.toLowerCase()]
+							: undefined}
+						{#if rating !== undefined}
+							<img
+								class="mr-1 inline-block h-5 w-5 object-contain"
+								src={crownImage(rating)}
+								alt="Crown rank"
+								title={`Rating ${rating}`}
+							/>
+						{/if}
+						<strong class="player-name">{player.displayName ?? player.clientId}</strong>
+						{#if states.you === player.clientId}<span class="you-label">You</span>{/if}
+						{#if player.isBot}
+							<span class="bot-label"><i class="fa fa-android" aria-hidden="true"></i> Bot</span>
+						{/if}
+						<span class="seat-status" class:is-ready={player.status === PLAYER_STATUS.ready}>
+							{player.status === PLAYER_STATUS.ready
+								? waiting
+									? 'Ready'
+									: 'Playing'
+								: 'Not ready'}
+						</span>
+					{:else}
+						<strong class="player-name open-seat">Open seat</strong>
+						<span class="seat-status">{color}</span>
 					{/if}
-					<span>{player.displayName ?? player.clientId}</span>
-					{#if player.isBot}
-						<span
-							class="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-800"
-							>BOT</span
-						>
-					{/if}
-					{#if states.you === player.clientId && player.status === PLAYER_STATUS.joined}
+				</div>
+				<div class="seat-actions">
+					{#if player}
+						{#if states.you === player.clientId && player.status === PLAYER_STATUS.joined}
+							<button
+								type="button"
+								disabled={!waiting}
+								class="seat-button primary"
+								onclick={() => send(EVENT.playerReady, {})}
+								><i class="fa fa-check" aria-hidden="true"></i> Ready up
+							</button>
+						{/if}
+						{#if player.isBot && canManageBots}
+							<button
+								type="button"
+								class="seat-button icon-button remove-bot"
+								aria-label="Remove bot"
+								title="Remove bot"
+								onclick={() => send(EVENT.removeBot, { color })}
+								><i class="fa fa-times" aria-hidden="true"></i>
+							</button>
+						{/if}
+						{#if states.you === player.clientId && waiting && !player.isBot}
+							<button
+								type="button"
+								class="seat-button icon-button"
+								aria-label="Leave seat"
+								title="Leave seat"
+								onclick={() => send(EVENT.leaveSeat, {})}
+								><i class="fa fa-sign-out" aria-hidden="true"></i>
+							</button>
+						{/if}
+					{:else if states.playerStatus === PLAYER_STATUS.spectating}
 						<button
-							disabled={!waiting}
-							class="ml-2 inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500 hover:shadow-md active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-							onclick={() => send(EVENT.playerReady, {})}
-							>Click when ready!
+							type="button"
+							class="seat-button take-seat"
+							disabled={!waiting || !myParticipant}
+							onclick={() => send(EVENT.joinGame, { color })}
+							>Take seat
 						</button>
 					{/if}
-					{#if player.isBot && canManageBots}
-						<button
-							class="ml-2 inline-flex items-center justify-center rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400"
-							onclick={() => send(EVENT.removeBot, { color })}
-							>Remove bot
+					{#if !player && canManageBots}
+						<button type="button" class="seat-button" onclick={() => send(EVENT.addBot, { color })}
+							><i class="fa fa-android" aria-hidden="true"></i> Add bot
 						</button>
 					{/if}
-					{#if states.you === player.clientId && waiting && !player.isBot}
-						<button
-							class="ml-2 inline-flex items-center justify-center rounded-lg bg-slate-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
-							onclick={() => send(EVENT.leaveSeat, {})}
-							>Leave seat
-						</button>
-					{/if}
-				{:else if states.playerStatus === PLAYER_STATUS.spectating}
-					<button
-						class="inline-flex items-center justify-center rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-400 hover:shadow-md active:translate-y-px active:bg-sky-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
-						onclick={() => send(EVENT.joinGame, { color })}
-						>Take seat
-					</button>
-				{/if}
-				{#if !player && canManageBots}
-					<button
-						class="ml-2 inline-flex items-center justify-center rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
-						onclick={() => send(EVENT.addBot, { color })}
-						>Add bot
-					</button>
-				{/if}
+				</div>
 			</li>
 		{/each}
 	</ul>
 
 	{#if canStartBotMatch}
 		<button
-			class="mt-4 inline-flex items-center justify-center rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+			type="button"
+			class="seat-button primary start-bots"
 			onclick={() => send(EVENT.startBotMatch, {})}
 			>Start bot match
 		</button>
 	{/if}
 
-	<h3 class="font-bold mt-4 mb-2">Spectators</h3>
-	<ul>
+	<div class="spectator-heading">
+		<h3><i class="fa fa-eye" aria-hidden="true"></i> Spectators</h3>
+		<span>{states.clients.filter((client) => !client.color).length}</span>
+	</div>
+	<ul class="spectators">
 		{#each states.clients.filter((client) => !client.color) as spectator}
-			<li class="my-1">
+			<li>
 				<span>{spectator.displayName ?? spectator.clientId}</span>
 				{#if spectator.clientId === states.you}
-					<span class="ml-2">(You)</span>
+					<span class="you-label">You</span>
 				{/if}
 			</li>
+		{:else}
+			<li class="empty-spectators">No spectators</li>
 		{/each}
 	</ul>
 </div>
 
 <style lang="postcss">
 	.client-list {
-		background-color: beige;
-		border: 1px solid gray;
-		color: #000;
-		padding: 1rem;
-		border-radius: 0.5rem;
+		color: var(--game-paper);
 	}
-
-	.circle {
-		border-radius: 100%;
-		display: inline-block;
-		width: 15px;
-		height: 15px;
-		vertical-align: middle;
-		margin-right: 10px;
+	.seats-heading,
+	.spectator-heading {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
 	}
-
-	.ready .circle::after {
-		content: '✓';
-		display: block;
-		font-size: 13px;
+	h2,
+	h3 {
+		margin: 0;
 		font-weight: 900;
-		color: #0cec13;
-		transform: translate(3px, -2px);
 	}
-
+	h2 {
+		font-size: 1rem;
+	}
+	h2 i,
+	h3 i {
+		margin-right: 0.35rem;
+		color: var(--game-mint);
+	}
+	.seat-count {
+		color: var(--game-muted);
+		font-size: 0.75rem;
+		font-variant-numeric: tabular-nums;
+	}
+	ul {
+		margin: 0.75rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+	.seat {
+		display: flex;
+		min-height: 4.3rem;
+		align-items: center;
+		gap: 0.65rem;
+		padding: 0.65rem 0;
+		border-bottom: 1px solid var(--game-line);
+	}
+	.seat-color {
+		width: 0.8rem;
+		height: 1.8rem;
+		flex: 0 0 auto;
+		border: 1px solid #ffffff40;
+		border-radius: 2px;
+	}
 	.red {
-		background-color: red;
+		background: red;
 	}
 	.blue {
-		background-color: blue;
+		background: blue;
 	}
 	.green {
-		background-color: green;
+		background: green;
 	}
 	.yellow {
-		background-color: yellow;
+		background: yellow;
+	}
+	.seat-copy {
+		min-width: 0;
+		flex: 1;
+		overflow-wrap: anywhere;
+	}
+	.player-name {
+		font-size: 0.8rem;
+	}
+	.open-seat {
+		color: var(--game-muted);
+		font-weight: 500;
+	}
+	.seat-status {
+		display: block;
+		margin-top: 0.15rem;
+		color: var(--game-muted);
+		font-size: 0.65rem;
+		text-transform: capitalize;
+	}
+	.is-ready {
+		color: var(--game-mint);
+	}
+	.you-label,
+	.bot-label {
+		margin-left: 0.25rem;
+		color: var(--game-amber);
+		font-size: 0.6rem;
+	}
+	.own-seat .seat-color {
+		outline: 1px solid var(--game-paper);
+		outline-offset: 3px;
+	}
+	.seat-actions {
+		display: flex;
+		flex: 0 0 auto;
+		align-items: center;
+		gap: 0.35rem;
+	}
+	.seat-button {
+		display: inline-flex;
+		min-height: 2.75rem;
+		align-items: center;
+		justify-content: center;
+		gap: 0.35rem;
+		padding: 0.4rem 0.6rem;
+		border: 1px solid var(--game-line);
+		border-radius: 3px;
+		background: var(--game-ink);
+		color: var(--game-paper);
+		font-size: 0.7rem;
+		font-weight: 800;
+		cursor: pointer;
+	}
+	.seat-button:hover:not(:disabled) {
+		border-color: var(--game-lime);
+		color: var(--game-lime);
+	}
+	.seat-button:focus-visible {
+		outline: 2px solid var(--game-lime);
+		outline-offset: 3px;
+	}
+	.seat-button:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+	.primary {
+		border-color: var(--game-lime);
+		background: var(--game-lime);
+		color: var(--game-ink);
+	}
+	.primary:hover:not(:disabled) {
+		background: #c0ff8d;
+		color: var(--game-ink);
+	}
+	.icon-button {
+		width: 2.75rem;
+		padding: 0;
+	}
+	.remove-bot {
+		color: var(--game-coral);
+	}
+	.start-bots {
+		width: 100%;
+		margin-top: 0.75rem;
+	}
+	.spectator-heading {
+		margin-top: 1.1rem;
+		color: var(--game-muted);
+		font-size: 0.7rem;
+	}
+	.spectators {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		font-size: 0.75rem;
+	}
+	.spectators li {
+		max-width: 100%;
+		overflow-wrap: anywhere;
+	}
+	.empty-spectators {
+		color: var(--game-muted);
+		font-size: 0.7rem;
 	}
 </style>

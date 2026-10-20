@@ -8,27 +8,23 @@
 	const chat = useChat();
 
 	const sendChat = () => {
-		if (message) {
-			send(LOBBY_EVENT.chat, { msg: message });
-			message = '';
-		}
+		const trimmedMessage = message.trim();
+		if (!trimmedMessage) return;
+		send(LOBBY_EVENT.chat, { msg: trimmedMessage });
+		message = '';
 	};
 
 	onMount(() => {
-		// Scroll to the bottom of the chat container when new messages are added
 		const observer = new MutationObserver(() => {
 			chatContainer.scrollTop = chatContainer.scrollHeight;
 		});
 		observer.observe(chatContainer, { childList: true });
+		return () => observer.disconnect();
 	});
 
-	// A helper function to format the datetime in a readable format
 	function formatDate(dateString: string) {
-		// Split the date and time parts
 		const [datePart, timePart] = dateString.split(', ');
-		// Split the date into day, month
 		const [day, month] = datePart.split('/');
-		// Split the time and ignore seconds
 		const [hours, minutes] = timePart.split(':');
 
 		return `${month}/${day} ${hours}:${minutes}`;
@@ -36,44 +32,135 @@
 </script>
 
 <div class="chat-messages flex flex-col">
-	<ul class="overflow-y-auto" bind:this={chatContainer}>
-		{#each chat.messages as message}
-			<li class="mb-1 text-xs">
+	<ul class="chat-history overflow-y-auto" aria-label="Chat messages" bind:this={chatContainer}>
+		{#each chat.messages as message, index (index)}
+			<li class="chat-message">
 				{#if message.datetime}
-					<slot name="date" datetime={formatDate(message.datetime)} />
+					<span class="chat-timestamp">
+						<slot name="date" datetime={formatDate(message.datetime)}>
+							{formatDate(message.datetime)}
+						</slot>
+					</span>
 				{/if}
 				{#if message.sender}
-					<slot name="sender" sender={message.sender} />
+					<strong class="chat-sender">
+						<slot name="sender" sender={message.sender}>{message.sender}:</slot>
+					</strong>
 				{/if}
 				<slot name="message" message={message.message}>
-					<i class="md:text-sm text-white">
-						{message.message}
-					</i>
+					<span class="chat-text">{message.message}</span>
 				</slot>
 			</li>
 		{/each}
 	</ul>
 
-	<div class="chat-footer flex gap-2">
+	<form
+		class="chat-footer flex gap-2"
+		onsubmit={(event) => {
+			event.preventDefault();
+			sendChat();
+		}}
+	>
 		<input
 			type="text"
 			bind:value={message}
-			class="chat-input min-w-0 flex-1 rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-100 shadow-inner transition placeholder:text-gray-400 focus:border-sky-400 focus:outline-hidden focus:ring-2 focus:ring-sky-400/40"
-			placeholder="Type your message here"
-			onkeydown={(e) => {
-				if (e.key === 'Enter') {
-					sendChat();
-				}
-			}}
+			class="chat-input min-w-0 flex-1"
+			aria-label="Chat message"
+			placeholder="Write a message…"
+			maxlength="500"
 		/>
 
-		<button
-			type="button"
-			class="chat-submit inline-flex items-center justify-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-400 hover:shadow-md active:translate-y-px active:bg-sky-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
-			onclick={() => {
-				sendChat();
-			}}
-			>Send
+		<button type="submit" class="chat-submit" aria-label="Send chat message">
+			<i class="fa fa-paper-plane" aria-hidden="true"></i>
 		</button>
-	</div>
+	</form>
 </div>
+
+<style>
+	.chat-messages {
+		display: flex;
+		min-height: 0;
+		flex-direction: column;
+	}
+
+	.chat-history {
+		display: flex;
+		min-height: 5rem;
+		flex: 1 1 auto;
+		flex-direction: column;
+		gap: 0.55rem;
+		overflow-y: auto;
+		margin: 0;
+		padding: 0.75rem;
+		border: 1px solid var(--line);
+		background: var(--ink);
+		list-style: none;
+		scrollbar-color: var(--line) var(--ink);
+	}
+
+	.chat-message {
+		overflow-wrap: anywhere;
+		color: var(--paper);
+		font-size: 0.8rem;
+		line-height: 1.5;
+	}
+
+	.chat-timestamp {
+		margin-right: 0.45rem;
+		color: #81988a;
+		font-size: 0.65rem;
+	}
+
+	.chat-sender {
+		margin-right: 0.35rem;
+		color: var(--lime);
+	}
+
+	.chat-text {
+		color: #d8e2da;
+	}
+
+	.chat-footer {
+		display: flex;
+		gap: 0.5rem;
+		padding-top: 0.65rem;
+	}
+
+	.chat-input {
+		width: 100%;
+		min-width: 0;
+		min-height: 2.8rem;
+		padding: 0.6rem 0.75rem;
+		border: 2px solid var(--line);
+		background: var(--ink);
+		color: var(--paper);
+		font-size: 0.82rem;
+	}
+
+	.chat-input::placeholder {
+		color: #879a8e;
+	}
+
+	.chat-submit {
+		display: grid;
+		width: 2.8rem;
+		min-height: 2.8rem;
+		flex: 0 0 auto;
+		place-items: center;
+		border: 2px solid var(--ink);
+		background: var(--lime);
+		box-shadow: 3px 3px 0 var(--mint);
+		color: var(--ink);
+		cursor: pointer;
+	}
+
+	.chat-submit:hover {
+		background: #c0ff8d;
+	}
+
+	@media (max-width: 420px) {
+		.chat-submit {
+			width: 2.6rem;
+		}
+	}
+</style>
