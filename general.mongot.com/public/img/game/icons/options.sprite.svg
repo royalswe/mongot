@@ -34,6 +34,28 @@
     <path d="M42 23l15 18M57 23L42 41" fill="none" stroke="#c8372d" stroke-width="4" stroke-linecap="round"/>
   </symbol>
 
+  <symbol id="unit-desktop" viewBox="0 0 64 64">
+    <g stroke="#231d17" stroke-width="3" stroke-linejoin="round">
+      <rect x="5" y="9" width="54" height="35" rx="3" fill="#f4ead3"/>
+      <path d="M32 44v11m-14 0h28" fill="none" stroke-linecap="round"/>
+    </g>
+  </symbol>
+
+  <symbol id="unit-mobile" viewBox="0 0 64 64">
+    <g stroke="#231d17" stroke-width="3" stroke-linejoin="round">
+      <rect x="17" y="5" width="30" height="54" rx="4" fill="#e8a820"/>
+      <path d="M27 51h10" fill="none" stroke-linecap="round"/>
+    </g>
+  </symbol>
+
+  <symbol id="controls-collapse" viewBox="0 0 64 64">
+    <path d="M39 14L21 32l18 18" fill="none" stroke="#231d17" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+
+  <symbol id="controls-expand" viewBox="0 0 64 64">
+    <path d="M25 14l18 18-18 18" fill="none" stroke="#231d17" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+
   <symbol id="flag" viewBox="0 0 64 64">
     <path d="M16 8v52" stroke="#231d17" stroke-width="5" stroke-linecap="round"/>
     <path d="M18 11c8-4 15 3 23-1s12-2 16 0v22c-4-2-8-4-16 0s-15-3-23 1z" fill="#f4ead3" stroke="#231d17" stroke-width="3" stroke-linejoin="round"/>

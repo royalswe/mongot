@@ -1,5 +1,9 @@
 'use strict';
 
+let unitBarLayout = '';
+try { unitBarLayout = localStorage.getItem('general_unit_layout') || ''; }
+catch (error) {}
+
 // Highlights a marker as the origin ('from') or destination ('to') of an attack or move; drawMap clears it.
 function markSelected(thisCountry, role, color) {
     const circle = thisCountry.querySelector('circle');
@@ -174,6 +178,7 @@ function showUnitBar(units, clickedCountry, keyboardActivation, originCountryId)
     form.addEventListener('keydown', function (event) {
         form.classList.remove('suppress-focus-ring');
         form.classList.add('keyboard-focus-visible');
+        if (event.target.closest('button') && (event.key === ' ' || event.key === 'Enter')) { return; }
         if (/^[0-9]$/.test(event.key) || event.key === 'Backspace') {
             event.preventDefault();
             typeUnits(event.key);
@@ -212,11 +217,18 @@ function showUnitBar(units, clickedCountry, keyboardActivation, originCountryId)
 }
 
 function positionUnitBar() {
-    const form = document.getElementById('unit_bar');
-    if (!form) { return; }
     const board = document.getElementById('game_board');
     const map = document.querySelector('.svg-container');
-    if (board.getBoundingClientRect().width <= 720) {
+    const mobile = unitBarLayout === 'mobile' ||
+        (unitBarLayout !== 'desktop' && navigator.maxTouchPoints > 0);
+    const toggle = document.getElementById('toggle_unit_layout');
+    toggle.title = toggle.ariaLabel = 'Switch to ' + (mobile ? 'desktop' : 'mobile') + ' unit controls';
+    toggle.setAttribute('aria-pressed', String(mobile));
+    toggle.querySelector('use').setAttribute('href', '/img/game/icons/options.sprite.svg?v=3#unit-' + (mobile ? 'mobile' : 'desktop'));
+    const form = document.getElementById('unit_bar');
+    if (!form) { return; }
+    form.classList.toggle('unit-layout-mobile', mobile);
+    if (mobile) {
         if (form.parentNode !== board) { board.appendChild(form); }
         return;
     }
@@ -227,6 +239,14 @@ function positionUnitBar() {
     form.style.setProperty('--unit-bar-top', Math.max(0, Math.min(container.height - bounds.height, target.top - container.top - bounds.height - 8)) + 'px');
     form.style.setProperty('--unit-bar-left', Math.max(0, Math.min(container.width - bounds.width, target.left - container.left - bounds.width / 2 + 12)) + 'px');
 }
+
+document.getElementById('toggle_unit_layout').addEventListener('click', function () {
+    unitBarLayout = this.getAttribute('aria-pressed') === 'true' ? 'desktop' : 'mobile';
+    try { localStorage.setItem('general_unit_layout', unitBarLayout); }
+    catch (error) {}
+    positionUnitBar();
+});
+positionUnitBar();
 
 document.getElementById('game_board').addEventListener('click', function (event) {
     if (!event.target.closest('#cancel_units')) { return; }

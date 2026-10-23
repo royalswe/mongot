@@ -90,6 +90,31 @@ function updateGameSoundToggle() {
     soundToggle.title = (gameSoundsMuted ? 'Unmute' : 'Mute') + ' game sounds';
 }
 
+const mapControlsToggle = document.getElementById('toggle_map_controls');
+let mapControlsHidden = false;
+try { mapControlsHidden = localStorage.getItem('general_map_controls_hidden') === 'true'; }
+catch (error) {}
+
+function updateMapControlsToggle() {
+    document.querySelector('.svg-container').classList.toggle('map-controls-hidden', mapControlsHidden);
+    document.querySelectorAll('.svg-container > .game-action-button:not(#toggle_map_controls)').forEach(function (button) {
+        button.inert = mapControlsHidden;
+    });
+    const label = (mapControlsHidden ? 'Show' : 'Hide') + ' map controls';
+    mapControlsToggle.setAttribute('aria-expanded', String(!mapControlsHidden));
+    mapControlsToggle.setAttribute('aria-label', label);
+    mapControlsToggle.title = label;
+    mapControlsToggle.querySelector('use').setAttribute('href', '/img/game/icons/options.sprite.svg?v=4#controls-' + (mapControlsHidden ? 'expand' : 'collapse'));
+}
+
+mapControlsToggle.addEventListener('click', function () {
+    mapControlsHidden = !mapControlsHidden;
+    try { localStorage.setItem('general_map_controls_hidden', String(mapControlsHidden)); }
+    catch (error) {}
+    updateMapControlsToggle();
+});
+updateMapControlsToggle();
+
 function territoryLabel(id) {
     const territory = mapData && mapData.countries[Number(id)];
     return territory && territory.name ? territory.name : 'Territory ' + (Number(id) + 1);
@@ -105,6 +130,14 @@ function actionDescription(action) {
     }
     return '';
 }
+
+function scrollGameActionsToLatest() {
+    if (!document.getElementById('activity_autoscroll').checked) { return; }
+    const list = document.getElementById('game_actions');
+    list.scrollTop = list.scrollHeight;
+}
+
+document.getElementById('activity_autoscroll').addEventListener('change', scrollGameActionsToLatest);
 
 function appendGameAction(action) {
     const list = document.getElementById('game_actions');
@@ -132,7 +165,7 @@ function appendGameAction(action) {
     entry.appendChild(actionButton);
     list.appendChild(entry);
     while (list.children.length > 40) { list.firstElementChild.remove(); }
-    list.scrollTop = list.scrollHeight;
+    scrollGameActionsToLatest();
 }
 
 function setGameActionHistory(actions) {
@@ -163,6 +196,7 @@ function selectSidebarTab(selectedTab, moveFocus) {
     chatPanel.hidden = showActivity;
     activityPanel.hidden = !showActivity;
     activityPanel.setAttribute('aria-hidden', String(!showActivity));
+    if (showActivity) { scrollGameActionsToLatest(); }
     if (moveFocus) { selectedTab.focus(); }
 }
 chatTab.addEventListener('click', function () {

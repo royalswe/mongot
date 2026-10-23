@@ -41,6 +41,43 @@ test('game action history replays and appends actions in an accessible panel', a
     await expect(activityTab).toHaveAttribute('tabindex', '-1');
 });
 
+test('activity autoscroll can pause reading and resume following new entries', async ({page}) => {
+    await page.goto('/game');
+    await page.getByRole('tab', {name: 'Activity'}).click();
+    const autoscroll = page.getByRole('checkbox', {name: 'Auto-scroll'});
+    const log = page.locator('#game_actions');
+    const atBottom = () => log.evaluate(element =>
+        Math.abs(element.scrollHeight - element.clientHeight - element.scrollTop) <= 1);
+    await expect(autoscroll).toBeChecked();
+    await page.evaluate(() => {
+        const history = Array.from({length: 30}, (_, index) => ({
+            type: 'move', player: 'Player ' + index, color: 'red', from: 0, to: 1, units: 2
+        }));
+        gameInfra.listeners('action_history').forEach(listener => listener(history));
+    });
+    await expect.poll(() => log.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+    await expect.poll(atBottom).toBe(true);
+    await autoscroll.uncheck();
+    await log.evaluate(element => { element.scrollTop = 100; });
+    const pausedPosition = await log.evaluate(element => element.scrollTop);
+    await page.evaluate(() => gameInfra.listeners('action_log').forEach(listener => listener({
+        type: 'move', player: 'New player', color: 'blue', from: 1, to: 2, units: 3
+    })));
+    await expect(log.locator('.activity-entry')).toHaveCount(31);
+    await expect.poll(() => log.evaluate(element => element.scrollTop)).toBe(pausedPosition);
+    await page.getByRole('tab', {name: 'Chat'}).click();
+    await page.getByRole('tab', {name: 'Activity'}).click();
+    await expect(autoscroll).not.toBeChecked();
+    await expect.poll(() => log.evaluate(element => element.scrollTop)).toBe(pausedPosition);
+    await autoscroll.check();
+    await expect.poll(atBottom).toBe(true);
+    await page.evaluate(() => gameInfra.listeners('action_log').forEach(listener => listener({
+        type: 'deploy', player: 'Latest player', color: 'red', country: 0, units: 5
+    })));
+    await expect(log.locator('.activity-entry')).toHaveCount(32);
+    await expect.poll(atBottom).toBe(true);
+});
+
 test('clicking an activity entry highlights its territories and route on the map', async ({page}) => {
     const roomName = await firstRoomName(page);
     await seatAs(page, roomName, null, 'red', 'Playing as a guest');
@@ -371,6 +408,8 @@ test.describe('touch controls', () => {
         await seatAs(page, roomName, null, 'red', 'Playing as a guest');
         await expect(page.locator('.popup')).toBeHidden();
         await page.evaluate(() => showUnitBar(10, 0));
+        await expect(page.locator('#unit_bar')).toHaveClass(/unit-layout-mobile/);
+        await expect(page.locator('#toggle_unit_layout use')).toHaveAttribute('href', /#unit-mobile$/);
         const output = page.locator('#unit_output');
         await expect.soft(output).toHaveJSProperty('readOnly', true);
         await expect.soft(output).toHaveAttribute('inputmode', 'none');
@@ -380,6 +419,8 @@ test.describe('touch controls', () => {
         await page.locator('#unit_input').fill('7');
         await expect(output).toHaveValue('7');
         await expect(page.locator('#send_units')).toBeEnabled();
+        await page.setViewportSize({width: 1280, height: 800});
+        await expect(page.locator('#unit_bar')).toHaveClass(/unit-layout-mobile/);
     });
 });
 
@@ -389,6 +430,7 @@ test('troop selector stays within the board through resizing', async ({page}) =>
     await expect(page.locator('.popup')).toBeHidden();
     await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
     await page.evaluate(() => {
+        gameInfra.listeners('display_flag').forEach(listener => listener());
         document.querySelector('.territory-marker').id = '0';
         showUnitBar(500, 0);
     });
@@ -401,6 +443,9 @@ test('troop selector stays within the board through resizing', async ({page}) =>
         });
     });
     for (const viewport of [{width: 1280, height: 800}, {width: 320, height: 568}, {width: 844, height: 390}, {width: 1000, height: 800}]) {
+        if (viewport.width <= 1000 && await page.locator('#toggle_unit_layout').getAttribute('aria-pressed') === 'false') {
+            await page.getByRole('button', {name: 'Switch to mobile unit controls'}).click();
+        }
         await page.setViewportSize(viewport);
         await expect.poll(contained).toBe(true);
         if (viewport.width <= 1000) {
@@ -423,6 +468,7 @@ test('troop selector stays within the board through resizing', async ({page}) =>
         }
     }
     await page.locator('.slide-toggle').click();
+    await page.getByRole('button', {name: 'Switch to desktop unit controls'}).click();
     await expect.poll(contained).toBe(true);
     await page.locator('.add').click();
     await expect(page.locator('#unit_output')).toHaveValue('2');
@@ -431,6 +477,102 @@ test('troop selector stays within the board through resizing', async ({page}) =>
     await expect(page.locator('#unit_output')).toHaveValue('499');
     await page.locator('#cancel_units').click();
     await expect(page.locator('#unit_bar')).toHaveCount(0);
+});
+
+test('unit layouts switch with status icons, persist and retain the original mobile bar', async ({page}) => {
+    const roomName = await firstRoomName(page);
+    await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+    await expect(page.locator('.popup')).toBeHidden();
+    await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
+    await expect(page.locator('#unit_bar')).toHaveCount(0);
+    await expect(page.locator('#toggle_unit_layout')).toBeHidden();
+    await expect(page.locator('.surrender-flag')).toBeHidden();
+    await page.evaluate(() => gameInfra.listeners('display_flag').forEach(listener => listener()));
+    await expect(page.locator('#toggle_unit_layout')).toBeVisible();
+    await expect(page.locator('.surrender-flag')).toBeVisible();
+    const icon = page.locator('#toggle_unit_layout use');
+    await expect(icon).toHaveAttribute('href', /#unit-desktop$/);
+    await page.getByRole('button', {name: 'Switch to mobile unit controls'}).click();
+    await expect(page.locator('#toggle_unit_layout')).toHaveAttribute('aria-pressed', 'true');
+    await expect(icon).toHaveAttribute('href', /#unit-mobile$/);
+    await page.getByRole('button', {name: 'Switch to desktop unit controls'}).click();
+    await expect(icon).toHaveAttribute('href', /#unit-desktop$/);
+    await page.evaluate(() => showUnitBar(4, 0));
+    const form = page.locator('#unit_bar');
+    const slider = page.locator('#unit_input');
+    await expect(slider).toBeHidden();
+    await page.getByRole('button', {name: 'Switch to mobile unit controls'}).click();
+    await expect(form).toHaveClass(/unit-layout-mobile/);
+    await expect(page.locator('.mobile-unit-label')).toBeVisible();
+    await expect(page.locator('#cancel_units')).toBeHidden();
+    await expect(form).toHaveCSS('grid-template-rows', '32px');
+    await slider.fill('2');
+    await expect(page.locator('#unit_output')).toHaveValue('2');
+    await page.getByRole('button', {name: 'Switch to desktop unit controls'}).press('Enter');
+    await expect(slider).toBeHidden();
+    await expect(page.locator('#unit_output')).toHaveValue('2');
+    await page.getByRole('button', {name: 'Switch to mobile unit controls'}).click();
+    await page.setViewportSize({width: 320, height: 568});
+    await expect(form).toHaveClass(/unit-layout-mobile/);
+    await page.evaluate(() => showUnitBar(500, 0));
+    for (const viewport of [{width: 320, height: 568}, {width: 390, height: 844}, {width: 1280, height: 800}]) {
+        await page.setViewportSize(viewport);
+        await expect.poll(() => form.evaluate(element => {
+            const bounds = element.getBoundingClientRect();
+            const outputBounds = element.querySelector('#unit_output').getBoundingClientRect();
+            const rowCenter = outputBounds.top + outputBounds.height / 2;
+            return Array.from(element.children).every(child => {
+                if (getComputedStyle(child).display === 'none') { return true; }
+                const rect = child.getBoundingClientRect();
+                return rect.left >= bounds.left && rect.right <= bounds.right &&
+                    rect.top + rect.height / 2 === rowCenter && rect.bottom <= bounds.bottom && child.scrollWidth <= child.clientWidth;
+            });
+        })).toBe(true);
+        expect(await page.evaluate(() => {
+            const flag = document.querySelector('.surrender-flag');
+            flag.classList.add('is-visible');
+            const flagBounds = flag.getBoundingClientRect();
+            const toggle = document.getElementById('toggle_unit_layout');
+            const toggleBounds = toggle.getBoundingClientRect();
+            const mapBounds = toggle.parentElement.getBoundingClientRect();
+            return toggle.parentElement.classList.contains('svg-container') &&
+                toggleBounds.top === flagBounds.top && toggleBounds.left === flagBounds.right + 8 &&
+                toggleBounds.right <= mapBounds.right;
+        })).toBe(true);
+    }
+    await page.reload();
+    await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
+    await page.getByRole('button', {name: 'Close color selection'}).click();
+    await expect(page.locator('#toggle_unit_layout')).toBeHidden();
+    await page.evaluate(() => gameInfra.listeners('display_flag').forEach(listener => listener()));
+    await page.evaluate(() => showUnitBar(2, 0));
+    await expect(form).toHaveClass(/unit-layout-mobile/);
+    await expect(icon).toHaveAttribute('href', /#unit-mobile$/);
+    await expect.poll(() => slider.evaluate(element => {
+        const range = element.getBoundingClientRect();
+        const bar = element.parentElement.getBoundingClientRect();
+        const output = element.parentElement.querySelector('#unit_output').getBoundingClientRect();
+        return Math.abs(range.left - bar.left - 8) < 1 && Math.abs(output.left - range.right - 12) < 1;
+    })).toBe(true);
+    await page.getByRole('button', {name: 'Switch to desktop unit controls'}).click();
+    await expect(icon).toHaveAttribute('href', /#unit-desktop$/);
+    await page.setViewportSize({width: 390, height: 844});
+    await expect(slider).toBeHidden();
+    await expect(page.locator('.add')).toBeVisible();
+});
+
+test('non-touch screens default to desktop unit controls even at phone widths', async ({page}) => {
+    await page.setViewportSize({width: 390, height: 844});
+    const roomName = await firstRoomName(page);
+    await seatAs(page, roomName, null, 'red', 'Playing as a guest');
+    await expect(page.locator('.popup')).toBeHidden();
+    await expect(page.locator('.svg-content')).toHaveAttribute('data-map-id', /.+/);
+    await page.evaluate(() => showUnitBar(10, 0));
+    await expect(page.locator('#unit_bar')).not.toHaveClass(/unit-layout-mobile/);
+    await expect(page.locator('#unit_input')).toBeHidden();
+    await expect(page.locator('#toggle_unit_layout use')).toHaveAttribute('href', /#unit-desktop$/);
+    await page.setViewportSize({width: 1280, height: 800});
+    await expect(page.locator('#unit_bar')).not.toHaveClass(/unit-layout-mobile/);
 });
 
 test('header layout follows board width when chat toggles', async ({page}) => {
@@ -947,6 +1089,63 @@ test('battle and tactical move forms submit the selected troop counts', async ({
     await page.keyboard.press('Enter');
     await expect.poll(() => page.evaluate(() => window.__gameEvents[1])).toEqual(['tactical_move', 0, 1, 0, 2]);
     await expect(page.locator('.territory-marker[id="1"]')).toBeFocused();
+});
+
+test('map controls collapse, persist and restore only player-allowed buttons', async ({page}) => {
+    for (const viewport of [{width: 320, height: 568}, {width: 1280, height: 800}]) {
+        await page.setViewportSize(viewport);
+        await page.goto('/game');
+        const toggle = page.locator('#toggle_map_controls');
+        const controls = page.locator('.svg-container > .game-action-button:not(#toggle_map_controls)');
+        await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.locator('.surrender-flag')).toBeHidden();
+        await expect(page.locator('#toggle_unit_layout')).toBeHidden();
+        await page.evaluate(() => gameInfra.listeners('display_flag').forEach(listener => listener()));
+        for (const control of await controls.all()) { await expect(control).toBeVisible(); }
+        expect(await toggle.evaluate(element => {
+            const bounds = element.getBoundingClientRect();
+            const map = element.parentElement.getBoundingClientRect();
+            const dice = element.parentElement.querySelector('.dice-log').getBoundingClientRect();
+            return element === element.parentElement.querySelector('.game-action-button') &&
+                bounds.left === map.left + 10 && bounds.right + 8 === dice.left && bounds.right <= map.right;
+        })).toBe(true);
+        const expandedPosition = await toggle.boundingBox();
+        await expect(page.locator('.dice-log')).toHaveCSS('transition-duration', '0.14s, 0.14s, 0s');
+        await toggle.click();
+        await expect(toggle).toHaveAttribute('aria-label', 'Show map controls');
+        await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        await expect(toggle.locator('use')).toHaveAttribute('href', /#controls-expand$/);
+        for (const control of await controls.all()) {
+            await expect(control).toBeHidden();
+            await expect(control).toHaveJSProperty('inert', true);
+        }
+        expect(await toggle.boundingBox()).toEqual(expandedPosition);
+        await expect(toggle).toBeFocused();
+        await page.reload();
+        await expect(toggle).toBeVisible();
+        await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        for (const control of await controls.all()) { await expect(control).toBeHidden(); }
+        await toggle.press('Enter');
+        await expect(toggle).toHaveAttribute('aria-label', 'Hide map controls');
+        await expect(toggle.locator('use')).toHaveAttribute('href', /#controls-collapse$/);
+        await expect(page.locator('.dice-log')).toBeVisible();
+        await expect(page.locator('#toggle_game_sound')).toBeVisible();
+        await expect(page.locator('.surrender-flag')).toBeHidden();
+        await expect(page.locator('#toggle_unit_layout')).toBeHidden();
+        await toggle.press('Space');
+        await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        await page.evaluate(() => gameInfra.listeners('display_flag').forEach(listener => listener()));
+        for (const control of await controls.all()) { await expect(control).toBeHidden(); }
+        await toggle.press('Space');
+        for (const control of await controls.all()) {
+            await expect(control).toBeVisible();
+            await expect(control).toHaveJSProperty('inert', false);
+        }
+    }
+    await page.emulateMedia({reducedMotion: 'reduce'});
+    await expect(page.locator('.dice-log')).toHaveCSS('transition-duration', '0s');
+    await page.locator('#toggle_map_controls').click();
+    await expect(page.locator('.dice-log')).toBeHidden();
 });
 
 test('game room sound preference persists across reloads', async ({page}) => {

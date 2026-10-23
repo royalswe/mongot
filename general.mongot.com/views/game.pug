@@ -22,6 +22,9 @@ html
             button#send(type='button' aria-label='Send chat message' title='Send chat message')
               img(src='/img/game/icons/send.svg' alt='')
         div#activity-panel.sidebar-panel.activity-panel(role='tabpanel' aria-labelledby='show_activity' aria-hidden='true')
+          label.activity-autoscroll
+            input#activity_autoscroll(type='checkbox' checked aria-controls='game_actions')
+            span Auto-scroll
           ol#game_actions(role='log' aria-label='Game activity' aria-live='polite' aria-relevant='additions')
             li.activity-empty No actions recorded yet
       button.slide-toggle(type='button', aria-label='Toggle chat', aria-controls='chatroom', aria-expanded='true', title='Toggle chat')
@@ -65,15 +68,21 @@ html
           circle#user_color(cx='958', cy='20', r='14')
           text#username_turn.player-round(x='980', y='29')
 
-        button.dice-log.game-action-button(type='button' aria-label='Open dice log' title='Open dice log')
+        button#toggle_map_controls.game-action-button(type='button' aria-label='Hide map controls' title='Hide map controls' aria-expanded='true' aria-controls='map_dice_log toggle_game_sound surrender_game toggle_unit_layout')
+          svg(aria-hidden='true' focusable='false')
+            use(href='/img/game/icons/options.sprite.svg?v=4#controls-collapse')
+        button#map_dice_log.dice-log.game-action-button(type='button' aria-label='Open dice log' title='Open dice log')
           svg(aria-hidden='true' focusable='false')
             use(href='/img/game/icons/options.sprite.svg?v=1#dice')
         button#toggle_game_sound.game-action-button.game-sound-toggle(type='button' aria-pressed='false' aria-label='Mute game sounds' title='Mute game sounds')
           svg(aria-hidden='true' focusable='false')
             use#game_sound_icon(href='/img/game/icons/options.sprite.svg?v=1#sound-on')
-        button.surrender-flag.game-action-button(type='button' aria-label='Give up' title='Give up')
+        button#surrender_game.surrender-flag.game-action-button(type='button' aria-label='Give up' title='Give up')
           svg(aria-hidden='true' focusable='false')
             use(href='/img/game/icons/options.sprite.svg?v=1#flag')
+        button#toggle_unit_layout.unit-layout-toggle.game-action-button(type='button' aria-label='Switch to mobile unit controls' title='Switch to mobile unit controls' aria-pressed='false')
+          svg(aria-hidden='true' focusable='false')
+            use(href='/img/game/icons/options.sprite.svg?v=3#unit-desktop')
         button#start_bots(type='button' style='display:none') Start with bots
     script
       if user

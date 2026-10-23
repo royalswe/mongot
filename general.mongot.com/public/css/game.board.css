@@ -1023,6 +1023,25 @@ text {
     background: var(--paper-light);
 }
 
+.activity-autoscroll {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-bottom: 2px solid var(--ink);
+    color: var(--ink);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.activity-autoscroll input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--red);
+}
+
 #game_actions {
     display: flex;
     flex-direction: column;
@@ -1254,16 +1273,48 @@ body:has(.show-gold) .gold-region-label {
     pointer-events: none;
 }
 .dice-log {
-    left: 10px;
-}
-.game-sound-toggle {
     left: calc(18px + var(--game-control-size));
 }
-.surrender-flag {
+.game-sound-toggle {
     left: calc(26px + 2 * var(--game-control-size));
+}
+.surrender-flag {
+    left: calc(34px + 3 * var(--game-control-size));
 }
 .surrender-flag:not(.is-visible) {
     display: none;
+}
+.unit-layout-toggle {
+    left: calc(42px + 4 * var(--game-control-size));
+}
+.svg-container:has(.surrender-flag:not(.is-visible)) .unit-layout-toggle {
+    display: none;
+}
+.unit-layout-toggle[aria-pressed="true"] {
+    background: var(--mustard);
+}
+
+#toggle_map_controls {
+    left: 10px;
+    z-index: 1;
+}
+.svg-container > .game-action-button:not(#toggle_map_controls) {
+    opacity: 1;
+    transform: translateX(0);
+    visibility: visible;
+    transition: opacity 140ms ease, transform 140ms ease, visibility 0s;
+}
+.svg-container.map-controls-hidden > .game-action-button:not(#toggle_map_controls) {
+    opacity: 0;
+    transform: translateX(-8px);
+    visibility: hidden;
+    pointer-events: none;
+    transition-delay: 0s, 0s, 140ms;
+}
+@media (prefers-reduced-motion: reduce) {
+    .svg-container > .game-action-button:not(#toggle_map_controls) {
+        transition: none;
+    }
 }
 
 .close-popup {
@@ -1428,6 +1479,44 @@ body:has(.show-gold) .gold-region-label {
 .mobile-unit-label {
     display: none
 }
+
+.input-unit-bar.unit-layout-mobile {
+    position: static;
+    width: 100%;
+    padding: 6px 8px;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) 40px max-content;
+    grid-template-rows: 32px;
+    grid-template-areas: "slider amount send";
+    align-items: center;
+    border: 0;
+    border-top: 3px solid var(--ink);
+    box-shadow: none;
+}
+
+.unit-layout-mobile #unit_input {
+    display: block;
+    cursor: pointer;
+}
+
+.unit-layout-mobile #unit_output {
+    height: 32px;
+    border: 3px solid var(--ink);
+    font-size: 16px;
+}
+
+.unit-layout-mobile #send_units {
+    height: 32px;
+    padding: 3px 8px;
+    border: 3px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    font-size: 15px;
+}
+.unit-layout-mobile .mobile-unit-label { display: inline; }
+.unit-layout-mobile .desktop-unit-label,
+.unit-layout-mobile .sub,
+.unit-layout-mobile .add,
+.unit-layout-mobile #cancel_units { display: none; }
 .sub:hover,
 .add:hover {
     background: var(--mustard);
@@ -1473,48 +1562,6 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @container game-board (max-width:720px) {
-    .input-unit-bar {
-        position: static;
-        width: 100%;
-        padding: 6px 8px;
-        gap: 12px;
-        grid-template-columns: minmax(0, 1fr) 40px max-content;
-        grid-template-rows: 32px;
-        grid-template-areas: "slider amount send";
-        align-items: center;
-        border: 0;
-        border-top: 3px solid var(--ink);
-        box-shadow: none
-    }
-
-    .input-unit-bar .sub, .input-unit-bar .add,
-    .input-unit-bar #cancel_units, .desktop-unit-label {
-        display: none
-    }
-
-    .mobile-unit-label {
-        display: inline
-    }
-
-    .input-unit-bar #unit_input {
-        display: block;
-        cursor: pointer
-    }
-
-    .input-unit-bar #unit_output {
-        height: 32px;
-        border: 3px solid var(--ink);
-        font-size: 16px
-    }
-
-    .input-unit-bar #send_units {
-        height: 32px;
-        padding: 3px 8px;
-        border: 3px solid var(--ink);
-        box-shadow: 3px 3px 0 var(--ink);
-        font-size: 15px
-    }
-
     #game_header {
         grid-template-columns: 64px minmax(0, 1fr);
         grid-template-areas: "phase info" "controls controls" "stats stats";
