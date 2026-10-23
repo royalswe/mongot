@@ -60,6 +60,11 @@ export function gameMessageHandler(msg: any) {
 			break;
 		case EVENT.ratingsUpdated:
 			states.clients = [...states.clients];
+			for (const { username, change } of msg.changes ?? []) {
+				chat.add({
+					message: `${username} ${change >= 0 ? 'won' : 'lost'} ${Math.abs(change)} points`
+				});
+			}
 			break;
 		case EVENT.chat:
 			chat.add({ sender: msg.clientId, message: msg.msg, datetime: msg.datetime });

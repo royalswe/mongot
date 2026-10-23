@@ -95,8 +95,9 @@ export class HighscoreStore {
   recordMatch(
     results: MatchResult[],
     options: { rated: boolean; recordStats?: boolean },
-  ): Promise<void> {
+  ): Promise<{ username: string; change: number }[]> {
     const update = this.writeQueue.then(async () => {
+      let changes: { username: string; change: number }[] = [];
       const data = await this.read();
       for (const result of results) {
         const username = result.username.trim();
@@ -112,7 +113,7 @@ export class HighscoreStore {
       }
 
       if (options.rated) {
-        const changes = calculateRatingChanges(
+        const ratingChanges = calculateRatingChanges(
           results.map((result) => {
             const score = data[result.username.trim().toLowerCase()];
             return {
@@ -122,12 +123,17 @@ export class HighscoreStore {
             };
           })
         );
-        for (const change of changes) {
+        for (const change of ratingChanges) {
           data[change.username.trim().toLowerCase()].rating = change.rating;
         }
+        changes = ratingChanges.map(({ username, change }) => ({
+          username,
+          change,
+        }));
       }
 
       await this.write(data);
+      return changes;
     });
     this.writeQueue = update.then(
       () => undefined,

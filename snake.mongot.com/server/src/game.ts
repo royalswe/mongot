@@ -400,8 +400,8 @@ export default new (class Game {
           rated,
           recordStats: !session.matchDraw
         })
-        .then(() => {
-          ws.emitter.roomEmit(EVENT.ratingsUpdated, {});
+        .then((changes) => {
+          ws.emitter.roomEmit(EVENT.ratingsUpdated, { changes });
           ws.emitter.lobby(LOBBY_EVENT.ratingsUpdated, {});
         })
         .catch((error: unknown) => {
@@ -457,8 +457,10 @@ export default new (class Game {
       });
     }
 
-    if (session.clients.size === 0) {
+    if ([...session.clients].every((client) => client.isBot)) {
+      session.cancelCountdown();
       session.stopGameLoop?.();
+      session.stopGameLoop = null;
       sessions.delete(session.room);
     } else {
       if (

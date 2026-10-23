@@ -5,7 +5,7 @@ jest.mock('../src/uws', () => ({
 }));
 jest.mock('../src/highscores', () => ({
 	__esModule: true,
-	default: { recordMatch: jest.fn(() => Promise.resolve()) }
+	default: { recordMatch: jest.fn(() => Promise.resolve([])) }
 }));
 
 import Client from '../src/client';
@@ -161,5 +161,20 @@ describe('Game.close during countdown', () => {
 				}
 			]
 		});
+	});
+});
+
+describe('Game.close with only bots left', () => {
+	it('removes the room', () => {
+		const session = new Session({ room: 'bots', width: 20, height: 20 });
+		const human = new Client('human');
+		const bot = new Client('bot-1', true);
+		session.join(human);
+		session.join(bot);
+		sessions.set(session.room, session);
+
+		Game.close(createSocket(human));
+
+		expect(sessions.has('bots')).toBe(false);
 	});
 });
