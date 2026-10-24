@@ -27,6 +27,8 @@ type Plan = {
 type SearchResult = {
   depth: number;
   mobility: number;
+  // True when every searched path ran out of moves before the budget did.
+  deadEnd: boolean;
 };
 
 function key({ x, y }: Cell) {
@@ -157,7 +159,9 @@ function searchFrom(
       if (budget.remaining === 0) break;
     }
 
-    if (!nextBeam.length) return { depth, mobility: deepestMobility };
+    if (!nextBeam.length) {
+      return { depth, mobility: deepestMobility, deadEnd: true };
+    }
     nextBeam.sort((left, right) => right.mobility - left.mobility);
     beam = nextBeam.slice(0, BEAM_WIDTH);
     depth++;
@@ -169,7 +173,164 @@ function searchFrom(
       (best, plan) => Math.max(best, plan.mobility),
       deepestMobility,
     ),
+    deadEnd: false,
   };
+}
+
+interface TerritoryEvaluation {
+  botTerritory: number;
+  oppTerritory: number;
+  contested: number;
+  botReachable: number;
+  cutoffBonus: number;
+}
+
+function evaluateTerritoryAndIntercept(
+  botNext: Cell,
+  opponents: BotParticipant[],
+  occupied: Set<string>,
+  width: number,
+  height: number,
+  budget: { remaining: number },
+  maxBfsCells: number,
+): TerritoryEvaluation {
+  let cutoffBonus = 0;
+
+  for (const opponent of opponents) {
+    const state = opponent.gameState;
+    const dir = state.directionQueue[0] ?? state.vel;
+    let proj = state.pos;
+    for (let step = 1; step <= 6; step++) {
+      proj = { x: proj.x + dir.x, y: proj.y + dir.y };
+      if (!isInsideBoard(proj, width, height) || occupied.has(key(proj))) break;
+      const dist = Math.abs(botNext.x - proj.x) + Math.abs(botNext.y - proj.y);
+      if (1 + dist < step) {
+        cutoffBonus += (7 - step) * 15;
+      }
+    }
+  }
+
+  const oppArrivalTime = new Map<string, number>();
+  for (const opponent of opponents) {
+    const state = opponent.gameState;
+    const dir = state.directionQueue[0] ?? state.vel;
+    let proj = state.pos;
+    for (let step = 1; step <= 3; step++) {
+      proj = { x: proj.x + dir.x, y: proj.y + dir.y };
+      if (!isInsideBoard(proj, width, height) || occupied.has(key(proj))) break;
+      const k = key(proj);
+      if (!oppArrivalTime.has(k)) {
+        oppArrivalTime.set(k, step);
+      }
+    }
+  }
+  let cellsInspected = 0;
+  const cellDist = new Map<string, { dist: number; owner: number }>();
+
+  type QueueNode = { x: number; y: number; dist: number; owner: number };
+  const queue: QueueNode[] = [];
+
+  const botKey = key(botNext);
+  cellDist.set(botKey, { dist: 0, owner: 0 });
+  queue.push({ x: botNext.x, y: botNext.y, dist: 0, owner: 0 });
+
+  let oppIdx = 1;
+  for (const opponent of opponents) {
+    const state = opponent.gameState;
+    const dir = state.directionQueue[0] ?? state.vel;
+    const oppNext = { x: state.pos.x + dir.x, y: state.pos.y + dir.y };
+    if (isInsideBoard(oppNext, width, height) && !occupied.has(key(oppNext))) {
+      const k = key(oppNext);
+      if (!cellDist.has(k)) {
+        cellDist.set(k, { dist: 0, owner: oppIdx });
+        queue.push({ x: oppNext.x, y: oppNext.y, dist: 0, owner: oppIdx });
+      } else if (cellDist.get(k)!.owner === 0) {
+        cellDist.set(k, { dist: 0, owner: -1 });
+      }
+    }
+    oppIdx++;
+  }
+
+  let head = 0;
+  while (head < queue.length && budget.remaining > 0 && cellsInspected < maxBfsCells) {
+    const current = queue[head++];
+
+    // If this cell was contested or claimed by another owner, it is a collision boundary
+    if (cellDist.get(key(current))!.owner !== current.owner) {
+      continue;
+    }
+
+    cellsInspected++;
+    budget.remaining--;
+
+    const nextDist = current.dist + 1;
+    for (const dir of DIRECTION_ORDER) {
+      const nx = current.x + dir.x;
+      const ny = current.y + dir.y;
+      const nPos = { x: nx, y: ny };
+      if (!isInsideBoard(nPos, width, height)) continue;
+      const nKey = key(nPos);
+      if (occupied.has(nKey)) continue;
+
+      if (current.owner === 0 && oppArrivalTime.has(nKey)) {
+        const oppStep = oppArrivalTime.get(nKey)!;
+        if (1 + nextDist > oppStep) {
+          continue;
+        }
+      }
+
+      const existing = cellDist.get(nKey);
+      if (!existing) {
+        cellDist.set(nKey, { dist: nextDist, owner: current.owner });
+        queue.push({ x: nx, y: ny, dist: nextDist, owner: current.owner });
+      } else if (existing.dist === nextDist) {
+        if (existing.owner !== current.owner && existing.owner !== -1) {
+          existing.owner = -1;
+        }
+      }
+    }
+  }
+
+  let botTerritory = 0;
+  let oppTerritory = 0;
+  let contested = 0;
+  let botReachable = 0;
+
+  for (const entry of cellDist.values()) {
+    if (entry.owner === 0) {
+      botTerritory++;
+      botReachable++;
+    } else if (entry.owner === -1) {
+      contested++;
+      botReachable++;
+    } else {
+      oppTerritory++;
+    }
+  }
+
+  return {
+    botTerritory,
+    oppTerritory,
+    contested,
+    botReachable,
+    cutoffBonus,
+  };
+}
+
+function compactnessScore(
+  position: Cell,
+  occupied: Set<string>,
+  width: number,
+  height: number,
+): number {
+  let neighbors = 0;
+  for (const dir of DIRECTION_ORDER) {
+    const adj = { x: position.x + dir.x, y: position.y + dir.y };
+    if (!isInsideBoard(adj, width, height) || occupied.has(key(adj))) {
+      neighbors++;
+    }
+  }
+  return neighbors;
 }
 
 export function chooseBotDirection(
@@ -221,33 +382,66 @@ export function chooseBotDirection(
   if (!options.length) return state.vel;
   if (!completeOccupancyScan) return options[0];
 
-  let bestDirection = options[0];
-  let bestResult: SearchResult = { depth: -1, mobility: -1 };
-  let bestPressure = -1;
   const opponents = players.filter(
     (player) => player.id !== bot.id && player.status === PLAYER_STATUS.ready,
   );
-  const predictedOpponentPositions = new Set(
-    opponents.map((opponent) => {
-      const direction =
-        opponent.gameState.directionQueue[0] ?? opponent.gameState.vel;
-      return key({
-        x: opponent.gameState.pos.x + direction.x,
-        y: opponent.gameState.pos.y + direction.y,
-      });
-    }),
-  );
-  const nonCollidingOptions = options.filter((direction) => {
+
+  const primaryOpponentPositions = new Set<string>();
+  const contestedOpponentPositions = new Set<string>();
+
+  for (const opponent of opponents) {
+    const oppState = opponent.gameState;
+    const primaryDir = oppState.directionQueue[0] ?? oppState.vel;
+    const primaryNext = {
+      x: oppState.pos.x + primaryDir.x,
+      y: oppState.pos.y + primaryDir.y,
+    };
+    if (isInsideBoard(primaryNext, width, height) && !occupied.has(key(primaryNext))) {
+      primaryOpponentPositions.add(key(primaryNext));
+      contestedOpponentPositions.add(key(primaryNext));
+    }
+
+    const oppMoves = oppState.directionQueue.length
+      ? [oppState.directionQueue[0]]
+      : nextDirections(oppState.vel);
+    for (const dir of oppMoves) {
+      const next = {
+        x: oppState.pos.x + dir.x,
+        y: oppState.pos.y + dir.y,
+      };
+      if (isInsideBoard(next, width, height) && !occupied.has(key(next))) {
+        contestedOpponentPositions.add(key(next));
+      }
+    }
+  }
+
+  // Prioritize completely safe moves that avoid all contested head-on cells
+  const safeOptions = options.filter((direction) => {
     const next = { x: state.pos.x + direction.x, y: state.pos.y + direction.y };
-    return !predictedOpponentPositions.has(key(next));
+    return !contestedOpponentPositions.has(key(next));
   });
-  const decisionOptions = nonCollidingOptions.length
-    ? nonCollidingOptions
-    : options;
+
+  const nonPrimaryOptions = options.filter((direction) => {
+    const next = { x: state.pos.x + direction.x, y: state.pos.y + direction.y };
+    return !primaryOpponentPositions.has(key(next));
+  });
+
+  const decisionOptions = safeOptions.length
+    ? safeOptions
+    : nonPrimaryOptions.length
+      ? nonPrimaryOptions
+      : options;
+
+  if (decisionOptions.length === 1) {
+    return decisionOptions[0];
+  }
 
   const decisionBudgetPerOption = Math.floor(
     budget.remaining / decisionOptions.length,
   );
+
+  let bestDirection = decisionOptions[0];
+  let bestScore = -Infinity;
 
   for (const direction of decisionOptions) {
     const branchBudget = { remaining: decisionBudgetPerOption };
@@ -270,6 +464,22 @@ export function chooseBotDirection(
       height,
       branchBudget,
     ).length;
+
+    // Territory and cutoff evaluation bounded by board size or 1000 cells
+    const territoryLimit = Math.min(Math.min(1000, width * height), branchBudget.remaining);
+    const territoryBudget = { remaining: territoryLimit };
+    const territory = evaluateTerritoryAndIntercept(
+      position,
+      opponents,
+      occupied,
+      width,
+      height,
+      territoryBudget,
+      territoryLimit,
+    );
+    branchBudget.remaining -= (territoryLimit - territoryBudget.remaining);
+
+    // Deep search with remaining branch budget
     const result = searchFrom(initial, occupied, width, height, branchBudget);
     const pressure = attackPressure(
       position,
@@ -278,16 +488,88 @@ export function chooseBotDirection(
       width,
       height,
     );
+    const compactness = compactnessScore(position, occupied, width, height);
+    const isStraight = direction.x === state.vel.x && direction.y === state.vel.y;
 
-    if (
-      result.depth > bestResult.depth ||
-      (result.depth === bestResult.depth &&
-        (pressure > bestPressure ||
-          (pressure === bestPressure && result.mobility > bestResult.mobility)))
-    ) {
+    let score = 0;
+
+    // Survival depth is fundamental: prioritize depth
+    score += result.depth * 1000;
+    // Survival depth: strong priority up to tactical horizon
+    const tacticalHorizon = 8;
+    score += Math.min(result.depth, tacticalHorizon) * 1000;
+    if (result.depth > tacticalHorizon) {
+      score += (result.depth - tacticalHorizon) * (result.deadEnd ? 500 : 50);
+    }
+
+    // Territory advantage: controlling space is key in Tron
+    score += territory.botTerritory * 10;
+    if (opponents.length > 0) {
+      score -= territory.oppTerritory * 7;
+      score += territory.contested * 3;
+    }
+
+    // Trapped in tiny chamber penalty
+    if (territory.botReachable < 15) {
+      score -= (15 - territory.botReachable) * 100;
+    }
+
+    // Cutoff bonus: rewards trapping opponent against boundary
+    score += territory.cutoffBonus;
+
+    // Attack pressure: rewards moving toward active opponent's path when survival is comparable
+    score += pressure * 15;
+
+    // Compactness: hug existing walls/trails to preserve open interior
+    if (compactness === 1 || compactness === 2) {
+      score += 8;
+    } else if (compactness >= 3) {
+      score -= 50;
+    }
+
+    // Mobility
+    score += result.mobility * 2;
+
+    // Collision hazard penalties
+    if (primaryOpponentPositions.has(key(position))) {
+      score -= 10000;
+    } else if (contestedOpponentPositions.has(key(position))) {
+      score -= 2000;
+    }
+
+    // Cutoff threat detection: is an opponent about to wall off the bot's path along this direction?
+    let cutoffThreat = 0;
+    for (const opponent of opponents) {
+      const oppState = opponent.gameState;
+      const oppDir = oppState.directionQueue[0] ?? oppState.vel;
+      let oppProj = oppState.pos;
+
+      for (let oppStep = 1; oppStep <= 6; oppStep++) {
+        oppProj = { x: oppProj.x + oppDir.x, y: oppProj.y + oppDir.y };
+        if (!isInsideBoard(oppProj, width, height) || occupied.has(key(oppProj))) break;
+
+        let botProj = state.pos;
+        for (let botStep = 1; botStep <= 6; botStep++) {
+          botProj = { x: botProj.x + direction.x, y: botProj.y + direction.y };
+          if (!isInsideBoard(botProj, width, height) || occupied.has(key(botProj))) break;
+
+          // Opponent arrives strictly before the bot, crossing and walling off the bot's path
+          if (oppProj.x === botProj.x && oppProj.y === botProj.y && oppStep < botStep) {
+            cutoffThreat = Math.max(cutoffThreat, (7 - botStep) * 200);
+          }
+        }
+      }
+    }
+    score -= cutoffThreat;
+
+    // Straight preference when otherwise tied
+    if (isStraight) {
+      score += 0.5;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
       bestDirection = direction;
-      bestResult = result;
-      bestPressure = pressure;
     }
   }
 
