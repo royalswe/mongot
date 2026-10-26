@@ -4,22 +4,27 @@
   "description": "tetris clone from blip.se",
   "main": "app.js",
   "scripts": {
+    "dev": "COOKIE_SECRET=s3cr3t node app.js",
     "start": "node app.js",
-    "gulp": "gulp"
+    "gulp": "gulp",
+    "test": "node --test test/*.test.js",
+    "test:e2e": "playwright test",
+    "test:all": "npm test && npm run test:e2e"
   },
   "author": "roYal",
   "license": "ISC",
   "dependencies": {
-    "ws": "^8.12.1"
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.20.2",
+    "@playwright/test": "^1.64.1",
     "gulp": "^4.0.2",
     "gulp-babel": "^8.0.0",
     "gulp-clean-css": "^4.3.0",
     "gulp-concat": "^2.6.1",
-    "gulp-uglify": "^3.0.2",
     "gulp-imagemin": "^7.1.0",
+    "gulp-uglify": "^3.0.2",
     "merge-stream": "^2.0.0"
   },
   "babel": {

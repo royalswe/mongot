@@ -54,9 +54,15 @@ var SCREEN = (function(){
         
         resizeContent: function () {
             document.getElementById("toggle_fullscreen").checked = isInFullScreen() ? false : true; // Toggle fullscreen icon
+            if (LAYOUT.isPhone()) { // the phone stylesheet sizes the page itself
+                document.documentElement.style.width = '';
+                return;
+            }
             const windowHeight = window.innerHeight;
             const windowWidth = window.innerWidth;
-            const landscape = (windowHeight / 3) + windowHeight;
+            const landscape = document.body.classList.contains('panels-collapsed')
+                ? windowHeight * 1.85
+                : (windowHeight / 3) + windowHeight;
         
             if (windowHeight < windowWidth) {
                 if (landscape > windowWidth) {

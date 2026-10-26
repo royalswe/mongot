@@ -136,42 +136,59 @@ Block.prototype.DASupdate = function (deltaTime) {
     } 
 };
 
+Block.prototype.softDrop = function (on) {
+    if (!on) {
+        this.dropInterval = this.DROP_SLOW;
+    } else if (this.dropInterval !== this.DROP_FAST && this.tetris.stopped === false) {
+        this.drop();
+        this.dropInterval = this.DROP_FAST;
+    }
+};
+
+Block.prototype.hardDrop = function () {
+    if (this.tetris.stopped !== false) { return; } // stopped, or the cleared rows are animating
+    this.drop(true);
+};
+
 Block.prototype.blockControll = function () {
     if (this.blockEventListening) {
         return;
     } // prevent more event listener
     this.blockEventListening = true;
+    TOUCH.attach(this);
 
     document.addEventListener('keydown', function (e) {
         keyDown(e);
     }, false); // keyboard
-    document.addEventListener('touchstart', function (e) {
+    document.addEventListener('pointerdown', function (e) {
         keyDown(e);
-    }, false); // touchscren
-    document.addEventListener('mousedown', function (e) {
-        keyDown(e);
-    }, false); // mouse
+    }, false); // touch and mouse on the on-screen keys
 
     document.addEventListener('keyup', function (e) {
         keyUpp(e);
     }, false);
-    document.addEventListener('touchend', function (e) {
+    document.addEventListener('pointerup', function (e) {
         keyUpp(e);
     }, false);
-    document.addEventListener('mouseup', function (e) {
+    document.addEventListener('pointercancel', function (e) {
         keyUpp(e);
     }, false);
 
+    // Pointer id -> key it pressed, so the release is right even if the pointer slid off the key.
+    const pressedKeys = new Map();
+
     let keyUpp = (e) => {
-        let keyPress = isNumeric(e.target.id) ? parseInt(e.target.id) : e.keyCode;
+        let keyPress = pressedKeys.has(e.pointerId) ? pressedKeys.get(e.pointerId) :
+            (isNumeric(e.target.id) ? parseInt(e.target.id) : e.keyCode);
+        pressedKeys.delete(e.pointerId);
 
         if (keyPress === this.DASkey){
             this.DASkey = false;
         }
         if (keyPress === KEY_BINDS.moveDown) {
-            this.dropInterval = this.DROP_SLOW;
+            this.softDrop(false);
         }
-        e.preventDefault();
+        if (e.type === 'keyup') { e.preventDefault(); }
     };
 
     let keyDown = (e) => {
@@ -180,6 +197,7 @@ Block.prototype.blockControll = function () {
         }
 
         let keyPress = isNumeric(e.target.id) ? parseInt(e.target.id) : e.keyCode;
+        if (e.pointerId !== undefined) { pressedKeys.set(e.pointerId, keyPress); }
 
         switch (keyPress) {
             case KEY_BINDS.moveRight:
@@ -200,10 +218,7 @@ Block.prototype.blockControll = function () {
                 break;
             }
             case KEY_BINDS.moveDown: // Down arrow
-                if (this.dropInterval !== this.DROP_FAST && this.tetris.stopped !== null) {
-                    this.drop();
-                    this.dropInterval = this.DROP_FAST;
-                }
+                this.softDrop(true);
                 break;
             case KEY_BINDS.rotLeft: // z key
                 this.rotate(-1);
@@ -212,10 +227,10 @@ Block.prototype.blockControll = function () {
                 this.rotate(+1);
                 break;
             case KEY_BINDS.hardDrop: // space
-                if (document.getElementById('message') === document.activeElement || this.tetris.stopped === null) {
+                if (document.getElementById('message') === document.activeElement) {
                     return;
                 } // inactivate drop when chating
-                this.drop(true);
+                this.hardDrop();
                 break;
             case KEY_BINDS.special1: // 1
             case KEY_BINDS.special2: // 2

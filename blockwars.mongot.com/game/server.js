@@ -11,7 +11,11 @@ const Status = require('./status');
 const Bot = require('./ai/bot.js');
 const config = require('../config.json');
 
+const DOMAIN = process.env.DOMAIN || config.DOMAIN;
+
 let BOT_COUNT = 0;
+
+const GAME_MESSAGES = new Set(['enter-room', 'take-seat', 'player-ready', 'state-update', 'state-lost', 'state-chat', 'add-special', 'use-special']);
 
 function createId() {
     const chars = 'abcdefghjkmnopqrstxz0123456789';
@@ -33,17 +37,9 @@ function createSession({name, ranking}) {
     }
     ranking = ranking === "yes" ? "yes" : "no"; // default is not ranked
 
-    const session = new Session({name, ranking});
+    const session = new Session({name, ranking}, {onChange: broadcastRooms});
     sessions.set(name, session);
     return session;
-}
-
-function getClient(session, clientId) {
-    for (const client of session.clients) {
-        if (client.id === clientId) {
-            return client;
-        }
-    }
 }
 
 function getSession({name}) {
@@ -57,20 +53,8 @@ function isGuest(client) {
     return false;
 }
 
-function canClientJoin(client) {
-    const session = client.session;
-
-    let countPlayers = 0;
-    for (const client of session.clients) {
-        if (client.status !== null) {
-            countPlayers++;
-        }
-    }
-    if (countPlayers > 4) {
-        return false;
-    }
-    
-    return true;
+function broadcastRooms() {
+    Lobby.roomEmit(updateRooms());
 }
 
 function updateRooms() {
@@ -155,17 +139,16 @@ exports.initialize = (server) => {
         socket.on('message', msg => {
             const data = JSON.parse(msg);
             if (data.type === "init_lobby") {
-                const rooms = updateRooms();
-                Lobby.roomEmit(rooms);
+                broadcastRooms();
                 const randomNr = Math.floor(1000 + Math.random() * 9000);
                 socket.username = (data.user === 'guest') ? 'guest' + randomNr : data.user.username;
                 socket.points = (data.user === 'guest') ? null : data.user.points_bw;
-                Lobby.broadcast({
+                Lobby.broadcast(socket, {
                     type: 'user_notification',
                     msg: socket.username + ' arrived to the lobby'
                 });
 
-                Lobby.send({
+                Lobby.send(socket, {
                     type: 'render_messages',
                     messages: lobbyChat
                 });
@@ -217,7 +200,7 @@ exports.initialize = (server) => {
     wsGame.on('error', () => console.log('wsGame errored'));
     wsGame.on('connection', (socket) => {
 
-        let client = createClient(socket);
+        const client = createClient(socket);
 
         socket.isAlive = true;
         socket.on('pong', () => { socket.isAlive = true; });
@@ -225,7 +208,11 @@ exports.initialize = (server) => {
         socket.on('message', msg => {
             const data = JSON.parse(msg);
 
-            if (data.type === "join-session") {
+            if (!GAME_MESSAGES.has(data.type)) { // a tab left open from before a deploy
+                return client.send({ type: "server-message", msg: "The game was updated. Please reload the page." });
+            }
+
+            if (data.type === "enter-room") {
                 if (data.user.username) {
                     client.id = data.user.username;
                     client.points = data.user.points_bw;
@@ -237,14 +224,12 @@ exports.initialize = (server) => {
                 } // TODO: prevent from multiple joining in the future
 
                 session.broadcastSession();
-
-                const rooms = updateRooms();
-                Lobby.roomEmit(rooms);
+                broadcastRooms();
 
                 data.clientId = client.id;
                 data.isGuest = isGuest(client);
                 data.status = session.status;
-                data.joinable = canClientJoin(client);
+                data.joinable = session.hasFreeSeat();
 
                 client.send(data);
                 return client.broadcast({
@@ -256,165 +241,38 @@ exports.initialize = (server) => {
                 return; // No session exist
             }
 
+            const session = client.session;
+
             if (data.type === "state-update") {
-                try {
-                    const [prop, value] = data.state;
-                    client.state[data.fragment][prop] = value;
-                    client.broadcast(data);
-                } catch (err) {
-                    console.log(err.message);
-                }
+                session.updateState(client, data);
             } else if (data.type === "add-special") {
-                if (client.session.status !== Status.session.running) {
-                    return; // got special when game finished
-                }
-                
-                if (data.specials.indexOf(19) != -1) { // it is a mine
-                    data.type = "state-lost";
-                    client.clientLost(data);
-                    data.type = "log-special";
-                    data.special = 19;
-                    data.receiver = client.id;
-                    return client.roomEmit(data);
-                }
-
-                client.specials.push.apply(client.specials, data.specials);
-                client.send({
-                    type: data.type,
-                    id: client.id,
-                    specials: data.specials
-                });
+                session.addSpecials(client, data);
             } else if (data.type === "use-special") {
-                if (client.session.status !== Status.session.running) {
-                    return; // used special when game finished
-                }
-
-                data.special = data.specials[0];
-                data.receiver = data.specials[1];
-                data.clientId = client.id;
-
-                const opponent = getClient(client.session, data.receiver);
-                
-                if (opponent == null || opponent.lost || opponent.status !== Status.client.ready) { // Opponent dont exist or lost
-                    return client.send({ type: "use-special-failed" }); 
-                } 
-        
-                if (!client.compareSpecials(data.special)) { // player dont have the special
-                    return client.send({ type: "use-special-failed" }); 
-                }
-
-                client.send({ type: "remove-special" });
-
-                opponent.send(data);
-                if (data.special === 16) { // if swop arena then swop player id
-                    data.clientId = data.receiver;
-                    client.send(data);
-                }
-
-                data.type = "log-special";
-                client.roomEmit(data);
-            } else if (data.type === "join-game") {
-                if (client.status === Status.client.joined) {
-                    console.log("user tries to join game when already joined (server.js)");
-                    return client.send({
-                        type: "status-error",
-                        message: "You already joined"
-                    }); // debbuging
-                }
-
-                if (canClientJoin(client)) {
-                    client.state = data.state;
-                    client.status = Status.client.joined;
-                    
-                    data.id = client.id;
-                    data.points = client.points;
-
-                    client.send(data);
-                    client.session.broadcastSession();
-
-                    if (client.session.timer !== null) { // reset countdown for all if it is running
-                        client.session.countDown();
-                        setTimeout(function () {
-                            const rooms = updateRooms();
-                            Lobby.roomEmit(rooms);
-                        }, 11000);
-                    }
-
-                    const rooms = updateRooms();
-                    Lobby.roomEmit(rooms);
-                }
-                
+                session.useSpecial(client, data);
+            } else if (data.type === "take-seat") {
+                session.takeSeat(client, data);
             } else if (data.type === "player-ready") {
-                const session = client.session;
-                if (session.status === Status.session.running || client.status !== Status.client.joined) {
-                    return;
-                } // if game is allready started or player clicked ready when not joined
-
-                client.status = Status.client.ready;
-                client.roomEmit(data);
-
-                let playersReady = 0;
-                let playersJoined = 0;
-                const startingPlayers = [];
-
-                for (const client of session.clients) {
-                    if (client.status === Status.client.ready) {
-                        playersReady++;
-                        startingPlayers.push(client);
-                    }
-                    if (client.status !== null) {
-                        playersJoined++;
-                    }
-                }
-                if (playersReady === playersJoined) {
-                    clearTimeout(session.timer);
-                    session.timer = null;
-
-                    const blocks = session.tetris.start();
-                    data.blocks = blocks;
-                    data.type = "game-start";
-                    session.status = Status.session.running;
-                    client.roomEmit(data);
-
-                    session.playingClients = startingPlayers; // store all started players
-                    session.GameStartTime = new Date().getTime(); // store the playing time
-                    session.speedUpBlocks(); //start block speed timer
-                    // Update rooms in lobby
-                    const rooms = updateRooms();
-                    Lobby.roomEmit(rooms);
-                } else if (session.timer === null) {
-                    session.countDown();
-                    setTimeout(function () { // Remove active players from lobby room if not pressed ready
-                        const rooms = updateRooms();
-                        Lobby.roomEmit(rooms);
-                    }, 11000);
-                }
-
+                session.ready(client, data);
             } else if (data.type === "state-lost") {
-                client.clientLost(data);
-                //if () { }
-                    // if game is over then update rooms in lobby
-                    const rooms = updateRooms();
-                    Lobby.roomEmit(rooms);
-                
+                session.playerLost(client, data);
             } else if (data.type === 'state-chat') {
                 const _message = data.message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
                 if(_message.toUpperCase() === "ADD BOT"){
-                    if (canClientJoin(client)) { // create bot
-                        const _bots = [...client.session.clients].filter(c => c.socket.constructor.name === 'MockClient');
+                    if (session.hasFreeSeat()) { // create bot
+                        const _bots = [...session.clients].filter(c => c.isBot);
                         if(_bots.length >= 4) return; // max 4 bots so player can join
                         const BotName = "#Bot-" + _bots.length;
-                        const bot = new Bot(client.session, BotName);
-                        client.session.join(bot);
-                        client.session.broadcastSession();
+                        const bot = new Bot(session, BotName);
+                        session.join(bot);
+                        session.broadcastSession();
                     }
                     BOT_COUNT++;
                 }
                 else if(_message.toUpperCase() === "LOSE BOTS"){
-                    const _players = client.session.playingClients.filter(c => c.lost === false);
-                    for (const client of _players) {
-                        if (client.socket.constructor.name === 'WebSocket') {
+                    const _players = session.playingClients.filter(c => c.lost === false);
+                    for (const player of _players) {
+                        if (!player.isBot) {
                             return client.send({
                                 clientId: "",
                                 type: 'state-chat',
@@ -428,13 +286,13 @@ exports.initialize = (server) => {
                     }
                 }
                 else if (_message === "#bye bots"){
-                    for (const bot of client.session.clients) {
+                    for (const bot of session.clients) {
                         bot.stop = true;
                         bot.lost = true;
                         delete bot.socket;
-                        client.session.leave(bot);
+                        session.leave(bot);
                     }
-                    return client.session.broadcastSession();
+                    return session.broadcastSession();
                 }
                 else if(_message === "#sessions"){
                     return console.log(sessions);
@@ -447,7 +305,7 @@ exports.initialize = (server) => {
                     }); // human
                 }
                 else { // log chat from game room
-                    gameChat.push({message: _message, username: client.id, room: client.session.id});
+                    gameChat.push({message: _message, username: client.id, room: session.id});
                     fs.writeFile('gameChat.json', JSON.stringify(gameChat), (err) => { if(err) console.log(err); });
                 }
 
@@ -461,48 +319,17 @@ exports.initialize = (server) => {
                 const session = client.session;
 
                 if (session) {
-                    client.broadcast({
-                        type: "server-message",
-                        msg: client.id + " left the room"
-                    });
-                    session.leave(client);
-
-                    // if bots exist without humas then delete them
-                    let iterations = session.clients.size;
-                    for (const client of session.clients) {
-                        if (client.socket.constructor.name === 'WebSocket') {
-                            break; // human
-                        }
-                        if (--iterations <= 0) // only bots in the room
-                        {
-                            for (const bot of session.clients) {
-                                bot.stop = true;
-                                delete bot.socket;
-                                session.leave(bot);
-                            }
-                        }
-                    }
-
-                    session.broadcastSession();
+                    const empty = session.playerLeft(client);
 
                     const rooms = updateRooms().rooms;
                     const nrOfOpenRooms = rooms.filter(c => c.status === Status.session.waiting && c.ranking === session.ranking);
 
-                    if (session.clients.size === 0 && (nrOfOpenRooms.length > 2 || session.status !== Status.session.waiting)) {
+                    if (empty && (nrOfOpenRooms.length > 2 || session.status !== Status.session.waiting)) {
+                        session.dispose();
                         sessions.delete(session.id); // Delete room
-                    } else if (session.status === Status.session.running && client.state !== null) {
-                        client.clientLost({
-                            type: 'state-lost'
-                        });
                     }
 
-                    client = null; // probably dont needed because of gb
-                    Lobby.leave();
-
-                    Lobby.roomEmit({
-                        type: 'render_rooms',
-                        rooms: updateRooms().rooms
-                    });
+                    broadcastRooms();
                 }
             } catch (error) {
                 console.log(error);
@@ -518,7 +345,7 @@ exports.initialize = (server) => {
      */
     server.on('upgrade', function upgrade(request, socket, head) {
         const pathname = request.url;
-        if(request?.headers?.origin !== config.DOMAIN){
+        if(request?.headers?.origin !== DOMAIN){
             return console.log('wrong origin:',request?.headers?.origin); // connection coming from another domain
         }
         if (pathname === '/lobby') {

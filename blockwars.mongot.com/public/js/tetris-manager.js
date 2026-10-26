@@ -14,6 +14,7 @@ TetrisManager.prototype.initArenas = function(){
 
 TetrisManager.prototype.createLocalPlayer = function () {
     if(this.document.querySelector('.arena.local')){
+        this.document.getElementById('tetris').appendChild(this.document.getElementById('player_ready'));
         //log if local player exist
         let li = document.createElement("li");
         li.innerHTML = "you allready have an local instance!";
@@ -26,6 +27,7 @@ TetrisManager.prototype.createLocalPlayer = function () {
     }
 
     const element = this.document.importNode(this.loacalTemplate.content, true).children[0];
+    element.appendChild(this.document.getElementById('player_ready'));
     const tetris = new Tetris(element);
     //this.instances.push(tetris);
 
@@ -62,6 +64,11 @@ TetrisManager.prototype.createPlayer = function () {
  * Remove arena and add a new on the same place
  */
 TetrisManager.prototype.removePlayer = function (tetris, gamestatus) {
+    if (tetris.element.classList.contains('local')) {
+        this.document.getElementById('tetris').appendChild(this.document.getElementById('player_ready'));
+    }
+    tetris.resizeObserver.disconnect();
+    document.removeEventListener('themechange', tetris.redraw);
     let element = document.importNode(this.template.content, true).children[0];
     tetris.element.parentNode.insertBefore(element, tetris.element);
     tetris.element.remove();

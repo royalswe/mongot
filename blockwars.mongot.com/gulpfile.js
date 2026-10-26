@@ -13,7 +13,7 @@ const jsDestDev = 'public/js/dist';
 function jsDev() {
   return mergeStream(
     src(
-      ['public/js/modules/utils.js', 'public/js/modules/tetris-utils.js', 'public/js/modules/screen-settings.js', 'public/js/connection-manager.js', 'public/js/tetris-manager.js',
+      ['game/special-rules.js', 'public/js/modules/utils.js', 'public/js/modules/canvas-fit.js', 'public/js/modules/layout.js', 'public/js/modules/gestures.js', 'public/js/modules/touch.js', 'public/js/modules/a11y.js', 'public/js/modules/tetris-utils.js', 'public/js/modules/theme.js', 'public/js/modules/screen-settings.js', 'public/js/connection-manager.js', 'public/js/tetris-manager.js',
        'public/js/tetris.js', 'public/js/events.js','public/js/arena.js','public/js/block.js','public/js/special.js','public/js/chat.js','public/js/zmain.js']
     )
       .pipe(babel({
@@ -52,7 +52,7 @@ function jsDev() {
 function js() {
   return mergeStream(
     src(
-      ['public/js/modules/utils.js', 'public/js/modules/tetris-utils.js', 'public/js/modules/screen-settings.js', 'public/js/connection-manager.js', 'public/js/tetris-manager.js',
+      ['game/special-rules.js', 'public/js/modules/utils.js', 'public/js/modules/canvas-fit.js', 'public/js/modules/layout.js', 'public/js/modules/gestures.js', 'public/js/modules/touch.js', 'public/js/modules/a11y.js', 'public/js/modules/tetris-utils.js', 'public/js/modules/theme.js', 'public/js/modules/screen-settings.js', 'public/js/connection-manager.js', 'public/js/tetris-manager.js',
        'public/js/tetris.js', 'public/js/events.js','public/js/arena.js','public/js/block.js','public/js/special.js','public/js/chat.js','public/js/zmain.js']
     )
       .pipe(babel({
@@ -109,6 +109,11 @@ function views() {
     .pipe(dest(prod + '/views'));
 }
 
+function fonts() {
+  return src('public/fonts/*')
+    .pipe(dest(prod + '/public/fonts'));
+}
+
 // Optimize Images
 function img(){
   return src('public/img/*/**')
@@ -121,4 +126,5 @@ exports.views = views;
 exports.js = js;
 exports.jsDev = jsDev;
 exports.img = img;
-exports.default = parallel(js, css, views, img);
+exports.fonts = fonts;
+exports.default = parallel(js, css, views, img, fonts);

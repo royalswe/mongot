@@ -243,6 +243,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     position: fixed;
+    z-index: 500; /* above the phone controls and the chat drawer */
     background-color: #111;
     top: 0;
     left: 0;
@@ -279,16 +280,19 @@
   div.close-controler-modal{
     padding: 1em;
   }
-  .close-controler-modal a {
+  .close-controler-modal button {
     cursor: pointer;
+    background: transparent;
+    font: inherit;
     color: #68ce52;
     text-decoration: none;
     border: 1px solid;
-    padding: 5px;
+    padding: 8px 16px;
+    min-height: 44px;
     border-radius: 5px;
   }
 
-  .close-controler-modal a:hover {
+  .close-controler-modal button:hover {
     color: #7cf361;
   }
 
@@ -362,4 +366,29 @@ input[type=number]::-webkit-outer-spin-button {
   #controler_settings .explanation{
     color: #9e9e9e;
     font-size: 1rem;
+  }
+
+  /* Touch settings */
+  #touch_settings {
+    margin: 0 auto 1em;
+  }
+  #touch_settings th {
+    font-weight: bold;
+    text-align: left;
+    line-height: 2.2;
+    padding-right: 1.5em;
+  }
+  #touch_settings td {
+    text-align: left;
+  }
+  #touch_settings input[type=checkbox] {
+    -webkit-appearance: checkbox;
+    appearance: auto;
+    width: 1.4em;
+    height: 1.4em;
+  }
+  #touch_settings input[type=range] {
+    -webkit-appearance: auto;
+    appearance: auto;
+    width: 9em;
   }

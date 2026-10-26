@@ -39,6 +39,11 @@ let server = http.createServer(app).listen(port);
  * Makes it possible to get static files from view
  */
 app.use(express.static(__dirname + '/public'));
+
+/**
+ * The special rules are shared with the server bot, so they live in game/
+ */
+app.get('/js/special-rules.js', (req, res) => res.sendFile(__dirname + '/game/special-rules.js'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
