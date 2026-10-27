@@ -50,7 +50,8 @@ test('the playfield and on-screen keys keep touches to themselves', async ({page
 
     const touchActions = await page.evaluate(() => [
         document.querySelector('.arena.local canvas.tetris'),
-        document.querySelector('[id="37"]')
+        document.querySelector('[id="37"]'),
+        document.querySelector('.arena:not(.local) canvas.tetris')
     ].map(element => getComputedStyle(element).touchAction));
-    expect(touchActions).toEqual(['none', 'none']);
+    expect(touchActions).toEqual(['none', 'none', 'auto']);
 });

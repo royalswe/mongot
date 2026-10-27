@@ -76,6 +76,76 @@ function defineAccessibilityTests(test) {
         });
     }
 
+    test('How to play keeps navigation visible and explains all three steps', async ({page}) => {
+        await page.goto(`/game?room=${uniqueRoom('guide')}&rank=no`);
+        await page.locator('#settings_toggle').click();
+        await page.getByRole('button', {name: 'How to play', exact: true}).click();
+        const dialog = page.getByRole('dialog', {name: 'How to play'});
+        const progress = dialog.getByRole('status');
+        const previous = dialog.getByRole('button', {name: 'Previous'});
+        const next = dialog.locator('#nextBtn');
+
+        for (const theme of ['classic', 'flat', 'retro']) {
+            await page.evaluate(name => document.documentElement.className = `theme-${name}`, theme);
+            await expect(progress).toHaveText('Step 1 of 3 - Get started');
+            await expect(previous).toBeHidden();
+            await expect(dialog.locator('.tab:visible')).toContainText('Click when ready!');
+            await expect(dialog.locator('.tab:visible')).toContainText('These are the default keys');
+            for (let step = 1; step <= 3; step++) {
+                for (const control of [next, dialog.getByRole('button', {name: 'Close How to play'})]) {
+                    await expect(control).toBeInViewport({ratio: 1});
+                }
+                const overflow = await dialog.locator('.tab:visible').evaluate(element => element.scrollWidth > element.clientWidth);
+                expect(overflow, `step ${step} on ${theme}`).toBe(false);
+                if (step < 3) { await next.click(); }
+            }
+            await expect(progress).toHaveText('Step 3 of 3 - Special reference');
+            await expect(dialog.locator('.specials-list li')).toHaveCount(12);
+            await expect(next).toHaveText('I understand');
+            await previous.click();
+            await expect(progress).toHaveText('Step 2 of 3 - Collect and use Specials');
+            await expect(dialog.locator('.tab:visible')).toContainText('You are always number 3');
+            await expect(dialog.locator('.tab:visible')).toContainText("Tap an opponent's Arena");
+            await previous.click();
+        }
+
+        await next.click();
+        await next.click();
+        await next.click();
+        await expect(dialog).toBeHidden();
+        expect(await page.evaluate(() => localStorage.getItem('rule-read'))).toBe('true');
+        await page.reload();
+        await expect(dialog).toBeHidden();
+        await page.locator('#settings_toggle').click();
+        await page.getByRole('button', {name: 'How to play', exact: true}).click();
+        await expect(progress).toHaveText('Step 1 of 3 - Get started');
+        await dialog.getByRole('button', {name: 'Close How to play'}).click();
+        await expect(dialog).toBeHidden();
+        await expect(page.locator('#settings_toggle')).toBeFocused();
+    });
+
+    test('Controls has a top-right close button that saves settings just like Done', async ({page}) => {
+        await page.goto(`/game?room=${uniqueRoom('close-controls')}&rank=no`);
+        const dialog = page.getByRole('dialog', {name: 'Controls', exact: true});
+        for (const name of ['Close Controls', 'Done']) {
+            await page.locator('#settings_toggle').click();
+            await page.getByRole('button', {name: 'Controls', exact: true}).click();
+            const close = dialog.getByRole('button', {name: 'Close Controls'});
+            await expect(close).toBeInViewport({ratio: 1});
+            const bounds = await close.boundingBox();
+            expect(bounds.x + bounds.width).toBeGreaterThan(page.viewportSize().width - 20);
+            expect(bounds.y).toBeLessThan(20);
+            await dialog.locator('#DAS').fill('12');
+            await dialog.locator('#ARR').fill('7');
+            await dialog.locator('#moveLeft').click();
+            await dialog.getByRole('button', {name, exact: true}).click();
+            await expect(dialog).toBeHidden();
+            await expect(page.locator('#settings_toggle')).toBeFocused();
+            expect(await page.evaluate(() => [localStorage.getItem('DAS'), localStorage.getItem('ARR')])).toEqual(['12', '7']);
+            await expect(page.locator('#moveLeft')).toHaveText('←');
+        }
+    });
+
     test('every button, field and toggle has a name', async ({page}) => {
         await page.goto(`/game?room=${uniqueRoom('names')}&rank=no`);
 

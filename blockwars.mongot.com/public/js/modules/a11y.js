@@ -61,5 +61,5 @@
     }
 
     watchDialog(document.getElementById('rules_modal'), '.close-rules');
-    watchDialog(document.getElementById('controler_settings'), '.close-controler-modal button');
+    watchDialog(document.getElementById('controler_settings'), '.close-controls');
 })();

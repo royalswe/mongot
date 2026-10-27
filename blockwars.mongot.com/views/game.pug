@@ -85,83 +85,128 @@ html(lang='en')
 
     #rules_modal(style='display:none;', role='dialog', aria-modal='true', aria-label='How to play')
       .rules-popup
-        button.close-rules(type='button', aria-label='Close') X
-        // One "tab" for each step in the form:
-        .tab
+        .rules-header
           h2 How to play
-          .screenshot-holder.a
-          .screenshot-explanation.a
-            p
-              | Blockwar is a Tetris variant where the goal is to stay alive for as long as possible until the opponents fill their playing field before your own gets filled.
-            p
-              | To interact with the game use the keys that are shown on the image.
-              br
-              | If you use a device with touh screen then you can use the controll symbols at the bottom of the game to interact with the game.
-              br
-              | On desktop, use the chevron at the bottom to hide or show chat and the on-screen keyboard together. Hiding them gives the Arenas more space. On phones, use the chat and keyboard icons to toggle each panel separately.
-              | The framed player Arena keeps the next piece and Specials together when space permits; smaller screens use the compact layout.
+          button.close-rules.modal-close(type='button', aria-label='Close How to play') &times;
+        p#rules_progress.rules-progress(role='status', aria-live='polite')
         .tab
-          h2 Collect specials
-          .screenshot-holder.b
-          .screenshot-explanation.b
-            p
-              | For every 2 lines you clear at once, one special item will randomly appear in your field
-            p
-              | When you clear a line that has a special item, it will be transfered to your item queue on the right side of the field
-            p
-              | To use the first item in your item queue, press the players number.
-              br
-              |  The players numbers is shown bellow each player field and you are always number 3.
+          h3 Be the last Player standing
+          p Fit falling blocks into complete horizontal rows to clear them. Keep your Arena from filling up and outlast the other Players.
+          ol.rules-start
+            li
+              strong Take a seat.
+              |  You enter a Room as a Spectator. Choose an open Seat to play.
+            li
+              strong Click when ready!
+              |  The Game starts when every seated Player is Ready.
+            li
+              strong Clear rows and send Specials.
+              |  Help yourself or disrupt an opponent to stay in the Game.
+          .rules-columns
+            section.rules-card
+              h4 Keyboard
+              p These are the default keys. Change them in Settings &gt; Controls.
+              dl.rules-keys
+                dt Move
+                dd
+                  kbd &larr;
+                  = ' '
+                  kbd &rarr;
+                dt Rotate right / left
+                dd
+                  kbd &uarr;
+                  = ' / '
+                  kbd Z
+                dt Soft drop
+                dd
+                  kbd &darr;
+                dt Hard drop
+                dd
+                  kbd Space
+            section.rules-card
+              h4 Touch
+              ul
+                li Drag across your Arena to move.
+                li Tap its left or right half to rotate in that direction.
+                li Hold or drag down to soft drop; flick down to hard drop.
+              p Prefer buttons? Enable On-screen buttons in Controls.
+          p.rules-tip Need more space? On desktop, use the bottom chevron to hide chat and the keyboard. On phones, toggle them separately with the chat and keyboard icons.
         .tab
-          h2 Special description
+          h3 Collect and use Specials
+          ol.rules-start
+            li
+              strong Create.
+              |  Clear 2 or 3 rows with one piece to create one Special, or 4 rows to create two. Specials appear on blocks remaining in your Arena, so an empty Arena cannot receive one.
+            li
+              strong Collect.
+              |  Clear a row containing a Special to add it to your queue beside your Arena.
+            li
+              strong Choose a target.
+              |  You always use the first Special in your queue. Its name is shown beside your Arena.
+          .rules-columns
+            section.rules-card
+              h4 Keyboard and on-screen buttons
+              p Press a Player's number (1 &ndash; 5) to send your next Special to that Player. The numbers appear below the Arenas.
+              p
+                strong You are always number 3.
+                |  Use helpful Specials on yourself and harmful ones on opponents. Number keys can be changed in Controls.
+            section.rules-card
+              h4 Touch targeting
+              p Tap an opponent's Arena to send your next Special to them.
+              p Tap your own Special queue to use the next Special on yourself.
+          p.rules-tip Watch out for Mines! Clearing a row containing a Mine eliminates you instead of giving you a Special.
+        .tab
+          h3 Know your Specials
+          p Every Special affects its target's Arena. Choose carefully: a helpful Special can also help an opponent.
           ul.specials-list
             li
               span
-              | <b>Add row</b> - Add one line at the bottom with an hole
+              | <b>Add row</b> - Adds a row at the bottom with one gap.
             li
               span
-              | <b>Remove row</b> - Removes the row at the bottom
+              | <b>Remove row</b> - Removes the bottom row.
             li
               span
-              | <b>Earthquake</b> - Scramble all lines horizontal
+              | <b>Earthquake</b> - Scrambles the blocks within each row.
             li
               span
-              | <b>Clear specials</b> - Converts all special items to regular blocks
+              | <b>Clear specials</b> - Turns Specials and Mines into ordinary blocks.
             li
               span
-              | <b>Shotgun</b> - Creates random holes in the field
+              | <b>Shotgun</b> - Blasts random holes in the blocks.
             li
               span
-              | <b>Gravity</b> - Pushes blocks downwards, filling all gaps and clearing all whole rows
+              | <b>Gravity</b> - Drops blocks into gaps and clears completed rows.
             li
               span
-              | <b>Clear arena</b> - Removes all blocks from the field
+              | <b>Clear arena</b> - Removes every block.
             li
               span
-              | <b>Switch arena</b> - Swap your field with the opponents
+              | <b>Switch arena</b> - Swaps your Arena with the target's.
             li
               span
-              | <b>Monster</b> - Builds a monster with blocks
+              | <b>Monster</b> - Replaces the blocks with a monster-shaped stack.
             li
               span
-              | <b>Mini bomb</b> - Change all specials to deadly mines
+              | <b>Mini bomb</b> - Turns Specials into deadly Mines.
             li
               span
-              | <b>Mine</b> -You lose the game if you collect this
+              | <b>Mine</b> - Eliminates you if you clear its row. Avoid collecting it!
             li
               span
-              | <b>Milkshake</b> - Scramble all lines vertical
+              | <b>Milkshake</b> - Scrambles blocks vertically.
 
         .rules-buttons
           button#prevBtn(type='button') Previous
           button#nextBtn(type='button') Next
 
-        .steps
+        .steps(aria-hidden='true')
           span.step
           span.step
           span.step
 
     #controler_settings(role='dialog', aria-modal='true', aria-label='Controls')
+      button.close-controls.modal-close(type='button', aria-label='Close Controls') &times;
       h2 Controls
       p
         | Click on the control you want to change, then press any key.

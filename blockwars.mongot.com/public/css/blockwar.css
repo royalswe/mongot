@@ -119,10 +119,13 @@ section#tetris {
 
 canvas.tetris {
   outline: 0.15em solid #b7b7b7;
-  touch-action: none;
   width: 100%;
   background-color: #333333;
   border-radius: 1%;
+}
+
+.arena.local canvas.tetris {
+  touch-action: none;
 }
 
 .arena:nth-child(3) canvas.tetris {

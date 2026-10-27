@@ -71,7 +71,7 @@ Session.prototype.getClient = function (id) {
  * Take a seat. Returns false if the client is already seated or no seat is free.
  */
 Session.prototype.takeSeat = function (client, data) {
-    if (client.status === Status.client.seated) {
+    if (client.status !== null) {
         client.send({ type: "status-error", message: "You already have a seat" });
         return false;
     }
@@ -128,6 +128,16 @@ Session.prototype.start = function (starter, data, startingPlayers) {
 };
 
 Session.prototype.updateState = function (client, data) {
+    const allowedProperties = {
+        block: ['pos', 'matrix'],
+        arena: ['matrix']
+    };
+    if (!Object.prototype.hasOwnProperty.call(allowedProperties, data.fragment) ||
+        !Array.isArray(data.state) || data.state.length !== 2 ||
+        !allowedProperties[data.fragment].includes(data.state[0])) {
+        return false;
+    }
+
     try {
         const [prop, value] = data.state;
         client.state[data.fragment][prop] = value;

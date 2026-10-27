@@ -43,6 +43,10 @@ describe('seating', () => {
 
         assert.equal(session.takeSeat(a, { state: {} }), false);
         assert.equal(lastOfType(a, 'status-error').message, 'You already have a seat');
+
+        a.status = Status.client.ready;
+        assert.equal(session.takeSeat(a, { state: {} }), false);
+        assert.equal(lastOfType(a, 'status-error').message, 'You already have a seat');
     });
 
     test('seating while a countdown runs restarts it', () => {
@@ -164,6 +168,11 @@ describe('state updates', () => {
 
         assert.equal(session.updateState(a, { fragment: 'block', state: ['pos', 1] }), false); // unseated
         assert.equal(session.updateState(a, { fragment: 'block' }), false);
+        a.state = { arena: { matrix: [] }, block: { pos: { x: 0, y: 0 }, matrix: [] } };
+        assert.equal(session.updateState(a, { fragment: '__proto__', state: ['polluted', true] }), false);
+        assert.equal(session.updateState(a, { fragment: 'block', state: ['constructor', true] }), false);
+        assert.equal(session.updateState(a, { fragment: 'arena', state: ['pos', true] }), false);
+        assert.equal(a.state.block.constructor, Object);
         assert.equal(lastOfType(b, 'state-update'), undefined);
     });
 });

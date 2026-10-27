@@ -13,18 +13,18 @@
   let prevBtn = document.getElementById('prevBtn');
   let nextBtn = document.getElementById('nextBtn');
   let tabs = document.getElementsByClassName("tab");
+  const progress = document.getElementById('rules_progress');
+  const stepNames = ['Get started', 'Collect and use Specials', 'Special reference'];
   let btn = document.getElementsByClassName("icon-help")[0];
 
-  // Get the <span> element that closes the modal
-  let span = document.getElementsByClassName("close-rules")[0];
+  const closeButton = document.getElementsByClassName("close-rules")[0];
 
   // When the user clicks the button, open the modal 
   btn.onclick = function() {
       modal.style.display = "block";
   };
 
-  // When the user clicks on <span> (x), close the modal
-  span.onclick = function() {
+  closeButton.onclick = function() {
       modal.style.display = "none";
   };
 
@@ -49,6 +49,8 @@
   function showTab(n) {
     // This function will display the specified tab of the form...
     tabs[n].style.display = "block";
+    tabs[n].scrollTop = 0;
+    progress.textContent = `Step ${n + 1} of ${tabs.length} - ${stepNames[n]}`;
     //... and fix the Previous/Next buttons:
     if (n == 0) {
       prevBtn.style.display = "none";
@@ -256,8 +258,7 @@ let KEY_BINDS = {
       keyListeners();
     }
   };
-  // When the user clicks on Done close the modal
-  document.getElementsByClassName("close-controler-modal")[0].onclick = function () {
+  function closeControls() {
     controlerModal.style.display = "none";
     //  If we're already waiting for an input, then set last vale when closing modal.
     if (currCell) {
@@ -272,7 +273,11 @@ let KEY_BINDS = {
     localStorage.setItem('ARR', ARR_VALUE);
     DAS_VALUE = DAS_VALUE * 10;
     ARR_VALUE = ARR_VALUE * 10;
-  };
+  }
+
+  controlerModal.querySelectorAll('.close-controls, .close-controler-modal button').forEach(button => {
+    button.addEventListener('click', closeControls);
+  });
 
   function keyListeners(){
     // Give controls an event listener.

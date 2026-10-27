@@ -1,7 +1,8 @@
 #rules_modal {
     position: fixed;
     z-index: 9999;
-    padding-top: 50px;
+    padding: 16px;
+    box-sizing: border-box;
     left: 0;
     top: 0;
     width: 100%;
@@ -12,17 +13,24 @@
   }
   
   .rules-popup {
-      position:absolute;
-      margin-left: 15%;
-      width: 70%;
-      height: 80%;
+      position: relative;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 860px;
+      height: 100%;
+      max-height: 820px;
       background-color:#111;
-      padding:5px;
-      border-radius:4px;
+      padding: 24px;
+      box-sizing: border-box;
+      border: 1px solid #525866;
+      border-radius: 12px;
       color:#FFF;
       z-index: 999;
-      animation: mymove 0.5s;
-      font-size: 0.8em;
+      font-size: 16px;
+      line-height: 1.55;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, .6);
   }
   
   @keyframes mymove {
@@ -32,43 +40,138 @@
   
   
   #rules_modal h2{
-    text-align: center;
-    height: 10%;
-    margin: 0px;
-    padding-top: 1%;
+    text-align: left;
+    margin: 0;
+    padding: 0;
+    font-size: 26px;
   }
   
-  .close-rules {
-      border: 2px solid #c2c2c2;
-      position: relative;
-      float: right;
-      padding: 6px 8px;
-      top: -14px;
-      right: -13px;
-      background-color: #ff4646;
-      border-radius: 20px;
-      font-size: 15px;
-      font-weight: 700;
+  .modal-close {
+      border: 1px solid #697080;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      background: #292e38;
+      border-radius: 8px;
+      font-size: 28px;
+      line-height: 1;
       color: #fff;
-      text-decoration: none;
-      cursor: pointer
+      cursor: pointer;
+  }
+
+  .modal-close:hover {
+    background: #444c5c;
+  }
+
+  .rules-header {
+    padding-right: 44px;
+  }
+
+  .rules-progress {
+    margin: 8px 0 16px;
+    color: #c3cad7;
+    font-size: 14px;
   }
   
   /* Hide all steps by default: */
-  .tab {
+  .rules-popup .tab {
     display: none;
-    height: 85%;
+    flex: 1;
+    min-height: 0;
     overflow: auto;
+    overscroll-behavior: contain;
+    padding-right: 8px;
+  }
+
+  .rules-popup h3 {
+    margin: 0 0 12px;
+    font-size: 21px;
+  }
+
+  .rules-popup h4 {
+    margin: 0 0 8px;
+    font-size: 17px;
+  }
+
+  .rules-popup p {
+    margin: 0 0 16px;
+  }
+
+  .rules-popup .rules-progress {
+    margin: 8px 0 16px;
+  }
+
+  .rules-start {
+    padding-left: 24px;
+  }
+
+  .rules-start li {
+    padding-left: 4px;
+    margin-bottom: 12px;
+  }
+
+  .rules-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+
+  .rules-card {
+    border: 1px solid #525866;
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .rules-card ul {
+    padding-left: 20px;
+  }
+
+  .rules-card p:last-child {
+    margin-bottom: 0;
+  }
+
+  .rules-keys {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .rules-keys dd {
+    margin: 0;
+  }
+
+  .rules-keys kbd {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid #697080;
+    border-bottom-width: 3px;
+    border-radius: 4px;
+    font: inherit;
+  }
+
+  .rules-tip {
+    border-left: 3px solid #9be3df;
+    padding: 8px 12px;
+    background: rgba(155, 227, 223, .08);
   }
   
   .rules-buttons button {
-    background-color: #4CAF50;
+    background-color: #237b36;
     color: #ffffff;
     border: none;
     padding: 10px 20px;
     margin-right: 0.5em;
     /* font-size: 17px; */
     cursor: pointer;
+    min-height: 44px;
+    border-radius: 6px;
+    font: inherit;
   }
   
   .rules-buttons button:hover {
@@ -76,7 +179,7 @@
   }
   
   #prevBtn {
-    background-color: #bbbbbb;
+    background-color: #444c5c;
   }
   
   /* Make circles that indicate the steps of the form: */
@@ -95,36 +198,19 @@
     opacity: 1;
   }
   
-  .screenshot-holder.a{
-    background: url(../img/blockwar-controls-white.png) no-repeat;
-    background-size: contain;
-    background-position: center center;
-    width: 50%;
-    height: 50%;
-    float: left;
-  
-  }
-  .screenshot-holder.b{
-    background: url(../img/rules-arena.png) no-repeat;
-    background-position: center center;
-    background-size: contain;
-    width: 50%;
-    height: 100%;
-    height: 84%;
-    float: left;
-  }
-  
-  .screenshot-holder img{
-    width: 100%;
-    background-color: #ccc;
-  }
-  .screenshot-explanation{
-    width: 48%;
-    float: left;
-    padding-left: 2%;
-  }
   .rules-popup .specials-list{
       list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+  }
+
+  .rules-popup .specials-list li {
+    border: 1px solid #525866;
+    border-radius: 8px;
+    padding: 12px;
   }
   
   .rules-popup .specials-list span {
@@ -189,48 +275,32 @@
   
   .rules-buttons{
     text-align:right;
+    padding-top: 16px;
+    flex-shrink: 0;
   }
   .steps{
     text-align: center;
+    line-height: 1;
+    padding-top: 8px;
+    flex-shrink: 0;
   }
-  @media screen and (max-width: 720px) {
+  @media screen and (max-width: 600px), screen and (max-height: 520px) {
+      #rules_modal {
+        padding: 8px;
+      }
+
       .rules-popup {
-        margin-left: 3%;
-        width: 92%;
+        padding: 16px;
       }
-  
-      .screenshot-holder.a{
-        width: 100%;
-        float: none;
+
+      .rules-columns,
+      .rules-popup .specials-list {
+        grid-template-columns: 1fr;
       }
-  
-      .screenshot-explanation.a{
-        width: 100%;
-        float: none;
-        padding: 0%;
+
+      .rules-buttons {
+        padding-top: 8px;
       }
-      
-  }
-  
-  /* #### Mobile Phones Portrait #### */
-  @media only screen and (max-device-width : 1024px) and (orientation : portrait) {
-    .rules-popup {
-      font-size: 1.4em;
-      margin-left: 3%;
-      width: 92%;
-    }
-  
-    .screenshot-holder.a{
-      width: 100%;
-      float: none;
-    }
-  
-    .screenshot-explanation.a{
-      width: 100%;
-      float: none;
-      padding: 0%;
-    }
-  
   }
   /*** Settings and game rules end ***/
 
@@ -248,6 +318,14 @@
     top: 0;
     left: 0;
     animation: mymove 0.5s;
+    box-sizing: border-box;
+    padding: 64px 16px 16px;
+    font-size: 16px;
+  }
+
+  #controler_settings h2 {
+    margin-top: 0;
+    font-size: 26px;
   }
 
   /* Controls */
@@ -353,7 +431,7 @@ input[type=number]::-webkit-outer-spin-button {
 
 .number-input input[type=number] {
     border: none;
-    font-size: 2vw;
+    font-size: 18px;
     height: 2rem;
     width: 3rem;
     font-weight: bold;
