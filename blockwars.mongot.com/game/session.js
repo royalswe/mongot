@@ -165,6 +165,19 @@ Session.prototype.addSpecials = function (client, data) {
 };
 
 /**
+ * A playing client cleared two or more rows at once; the others bounce that Arena.
+ */
+Session.prototype.bounceArena = function (client, data) {
+    if (this.status !== Status.session.running) { return false; }
+    if (client.status !== Status.client.ready || client.lost) { return false; }
+    const rows = Number(data.rows);
+    if (!Number.isInteger(rows) || rows < 2) { return false; }
+
+    client.broadcast({ type: "arena-bounce", rows: Math.min(rows, 4) });
+    return true;
+};
+
+/**
  * data.specials is [special, receiverId]. The sender must own the special and the receiver still be playing.
  */
 Session.prototype.useSpecial = function (client, data) {

@@ -55,6 +55,8 @@ module.exports = function createNotifications({
         if (!validSubscription(req.body && req.body.subscription)) {
             return res.status(400).json({ error: 'Invalid or unsupported push subscription.' });
         }
+        const { endpoint, keys } = req.body.subscription;
+        req.subscriptionKey = JSON.stringify({ endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } });
         next();
     });
 

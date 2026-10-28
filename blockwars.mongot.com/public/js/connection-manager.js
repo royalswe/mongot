@@ -283,6 +283,9 @@ ConnectionManager.prototype.receive = function(event) {
         case 'log-special':
             this.logSpecial(data);
             break;
+        case 'arena-bounce':
+            if (this.peers.has(data.clientId)) { this.peers.get(data.clientId).bounceRows(data.rows); }
+            break;
         case 'remove-special':
             this.localTetris.special.removeSpecial();
             break;
@@ -490,6 +493,10 @@ ConnectionManager.prototype.watchEvents = function() {
             fragment: 'arena',
             state: ['matrix', value]
         });
+    });
+
+    arena.events.listen('bounce', rows => {
+        this.send({ type: 'arena-bounce', rows });
     });
 
 };

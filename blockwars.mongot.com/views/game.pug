@@ -256,24 +256,79 @@ html(lang='en')
             th Special 5
             td#special5
               | 5
+      h3 Handling
       table#DAS_ARR
         tbody
           tr
-            th DAS
+            th
+              label(for='os_repeat') Use keyboard repeat
+            td
+              input#os_repeat(type='checkbox')
+            td
+          tr
+            th
+              label(for='DAS') DAS
             td
               .number-input
                 button(type='button', aria-label='Decrease DAS', onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
-                input#DAS(min='0' max='30' name='DAS' value='0' type='number', aria-label='DAS')
+                input#DAS(min='0' max='500' name='DAS' value='167' type='number', aria-label='DAS in milliseconds')
                 button.plus(type='button', aria-label='Increase DAS', onclick="this.parentNode.querySelector('input[type=number]').stepUp()")
-            td         
+            td.unit ms
           tr
-            th ARR
+            th
+              label(for='ARR') ARR
             td
               .number-input
                 button(type='button', aria-label='Decrease ARR', onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
-                input#ARR(min='0' max='30' name='ARR' value='10' type='number', aria-label='ARR')
+                input#ARR(min='0' max='200' name='ARR' value='33' type='number', aria-label='ARR in milliseconds')
                 button.plus(type='button', aria-label='Increase ARR', onclick="this.parentNode.querySelector('input[type=number]').stepUp()")
-      p.explanation DAS is delayed auto shift (How long you have to hold down the button before a piece starts flying to the wall).<br>ARR is auto repeat rate (how quickly the pieces move from right to left.)<br>Set DAS to 0 to disable this functions.
+            td.unit ms
+          tr
+            th
+              label(for='DCD') DCD
+            td
+              .number-input
+                button(type='button', aria-label='Decrease DCD', onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
+                input#DCD(min='0' max='200' name='DCD' value='0' type='number', aria-label='DCD in milliseconds')
+                button.plus(type='button', aria-label='Increase DCD', onclick="this.parentNode.querySelector('input[type=number]').stepUp()")
+            td.unit ms
+          tr
+            th
+              label(for='SDF') SDF
+            td
+              .number-input
+                button(type='button', aria-label='Decrease SDF', onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
+                input#SDF(min='2' max='41' name='SDF' value='16' type='number', aria-label='SDF, soft drop speed as a multiple of gravity, 41 is instant')
+                button.plus(type='button', aria-label='Increase SDF', onclick="this.parentNode.querySelector('input[type=number]').stepUp()")
+            td.unit#SDF_unit ×
+          tr
+            th
+              label(for='ghost_piece') Ghost piece
+            td
+              input#ghost_piece(type='checkbox')
+            td
+      p.explanation
+        | Use keyboard repeat lets your operating system's key repeat move the block, like DAS 0 used to; DAS, ARR and DCD are then not used.
+        br
+        | DAS (delayed auto shift) is how long you hold left or right before the block starts sliding by itself.
+        br
+        | ARR (auto repeat rate) is the time between each step of that slide; 0 sends it straight to the wall.
+        br
+        | DCD (DAS cut delay) pauses the slide for a moment after you rotate or a new block appears; 0 turns it off.
+        br
+        | SDF (soft drop factor) is how many times faster than gravity Move Down drops; 41 (∞) drops to the floor at once.
+        br
+        | Ghost piece shows where the block will land.
+
+      h3 Effects
+      table#effect_settings
+        tbody
+          tr
+            th
+              label(for='arena_bounce') Arena bounce
+            td
+              input#arena_bounce(type='checkbox', checked='')
+      p.explanation Arena bounce shakes a player's Arena when they clear two or more rows at once, harder for four.
 
       h3 Touch
       table#touch_settings
@@ -316,6 +371,7 @@ html(lang='en')
     script(src='/js/modules/canvas-fit.js')
     script(src='/js/modules/layout.js')
     script(src='/js/modules/gestures.js')
+    script(src='/js/modules/handling.js')
     script(src='/js/modules/touch.js')
     script(src='/js/modules/a11y.js')
     script(src='/js/modules/tetris-utils.js')

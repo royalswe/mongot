@@ -103,6 +103,7 @@ Tetris.prototype.drawSweepRow = function (rows, callback) {
                 let row = this.arena.matrix.splice(rows[i] + i, 1)[0].fill(0); // sweep row
                 this.arena.matrix.unshift(row); // move it to the top
             }
+            this.bounceRows(rows.length);
             if (this.stopped === null) { // start the animation again if game not ended
                 this.stopped = false;
                 this._update();
@@ -133,7 +134,19 @@ Tetris.prototype.draw = function () {
     this.drawGrid(THEME.get().grid);
 
     this.drawMatrix(this.arena.matrix, {x: 0, y: 0});
+    this.drawGhost();
     this.drawMatrix(this.block.matrix, this.block.pos);
+};
+
+// Where the falling block will land, only on your own Arena and only when turned on in Controls.
+Tetris.prototype.drawGhost = function () {
+    if (!HANDLING.get().ghost || !(this.block instanceof Block) || !this.element.classList.contains('local')) { return; }
+    const y = this.block.landingY();
+    if (y <= this.block.pos.y) { return; }
+    this.ctx.save();
+    this.ctx.globalAlpha = 0.3;
+    this.drawMatrix(this.block.matrix, {x: this.block.pos.x, y});
+    this.ctx.restore();
 };
 
 // Faint lines between the cells, so a played field matches the blocks of an empty one
@@ -228,7 +241,7 @@ Tetris.prototype.run = function () {
         this.fitCanvas();
     }
     this.block.DROP_SLOW = 800;
-    this.block.dropInterval = this.block.DROP_SLOW; // Remove fast moving block
+    this.block.releaseAll(); // Remove fast moving block and held keys from the last game
     this.stopped = false;
     this._update(); // start the game
     this.handleVisibilityChange();
@@ -305,9 +318,17 @@ Tetris.prototype.bounceArena = function () {
     this.element.querySelector(".tetris").classList.add("tetris-pulse");
 };
 
+Tetris.prototype.bounceRows = function (rowCount) {
+    if (rowCount < 2 || localStorage.getItem("arena-bounce") === "off") { return; }
+    const arena = this.element.querySelector(".tetris");
+    if (!arena) { return; }
+    arena.classList.remove("tetris-bounce", "tetris-bounce-big");
+    void arena.offsetWidth; // requires a recalc to append the class again
+    arena.classList.add(rowCount >= 4 ? "tetris-bounce-big" : "tetris-bounce");
+};
+
 Tetris.prototype.speedUpBlocks = function () {
     this.block.DROP_SLOW = this.block.DROP_SLOW / 2;
-    this.block.dropInterval = this.block.DROP_SLOW;
 
     let span = document.createElement("div");
     span.className = "display-speed-up";

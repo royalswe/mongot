@@ -16,7 +16,7 @@ const DOMAIN = process.env.DOMAIN || config.DOMAIN;
 
 let BOT_COUNT = 0;
 
-const GAME_MESSAGES = new Set(['enter-room', 'take-seat', 'player-ready', 'state-update', 'state-lost', 'state-chat', 'add-special', 'use-special']);
+const GAME_MESSAGES = new Set(['enter-room', 'take-seat', 'player-ready', 'state-update', 'state-lost', 'state-chat', 'add-special', 'use-special', 'arena-bounce']);
 
 function createId() {
     const chars = 'abcdefghjkmnopqrstxz0123456789';
@@ -261,6 +261,8 @@ exports.initialize = (server, { notifications } = {}) => {
                 session.addSpecials(client, data);
             } else if (data.type === "use-special") {
                 session.useSpecial(client, data);
+            } else if (data.type === "arena-bounce") {
+                session.bounceArena(client, data);
             } else if (data.type === "take-seat") {
                 session.takeSeat(client, data);
             } else if (data.type === "player-ready") {

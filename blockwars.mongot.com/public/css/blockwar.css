@@ -509,6 +509,38 @@ html.theme-retro .current-special {
   }
 }
 
+.tetris-bounce {
+  animation: bounce_animation 0.35s ease-out;
+  --bounce-depth: 6px;
+}
+
+.tetris-bounce-big {
+  animation: bounce_animation 0.55s ease-out;
+  --bounce-depth: 16px;
+}
+
+@keyframes bounce_animation {
+  0% {
+    transform: translateY(0);
+  }
+
+  30% {
+    transform: translateY(var(--bounce-depth));
+  }
+
+  55% {
+    transform: translateY(calc(var(--bounce-depth) * -0.4));
+  }
+
+  80% {
+    transform: translateY(calc(var(--bounce-depth) * 0.15));
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
 #game_log .player-info {
   color: #ffd700;
 }

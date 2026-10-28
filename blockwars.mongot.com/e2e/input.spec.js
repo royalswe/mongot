@@ -31,17 +31,17 @@ test('each key press or click on an on-screen key moves the block once', async (
 });
 
 test('an on-screen key released away from where it was pressed is still released', async ({page, context}) => {
-    await context.addInitScript(() => { localStorage.setItem('DAS', '3'); localStorage.setItem('ARR', '10'); });
+    await context.addInitScript(() => { localStorage.setItem('handling', JSON.stringify({das: 30, arr: 100})); });
     await startLoneGame(page, uniqueRoom('slide'));
     await watchBlock(page);
 
     const key = page.locator('[id="37"]');
     await key.hover();
     await page.mouse.down();
-    await expect.poll(() => page.evaluate(() => window.__block && window.__block.DASkey)).toBe(37);
+    await expect.poll(() => page.evaluate(() => window.__block && window.__block.shift.direction)).toBe(-1);
 
     await page.mouse.move(5, 5);
     await page.mouse.up();
 
-    expect(await page.evaluate(() => window.__block.DASkey)).toBe(false);
+    expect(await page.evaluate(() => window.__block.shift.direction)).toBe(0);
 });

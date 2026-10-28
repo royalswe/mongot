@@ -14,6 +14,7 @@ function controls(host) {
     const context = vm.createContext({
         location: { host },
         document: { addEventListener: (name, callback) => { listeners[name] = callback; } },
+        window: { addEventListener() {} },
         TOUCH: { attach() {} },
         KEY_BINDS: {},
         isNumeric: value => /^\d+$/.test(value)

@@ -1,18 +1,14 @@
 "use strict";
 let Block = function (tetris) {
     this.DROP_SLOW = 800;
-    this.DROP_FAST = 50;
-    this.SidewaySpeed = DAS_VALUE;
-    this.DAScounter = 0;
-    this.DASkey = false;
-    this.movePos = null;
+    this.softDropping = false;
+    this.shift = new Handling.AutoShift(direction => this.move(direction), () => HANDLING.get());
 
     this.events = new Events();
 
     this.tetris = tetris;
     this.arena = tetris.arena;
     this.dropCounter = 0;
-    this.dropInterval = this.DROP_SLOW;
 
     this.pos = { x: 0, y: 0 };
     this.matrix = [];
@@ -25,7 +21,9 @@ Block.prototype.move = function (direction) {
     this.pos.x += direction;
     if (this.arena.collide(this)) {
         this.pos.x -= direction;
+        return false;
     }
+    return true;
     //this.events.emit('pos', this.pos); // comment out to update moving blocks to peers
 };
 
@@ -53,6 +51,7 @@ Block.prototype.randomizeBlock = function () {
     this.events.emit('pos', { x: 4, y: 1 }); // increment y so peers can se the whole block
 
     this.events.emit('matrix', this.matrix); // comment out to update matrix when create new block to peers
+    this.shift.cut();
     // Lose if new block collidates when generates new block.
     if (this.arena.collide(this)) {
         this.tetris.draw(); // draw the last created block before lose
@@ -74,6 +73,7 @@ Block.prototype.rotate = function (direction) {
             return;
         }
     }
+    this.shift.cut();
     // this.events.emit('pos', this.pos); // comment out to update when rotating blocks to peers
     // this.events.emit('matrix', this.matrix); // comment out to update matrix when rotate to peers
 };
@@ -117,32 +117,59 @@ Block.prototype.drop = function (toBottom) {
     //this.events.emit('pos', this.pos); // comment out to update falling blocks to peers
 };
 
+// Milliseconds per row: gravity, or gravity sped up by SDF while soft dropping.
+Block.prototype.dropInterval = function () {
+    const sdf = HANDLING.get().sdf;
+    return this.softDropping && sdf < Handling.SDF_INFINITE ? this.DROP_SLOW / sdf : this.DROP_SLOW;
+};
+
 Block.prototype.update = function (deltaTime) {
+    if (this.softDropping && HANDLING.get().sdf >= Handling.SDF_INFINITE) {
+        this.sonicDrop();
+    }
     this.dropCounter += deltaTime;
-    if (this.dropCounter > this.dropInterval) {
+    if (this.dropCounter > this.dropInterval()) {
         this.drop();
     }
 };
 
+// Move sideways with DAS, ARR and DCD
 Block.prototype.DASupdate = function (deltaTime) {
-    // Move sideways with DAS
-    if (this.DASkey){
-        this.DAScounter += deltaTime;
-        if(this.DAScounter >= this.SidewaySpeed) {
-            this.DAScounter = 0;
-            this.SidewaySpeed = ARR_VALUE;
-            this.move(this.movePos);
-        }
-    } 
+    this.shift.update(deltaTime);
+};
+
+// The row the block would land on, used by the ghost piece and an infinite SDF.
+Block.prototype.landingY = function () {
+    const y = this.pos.y;
+    if (!this.matrix.length) { return y; }
+    while (!this.arena.collide(this)) { this.pos.y++; }
+    const landing = this.pos.y - 1;
+    this.pos.y = y;
+    return Math.max(landing, y);
+};
+
+// Falls to the floor without locking, so the block can still slide; gravity locks it.
+Block.prototype.sonicDrop = function () {
+    const landing = this.landingY();
+    if (landing > this.pos.y) {
+        this.pos.y = landing;
+        this.dropCounter = 0;
+    }
 };
 
 Block.prototype.softDrop = function (on) {
     if (!on) {
-        this.dropInterval = this.DROP_SLOW;
-    } else if (this.dropInterval !== this.DROP_FAST && this.tetris.stopped === false) {
+        this.softDropping = false;
+    } else if (!this.softDropping && this.tetris.stopped === false) {
+        this.softDropping = true;
         this.drop();
-        this.dropInterval = this.DROP_FAST;
     }
+};
+
+// Forget held keys, e.g. when the window loses focus and their release is never seen.
+Block.prototype.releaseAll = function () {
+    this.shift.reset();
+    this.softDrop(false);
 };
 
 Block.prototype.hardDrop = function () {
@@ -173,6 +200,7 @@ Block.prototype.blockControll = function () {
     document.addEventListener('pointercancel', function (e) {
         keyUpp(e);
     }, false);
+    window.addEventListener('blur', () => this.releaseAll(), false);
 
     // Pointer id -> key it pressed, so the release is right even if the pointer slid off the key.
     const pressedKeys = new Map();
@@ -182,8 +210,11 @@ Block.prototype.blockControll = function () {
             (isNumeric(e.target.id) ? parseInt(e.target.id) : UTILS.keyCode(e));
         pressedKeys.delete(e.pointerId);
 
-        if (keyPress === this.DASkey){
-            this.DASkey = false;
+        if (keyPress === KEY_BINDS.moveLeft) {
+            this.shift.release(-1);
+        }
+        if (keyPress === KEY_BINDS.moveRight) {
+            this.shift.release(+1);
         }
         if (keyPress === KEY_BINDS.moveDown) {
             this.softDrop(false);
@@ -201,22 +232,9 @@ Block.prototype.blockControll = function () {
 
         switch (keyPress) {
             case KEY_BINDS.moveRight:
-            case KEY_BINDS.moveLeft: {
-
-                this.movePos = (keyPress === KEY_BINDS.moveRight) ? +1 : -1;
-
-                if(DAS_VALUE === 0){
-                    this.move(this.movePos);
-                }
-                else if(!this.DASkey){
-                    this.move(this.movePos);
-                    this.DAScounter = 0;
-                    this.SidewaySpeed = DAS_VALUE;
-                    this.DASkey = keyPress;
-                }
-
+            case KEY_BINDS.moveLeft:
+                this.shift.press(keyPress === KEY_BINDS.moveRight ? +1 : -1);
                 break;
-            }
             case KEY_BINDS.moveDown: // Down arrow
                 this.softDrop(true);
                 break;

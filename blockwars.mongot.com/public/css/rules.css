@@ -380,6 +380,29 @@
   margin: 0 auto 1em;
 }
 
+#DAS_ARR th {
+  text-align: left;
+  padding-right: 1em;
+}
+#DAS_ARR td.unit {
+  color: #9e9e9e;
+  padding-left: 0.4em;
+  min-width: 1.5em;
+  text-align: left;
+}
+#DAS_ARR tr.disabled {
+  opacity: 0.4;
+}
+#DAS_ARR tr.disabled button {
+  cursor: not-allowed;
+}
+#DAS_ARR input[type=checkbox] {
+  -webkit-appearance: checkbox;
+  appearance: auto;
+  width: 1.4em;
+  height: 1.4em;
+}
+
 input[type="number"] {
   -webkit-appearance: textfield;
   -moz-appearance: textfield;
@@ -446,20 +469,24 @@ input[type=number]::-webkit-outer-spin-button {
     font-size: 1rem;
   }
 
-  /* Touch settings */
-  #touch_settings {
+  /* Touch and effect settings */
+  #touch_settings,
+  #effect_settings {
     margin: 0 auto 1em;
   }
-  #touch_settings th {
+  #touch_settings th,
+  #effect_settings th {
     font-weight: bold;
     text-align: left;
     line-height: 2.2;
     padding-right: 1.5em;
   }
-  #touch_settings td {
+  #touch_settings td,
+  #effect_settings td {
     text-align: left;
   }
-  #touch_settings input[type=checkbox] {
+  #touch_settings input[type=checkbox],
+  #effect_settings input[type=checkbox] {
     -webkit-appearance: checkbox;
     appearance: auto;
     width: 1.4em;

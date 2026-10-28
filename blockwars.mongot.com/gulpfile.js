@@ -9,7 +9,7 @@ const prod = '../../mongot_prod/blockwars.mongot.com';
 const stage = 'build';
 const gameScripts = [
   'public/js/modules/utils.js', 'public/js/modules/canvas-fit.js',
-  'public/js/modules/layout.js', 'public/js/modules/gestures.js',
+  'public/js/modules/layout.js', 'public/js/modules/gestures.js', 'public/js/modules/handling.js',
   'public/js/modules/touch.js', 'public/js/modules/a11y.js',
   'public/js/modules/tetris-utils.js', 'public/js/modules/theme.js',
   'public/js/modules/screen-settings.js', 'public/js/connection-manager.js',

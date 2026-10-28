@@ -183,6 +183,10 @@ Bot.prototype.endTurn = function(){
         return false; 
     }
 
+    if (rows.cleared > 1) {
+        this.broadcast({ type: "arena-bounce", rows: Math.min(rows.cleared, 4) });
+    }
+
     for (; rows.cleared > 1; rows.cleared -= 2) { // create special every two rows
         this.createSpecial();
     }

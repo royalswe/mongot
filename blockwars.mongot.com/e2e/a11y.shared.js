@@ -135,13 +135,24 @@ function defineAccessibilityTests(test) {
             const bounds = await close.boundingBox();
             expect(bounds.x + bounds.width).toBeGreaterThan(page.viewportSize().width - 20);
             expect(bounds.y).toBeLessThan(20);
-            await dialog.locator('#DAS').fill('12');
+            await dialog.locator('#DAS').fill('120');
             await dialog.locator('#ARR').fill('7');
+            await dialog.locator('#DCD').fill('900');
+            await dialog.locator('#SDF').fill('41');
+            await dialog.locator('#ghost_piece').check();
+            await dialog.locator('#os_repeat').check();
+            await expect(dialog.locator('#DAS')).toBeDisabled();
+            await expect(dialog.getByRole('button', {name: 'Increase ARR'})).toBeDisabled();
+            await expect(dialog.locator('#SDF')).toBeEnabled();
             await dialog.locator('#moveLeft').click();
             await dialog.getByRole('button', {name, exact: true}).click();
             await expect(dialog).toBeHidden();
             await expect(page.locator('#settings_toggle')).toBeFocused();
-            expect(await page.evaluate(() => [localStorage.getItem('DAS'), localStorage.getItem('ARR')])).toEqual(['12', '7']);
+            expect(await page.evaluate(() => JSON.parse(localStorage.getItem('handling'))))
+                .toEqual({das: 120, arr: 7, dcd: 200, sdf: 41, ghost: true, osRepeat: true});
+            await expect(page.locator('#DCD')).toHaveValue('200');
+            await page.evaluate(() => { document.getElementById('os_repeat').click(); });
+            await expect(page.locator('#DAS')).toBeEnabled();
             await expect(page.locator('#moveLeft')).toHaveText('←');
         }
     });

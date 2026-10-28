@@ -479,3 +479,32 @@ describe('leaving', () => {
         assert.equal(session.blockSpeedIntervall, null);
     });
 });
+
+describe('arena bounce', () => {
+    test('a multi-row clear bounces the Arena for the others only, capped at four rows', () => {
+        const { session } = makeSession();
+        const [a, b] = ['a', 'b'].map(id => makePlayer(session, id));
+        startGame(session, a, b);
+
+        assert.equal(session.bounceArena(a, { type: 'arena-bounce', rows: 2 }), true);
+        assert.deepEqual(lastOfType(b, 'arena-bounce'), { type: 'arena-bounce', rows: 2, clientId: 'a' });
+        assert.equal(lastOfType(a, 'arena-bounce'), undefined);
+
+        session.bounceArena(a, { type: 'arena-bounce', rows: 9 });
+        assert.equal(lastOfType(b, 'arena-bounce').rows, 4);
+    });
+
+    test('ignores single rows, bad values, spectators and stopped games', () => {
+        const { session } = makeSession();
+        const [a, b, spectator] = ['a', 'b', 'spectator'].map(id => makePlayer(session, id));
+        assert.equal(session.bounceArena(a, { rows: 2 }), false); // not running
+        startGame(session, a, b);
+
+        assert.equal(session.bounceArena(a, { rows: 1 }), false);
+        assert.equal(session.bounceArena(a, { rows: '2; drop' }), false);
+        assert.equal(session.bounceArena(spectator, { rows: 2 }), false);
+        a.lost = true;
+        assert.equal(session.bounceArena(a, { rows: 2 }), false);
+        assert.equal(lastOfType(b, 'arena-bounce'), undefined);
+    });
+});

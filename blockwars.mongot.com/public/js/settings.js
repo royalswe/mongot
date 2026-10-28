@@ -121,11 +121,6 @@ function toggleSound(checkbox) {
 /***************************
  * Controler settings menu *
  ***************************/
-  /** 
-   * present the DAS and ARR values
-   */ 
-  let DAS_VALUE = document.getElementById('DAS').value *10;
-  let ARR_VALUE = document.getElementById('ARR').value *10;
 /**
  * Controller keys
  */
@@ -266,14 +261,61 @@ let KEY_BINDS = {
       currCell.innerHTML = key[tempKey];
       currCell = 0;
     }
-    // set DAS and ARR values when closing settings
-    DAS_VALUE = document.getElementById("DAS").value;
-    ARR_VALUE = document.getElementById("ARR").value;
-    localStorage.setItem('DAS', DAS_VALUE);
-    localStorage.setItem('ARR', ARR_VALUE);
-    DAS_VALUE = DAS_VALUE * 10;
-    ARR_VALUE = ARR_VALUE * 10;
+    // Save the handling settings when closing, and show them as they were stored (clamped).
+    saveHandling();
   }
+
+  const handlingInputs = { das: 'DAS', arr: 'ARR', dcd: 'DCD', sdf: 'SDF' };
+  const ghostInput = document.getElementById('ghost_piece');
+  const osRepeatInput = document.getElementById('os_repeat');
+  const sdfUnit = document.getElementById('SDF_unit');
+
+  // DAS, ARR and DCD do nothing while the operating system's key repeat moves the block.
+  function showLive(settings) {
+    sdfUnit.textContent = settings.sdf >= Handling.SDF_INFINITE ? '∞' : '×';
+    for (const id of ['DAS', 'ARR', 'DCD']) {
+      const row = document.getElementById(id).closest('tr');
+      row.classList.toggle('disabled', settings.osRepeat);
+      row.querySelectorAll('input, button').forEach(control => { control.disabled = settings.osRepeat; });
+    }
+  }
+
+  function showHandling(settings) {
+    for (const name in handlingInputs) {
+      document.getElementById(handlingInputs[name]).value = settings[name];
+    }
+    ghostInput.checked = settings.ghost;
+    osRepeatInput.checked = settings.osRepeat;
+    showLive(settings);
+  }
+
+  function readHandling() {
+    const changes = { ghost: ghostInput.checked, osRepeat: osRepeatInput.checked };
+    for (const name in handlingInputs) {
+      changes[name] = document.getElementById(handlingInputs[name]).value;
+    }
+    return changes;
+  }
+
+  function saveHandling() {
+    showHandling(HANDLING.set(readHandling()));
+  }
+
+  // Apply while the dialog is open, without rewriting a field that is being typed in.
+  controlerModal.querySelector('#DAS_ARR').addEventListener('input', () => {
+    showLive(HANDLING.set(readHandling()));
+  });
+  controlerModal.querySelectorAll('#DAS_ARR .number-input button').forEach(button => {
+    button.addEventListener('click', saveHandling);
+  });
+  controlerModal.querySelector('#DAS_ARR').addEventListener('change', saveHandling);
+  showHandling(HANDLING.get());
+
+  const bounceInput = document.getElementById('arena_bounce');
+  bounceInput.checked = localStorage.getItem('arena-bounce') !== 'off';
+  bounceInput.addEventListener('change', () => {
+    localStorage.setItem('arena-bounce', bounceInput.checked ? 'on' : 'off');
+  });
 
   controlerModal.querySelectorAll('.close-controls, .close-controler-modal button').forEach(button => {
     button.addEventListener('click', closeControls);
@@ -324,15 +366,6 @@ let KEY_BINDS = {
     for (let i = 0, len = controlCells.length; i < len; i++) {
       controlCells[i].innerHTML = key[KEY_BINDS[controlCells[i].id]];
     }
-  }
-
-  if(localStorage['DAS']) {
-    const _DAS = localStorage.getItem('DAS');
-    const _ARR = localStorage.getItem('ARR');
-    document.getElementById('DAS').value = _DAS;
-    document.getElementById('ARR').value = _ARR;
-    DAS_VALUE = _DAS *10;
-    ARR_VALUE = _ARR *10;
   }
 
 })();

@@ -52,8 +52,7 @@ test('modern-only keys honor saved bindings and default gameplay controls', asyn
 
 test('modern keyboard release clears held movement state', async ({page, context}) => {
     await context.addInitScript(() => {
-        localStorage.setItem('DAS', '3');
-        localStorage.setItem('ARR', '10');
+        localStorage.setItem('handling', JSON.stringify({das: 30, arr: 100}));
     });
     await startLoneGame(page, uniqueRoom('held-modern-key'));
     await page.evaluate(() => {
@@ -64,9 +63,46 @@ test('modern keyboard release clears held movement state', async ({page, context
         };
         document.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowLeft', code: 'ArrowLeft'}));
     });
-    expect(await page.evaluate(() => window.__heldBlock.DASkey)).toBe(37);
+    expect(await page.evaluate(() => window.__heldBlock.shift.direction)).toBe(-1);
     await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keyup', {key: 'ArrowLeft', code: 'ArrowLeft'})));
-    expect(await page.evaluate(() => window.__heldBlock.DASkey)).toBe(false);
+    expect(await page.evaluate(() => window.__heldBlock.shift.direction)).toBe(0);
+});
+
+test('with keyboard repeat on, each repeated keydown moves the block once', async ({page, context}) => {
+    await context.addInitScript(() => {
+        localStorage.setItem('handling', JSON.stringify({osRepeat: true, das: 0, arr: 0}));
+    });
+    await startLoneGame(page, uniqueRoom('os-repeat'));
+    await page.evaluate(() => {
+        window.__moves = 0;
+        const move = Block.prototype.move;
+        Block.prototype.move = function (direction) { window.__moves++; return move.call(this, direction); };
+        for (let i = 0; i < 3; i++) {
+            document.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', code: 'ArrowRight', repeat: i > 0}));
+        }
+    });
+    await page.waitForTimeout(200);
+    expect(await page.evaluate(() => window.__moves)).toBe(3);
+});
+
+test('holding a direction auto shifts to the wall and ghost piece shows the landing row', async ({page, context}) => {
+    await context.addInitScript(() => {
+        localStorage.setItem('handling', JSON.stringify({das: 50, arr: 0, ghost: true}));
+    });
+    await startLoneGame(page, uniqueRoom('auto-shift'));
+    await page.evaluate(() => {
+        const draw = Tetris.prototype.drawGhost;
+        window.__ghosts = 0;
+        Tetris.prototype.drawGhost = function () { window.__ghostBlock = this.block; window.__ghosts++; return draw.call(this); };
+    });
+    await expect.poll(() => page.evaluate(() => window.__ghosts)).toBeGreaterThan(0);
+    await page.keyboard.down('ArrowLeft');
+    await expect.poll(() => page.evaluate(() => {
+        const block = window.__ghostBlock;
+        return block.matrix.some(row => row[-block.pos.x] > 0);
+    })).toBe(true);
+    await page.keyboard.up('ArrowLeft');
+    expect(await page.evaluate(() => window.__ghostBlock.landingY())).toBeGreaterThan(await page.evaluate(() => window.__ghostBlock.pos.y));
 });
 
 test('rebinding persists numeric values, removes duplicates and survives reload', async ({page}) => {
