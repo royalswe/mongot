@@ -1,130 +1,148 @@
 var NOTIFICATION = (function () {
-  /**
-   * Push notification 
-   */
-  const username = (user === 'guest') ? 'guest' : user.username;
-  let arrivedTimestamp = Date.now();
+  const toggle = document.getElementById("toggle_notification");
+  const help = document.getElementById("notification-details");
+  const state = document.getElementById("notification-state");
+  const status = document.getElementById("notification-status");
+  const PlayerArrivedSound = new Howl({ src: ["/sounds/join-lobby.mp3"] });
+  let enabled = false;
+  let busy = false;
+  let arrivedTimestamp = 0;
 
-  // Send Push Notification
-  fetch("/send-pw", {
-    method: "POST",
-    body: JSON.stringify({ username }),
-    headers: {
-      "content-type": "application/json"
-    }
-  });
+  function supported() {
+    return window.isSecureContext && "Notification" in window &&
+      "serviceWorker" in navigator && "PushManager" in window;
+  }
 
-  // Register SW, Register Push, Send Push
-  function subscribePushNotification() {
-    // Register Service Worker
-    navigator.serviceWorker.register("/js/service-worker.js").then(function (reg) {
-      reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array("BEjK-T4xq910AGfKQ09xIF_hCgBUTebFj2ZPaHilzouo8ca3kjJAmX4WjgQp8n8Yg02Bu5hwp97MLu0a14OP4RY")
-      }).then(function (subscription) {
-        // Send Push Notification
-        fetch("/subscribe", {
-          method: "POST",
-          body: JSON.stringify({ subscription, username }),
-          headers: {
-            "content-type": "application/json"
-          }
-        });
-      });
+  function showState(active) {
+    enabled = active;
+    toggle.checked = active;
+    state.textContent = active ? "On" : "Off";
+    status.textContent = active
+      ? "Notifications enabled for this browser, even with no Lobby tab open."
+      : "Notifications disabled for this browser.";
+  }
+
+  async function request(url, method, subscription) {
+    const response = await fetch(url, {
+      method,
+      headers: { "content-type": "application/json" },
+      body: subscription ? JSON.stringify({ subscription }) : undefined
     });
-  }
-
-  function urlBase64ToUint8Array(base64String) {
-    const padding = "=".repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/\-/g, "+")
-      .replace(/_/g, "/");
-
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || "Notification settings could not be saved. Please try again.");
     }
-    return outputArray;
+    return result;
   }
 
-  if ("Notification" in window && getNotificationPermissions() === "granted") {
-    // check checkbox if notification is granted
-    document.getElementById("toggle_notification").checked = true;
+  function urlBase64ToUint8Array(value) {
+    const raw = window.atob(value.replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from(raw, character => character.charCodeAt(0));
   }
 
-  function getNotificationPermissions() {
-    if (Notification.permission === "granted") {
-      return localStorage.getItem("notification-permissions");
-    } else {
-      return Notification.permission;
+  const restored = restore();
+  async function restore() {
+    if (!supported() || Notification.permission !== "granted") { return; }
+    toggle.disabled = true;
+    state.textContent = "Checking...";
+    status.textContent = "Checking your saved notification setting...";
+    try {
+      const registration = await navigator.serviceWorker.getRegistration("/");
+      if (!registration) { return; }
+      const subscription = await registration.pushManager.getSubscription();
+      if (!subscription) { return; }
+      const result = await request("/notifications/subscription/status", "POST", subscription);
+      showState(result.active);
+      // Upgrade older workers, including the version without notification click handling.
+      await navigator.serviceWorker.register("/service-worker.js");
+    } catch (error) {
+      state.textContent = "Unknown";
+      status.textContent = "Could not check notification settings: " + error.message;
+    } finally {
+      if (state.textContent === "Checking...") { showState(false); }
+      toggle.disabled = false;
     }
   }
 
-  const PlayerArrivedSound = new Howl({ src: ["sounds/join-lobby.mp3"] });
-  function spawnNotification(theIcon, theTitle) {
-    let options = {
-      icon: theIcon
-    };
-    let n = new Notification(theTitle, options);
-    PlayerArrivedSound.play();
-    setTimeout(n.close.bind(n), 3000);
+  async function toggleNotificationPermissions(element) {
+    if (busy) { return; }
+    const checked = element.checked;
+    if (!supported()) {
+      showState(false);
+      status.textContent = "Off-site notifications need HTTPS and a supported browser. On iPhone or iPad, add Blockwars to your Home Screen and open it there first.";
+      return;
+    }
+    // Permission must be requested directly from the click, before awaiting network work.
+    const permission = checked && Notification.permission === "default"
+      ? Notification.requestPermission() : Promise.resolve(Notification.permission);
+    busy = true;
+    toggle.disabled = true;
+    state.textContent = "Saving...";
+    status.textContent = checked ? "Enabling notifications..." : "Disabling notifications...";
+    try {
+      const choice = await permission;
+      await restored;
+      toggle.disabled = true;
+      if (checked && choice !== "granted") {
+        throw new Error("Notifications are blocked or were not allowed. Enable them in your browser's site settings, then try again.");
+      }
+      if (checked) {
+        const config = await request("/notifications/config", "GET");
+        if (!config.enabled) {
+          throw new Error("Off-site notifications are not configured on the server yet.");
+        }
+        await navigator.serviceWorker.register("/service-worker.js");
+        const registration = await navigator.serviceWorker.ready;
+        const applicationServerKey = urlBase64ToUint8Array(config.publicKey);
+        let subscription = await registration.pushManager.getSubscription();
+        if (subscription && subscription.options && subscription.options.applicationServerKey) {
+          const previousKey = new Uint8Array(subscription.options.applicationServerKey);
+          if (previousKey.length !== applicationServerKey.length ||
+              previousKey.some((byte, index) => byte !== applicationServerKey[index])) {
+            await request("/notifications/subscription", "DELETE", subscription);
+            showState(false);
+            if (!await subscription.unsubscribe()) {
+              throw new Error("Could not replace the old push subscription. Please try again.");
+            }
+            subscription = null;
+          }
+        }
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+        }
+        await request("/notifications/subscription", "PUT", subscription);
+        showState(true);
+        status.textContent = "Notifications enabled for this browser, even with no Lobby tab open.";
+      } else {
+        const registration = await navigator.serviceWorker.getRegistration("/");
+        const subscription = registration && await registration.pushManager.getSubscription();
+        if (subscription) {
+          await request("/notifications/subscription", "DELETE", subscription);
+        }
+        showState(false);
+        status.textContent = "Notifications disabled for this browser.";
+      }
+    } catch (error) {
+      toggle.checked = enabled;
+      state.textContent = enabled ? "On" : "Off";
+      status.textContent = error.message;
+    } finally {
+      busy = false;
+      toggle.disabled = false;
+    }
   }
 
   return {
-    togglePushNotification: function () {
-      // Check for service worker
-      if ("serviceWorker" in navigator) {
-        subscribePushNotification();
-      }
-      else {
-        alert("Sorry but your browser does not support push notification");
-      }
+    toggleNotificationPermissions,
+    closeHelp: function () {
+      help.open = false;
+      document.getElementById("notification-help-toggle").focus();
     },
-
-    /**
-     * Notification when in lobby
-     */
-    toggleNotificationPermissions: function (e) {
-      let checked = e.checked;
-      if (!("Notification" in window)) {
-        return alert(
-          "Sorry but your browser does not support desktop notification"
-        );
-      } else if (Notification.permission === "granted") {
-        localStorage.setItem(
-          "notification-permissions",
-          checked ? "granted" : "denied"
-        );
-      } else if (Notification.permission === "denied") {
-        localStorage.setItem("notification-permissions", "denied");
-        checked = false;
-      } else if (Notification.permission === "default") {
-        Notification.requestPermission(function (choice) {
-          if (choice === "granted") {
-            localStorage.setItem(
-              "notification-permissions",
-              checked ? "granted" : "denied"
-            );
-          } else {
-            localStorage.setItem("notification-permissions", "denied");
-            checked = false;
-          }
-        });
-      }
-    },
-
-    userNotification: function (data) {
-      console.log(Notification.permission);
-      if (
-        getNotificationPermissions() === "granted" &&
-        arrivedTimestamp < Date.now()
-      ) {
+    userNotification: function () {
+      if (enabled && Notification.permission === "granted" && Date.now() >= arrivedTimestamp) {
         arrivedTimestamp = Date.now() + 60000;
-        spawnNotification("img/pacghost-meta.png", data.msg);
+        PlayerArrivedSound.play();
       }
     }
   };
-
 }());

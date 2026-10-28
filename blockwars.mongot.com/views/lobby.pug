@@ -1,6 +1,8 @@
 extends base
 block head
-  - var title = 'Blockwars Lobby'
+  - const title = 'Blockwars Lobby'
+  link(rel='manifest', href='/manifest.webmanifest')
+  link(rel='apple-touch-icon', href='/img/pacghost-meta.png')
 
 block body
 
@@ -44,18 +46,48 @@ block body
       p.news-heading Help us grow
       .fb-like(data-href='https://www.facebook.com/blipmini/', data-layout='button_count', data-action='like', data-size='large', data-show-faces='false', data-share='true')
 
-      p.news-heading
-        | Be notified when new users arrive by clicking the bell.
-      input#toggle_notification(type='checkbox', onchange='NOTIFICATION.toggleNotificationPermissions(this);')
-      label(for='toggle_notification')
+    #lobby_notifications
+      h2.notification-heading Lobby alerts
+      p.notification-intro Know when someone arrives, even with no Lobby tab open.
+      .notification-control
+        input#toggle_notification(type='checkbox', aria-label='Notify me when someone arrives in the Lobby', aria-describedby='notification-status', onchange='NOTIFICATION.toggleNotificationPermissions(this);')
+        label(for='toggle_notification')
+          span.notification-bell(aria-hidden='true')
+            i.fa.fa-bell-o
+          span.notification-control-copy
+            strong Arrival notifications
+            span This browser only
+          span#notification-state.notification-state Off
+      p#notification-status.notification-status(role='status', aria-live='polite') Notifications are off for this browser.
+      details#notification-details
+        summary#notification-help-toggle How it works &amp; limits
+        #notification-help
+          p.notification-help-lead A heads-up, not a guarantee
+          ul
+            li
+              strong Browser permission.
+              |  A supported browser, and permission to send notifications.
+            li
+              strong iPhone or iPad.
+              |  On iOS/iPadOS 16.4 or newer, add Blockwars to your Home Screen and enable notifications from there.
+            li
+              strong Delivery limits.
+              |  Quitting the browser, power saving, offline mode, or Do Not Disturb may delay or block alerts.
+            li
+              strong No arrival spam.
+              |  At most one alert per minute. Undelivered pushes expire at the push service after one minute.
+            li
+              strong Your choice.
+              |  Settings apply to this browser/device. Turn the bell off to stop alerts; clearing site data or revoking permission may require enabling them again.
+          button.notification-help-close(type='button', onclick='NOTIFICATION.closeHelp();') Close explanation
 
-  section#lobby_chat
-    div#messages
-    div#chat_input
-      //input#message(type='text', autocomplete="off", placeholder='#{(user) ? "Enter your message here" : "Login to use the chat"}')
-      input#message(type="text", autocomplete="off", placeholder="Enter your message here")
-      input#send(type='submit', value='Send')
-  section#users_online
+    section#lobby_chat
+      div#messages
+      div#chat_input
+        //input#message(type='text', autocomplete="off", placeholder='#{(user) ? "Enter your message here" : "Login to use the chat"}')
+        input#message(type="text", autocomplete="off", placeholder="Enter your message here")
+        input#send(type='submit', value='Send')
+    section#users_online
 
 
   script
@@ -65,7 +97,6 @@ block body
       | var user = 'guest';
   script(src='/resources/howler.min.js')
 
-  //- script(src='/js/service-worker.js')
   //- script(src='/js/lobby.min.js')
 
   script(src='/js/modules/utils.js')
@@ -75,9 +106,9 @@ block body
   script.
     document.addEventListener("DOMContentLoaded", function(event) { 
       (function (d, s, id) {
-          var js, fjs = d.getElementsByTagName(s)[0];
+          const fjs = d.getElementsByTagName(s)[0];
           if (d.getElementById(id)) return;
-          js = d.createElement(s);
+          const js = d.createElement(s);
           js.id = id;
           js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.8&appId=396659270516324";
           fjs.parentNode.insertBefore(js, fjs);

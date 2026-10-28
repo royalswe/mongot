@@ -1,6 +1,6 @@
 extends base
 block head
-  - var title = 'High score'
+  - const title = 'High score'
     style.
       body {
         background-color: #E0E0E0;
@@ -64,7 +64,7 @@ block head
   script(src='/resources/jquery.tablesorter-2.31.0.min.js')
 
 block body
-  - function msToMinutesAndSeconds(ms) { var s = parseInt((ms/1000)%60); var m = parseInt((ms/(1000*60))%60); return m+":"+s; }
+  - function msToMinutesAndSeconds(ms) { const s = parseInt((ms/1000)%60); const m = parseInt((ms/(1000*60))%60); return m+":"+s; }
   
   script.
     $(function() {
@@ -89,31 +89,32 @@ block body
             | Won/Lost
           th
             | Longest game
-      - for (var i=0; i<highscores.length; i++)
+      - for (let i=0; i<highscores.length; i++)
 
-        - var points = highscores[i].points_bw;
+        - const points = highscores[i].points_bw;
+        - let img;
         if points < 900
-          - var img = "crown0.png";
+          - img = "crown0.png";
         else if points >= 900 && points < 1300
-          - var img = "crown1.png";
+          - img = "crown1.png";
         else if points >= 1300 && points < 1500
-          - var img = "crown2.png";
+          - img = "crown2.png";
         else if points >= 1500 && points < 1700
-          - var img = "crown3.png";
+          - img = "crown3.png";
         else if points >= 1700 && points < 1900
-          - var img = "crown4.png";
+          - img = "crown4.png";
         else if points >= 1900 && points < 2100
-          - var img = "crown5.png";
+          - img = "crown5.png";
         else if points >= 2100 && points < 2300
-          - var img = "crown6.png";
+          - img = "crown6.png";
         else if points >= 2300 && points < 2500
-          - var img = "crown7.png";
+          - img = "crown7.png";
         else if points >= 2500 && points < 2700
-          - var img = "crown8.png";
+          - img = "crown8.png";
         else if points >= 2700 && points < 2900
-          - var img = "crown9.png";
+          - img = "crown9.png";
         else
-          - var img = "crown10.png";
+          - img = "crown10.png";
         tr
           td
             | #{i+1}

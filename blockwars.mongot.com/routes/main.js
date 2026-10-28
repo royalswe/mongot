@@ -1,34 +1,33 @@
-let express = require('express');
-let models = require('../../models');
-let router = express.Router();
-let fs = require('fs');
+const express = require('express');
+const models = require('../../models');
+const router = express.Router();
+const fs = require('fs');
+const chatFiles = require('../game/chat-files');
 
 router.get('/', function (req, res) {
     res.render('index.pug');
 });
 
-router.get('/lobby', function (req, res) {
-    const ip = req.headers['x-forwarded-for'] ||
-    req.connection.remoteAddress ||
-    req.socket.remoteAddress ||
-    req.connection.socket.remoteAddress;
+router.get('/lobby', function (req, res, next) {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const renderLobby = () => res.render('lobby.pug', {bodyClass: 'lobby-body'});
 
     if(req.user){
         models.User.findOne({ username: req.user.username }, function(err, user) {
+            if (err) { return next(err); }
             if(user){
                 user.last_visit_bw = new Date();
                 user.ip = ip;
-                user.save();
+                return user.save(function(err) {
+                    if (err) { return next(err); }
+                    renderLobby();
+                });
             }
+            renderLobby();
         });
-        // if(!req.user.active) {
-        //     req.flash('error', 'Your account is not activated. <a href="https://mongot.com/sendVerificationToken">Send new activation link if needed</a>');
-        // }
+        return;
     }
-    // else {
-    //     req.flash('lobby', ' <a href="https://mongot.com/register">Register</a> new account or  <a href="https://mongot.com/login">login</a> to play games with ranking.');
-    // }
-    res.render('lobby.pug', {bodyClass: 'lobby-body'});
+    renderLobby();
 });
 
 router.get('/game', checkIfBanned, function (req, res) {
@@ -39,53 +38,41 @@ router.get('/rules', function (req, res) {
     res.render('rules.pug');
 });
 
-router.get('/highscore', function (req, res) {
+router.get('/highscore', function (req, res, next) {
     models.User.find().or([{games_lost_bw: { $gt: 0 }}, {games_won_bw: { $gt: 0 }}]).sort({points_bw: -1}).exec(function(err, docs){
+        if (err) { return next(err); }
         res.render('highscore.pug', {highscores: docs});
     });
 });
 
-router.get('/gamelog', requireAdmin, function (req, res) {
+router.get('/gamelog', requireAdmin, function (req, res, next) {
     models.BwLog.find().exec(function(err, docs){
-        if(err) console.log(err);
+        if (err) { return next(err); }
         res.render('gamelog.pug', {logs: docs});
     });
 });
 
-router.get('/gamechat', requireAdmin, function (req, res) {
-    fs.readFile( 'gameChat.json', function (err, data) {
-        if (err) {
-            console.log(err);
+function renderGameChat(req, res, next) {
+    fs.readFile(chatFiles.game, function (err, data) {
+        if (err) { return next(err); }
+        let messages;
+        try {
+            messages = JSON.parse(data);
+        } catch (error) {
+            return next(error);
         }
-        res.render('gamechat.pug', {messages: JSON.parse(data)});
+        res.render('gamechat.pug', {messages});
     });
-});
-
-router.get('/erasechat', requireAdmin, function (req, res) {
-    fs.writeFile('gameChat.json', '[]', function () {
-        fs.readFile('gameChat.json', function (err, data) {
-            if (err) {
-                //throw err;
-            }
-            res.render('gamechat.pug', { messages: JSON.parse(data) });
-        });
-    });
-});
-
-/**
- * Redirect to login page if not logged in
- */
-function requireLogin(req, res, next) {
-    if(req.user) {
-        if(!req.user.active) {
-            req.flash('error', 'Your account is not activated, <a href="https://mongot.com/sendVerificationToken">Send new activation link if needed</a>');
-        }
-        next();
-    }
-    else {
-        res.redirect('/login');
-    }
 }
+
+router.get('/gamechat', requireAdmin, renderGameChat);
+
+router.get('/erasechat', requireAdmin, function (req, res, next) {
+    fs.writeFile(chatFiles.game, '[]', function (err) {
+        if (err) { return next(err); }
+        renderGameChat(req, res, next);
+    });
+});
 
 function requireAdmin(req, res, next) {
     if(req.user && req.user.god) {
@@ -97,12 +84,10 @@ function requireAdmin(req, res, next) {
 }
 
 function checkIfBanned(req, res, next) {
-    const ip = req.headers['x-forwarded-for'] ||
-        req.connection.remoteAddress ||
-        req.socket.remoteAddress ||
-        req.connection.socket.remoteAddress;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         
     models.Ips.findOne({ ip: ip }, function(err, ips) {
+        if (err) { return next(err); }
         if (ips) {
             req.flash('info', 'You are banned!');
             res.redirect('/');

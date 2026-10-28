@@ -6,8 +6,8 @@ let Chat = function(document, connectionManager) {
     let timeStamp = Date.now();
 
     document.getElementById("send").addEventListener('click', () => { sendMessage(); }, false);
-    document.getElementById("message").addEventListener("keypress", function(e) {
-        if(e.keyCode === 13){
+    document.getElementById("message").addEventListener("keydown", function(e) {
+        if(e.key === 'Enter' && !e.isComposing){
             sendMessage();
         }
     }, false);
@@ -73,4 +73,3 @@ Chat.prototype.serverMessage = function(data){
     messages.scrollTop = messages.scrollHeight;
     LAYOUT.noteChatMessage();
 };
-

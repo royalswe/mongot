@@ -14,7 +14,7 @@ const models = {
         findOne(query, projection, callback) {
             callback = typeof projection === 'function' ? projection : callback;
             const account = findAccount(query);
-            callback(null, account ? {...account, save() {}} : null);
+            callback(null, account ? {...account, save(callback) { callback(null); }} : null);
         },
         updateOne: () => ({exec: () => Promise.resolve()}),
         find: () => ({or() { return this; }, sort() { return this; }, exec: (callback) => callback(null, [])})

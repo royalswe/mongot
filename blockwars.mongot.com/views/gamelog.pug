@@ -1,6 +1,6 @@
 extends base
 block head
-  - var title = 'Game log'
+  - const title = 'Game log'
     style.
       body {
         background-color: #E0E0E0;
@@ -68,7 +68,7 @@ block body
             | Players and points
           th
             | Date
-      - for (var i=0; i<logs.length; i++)
+      - for (let i=0; i<logs.length; i++)
 
         tr
           td

@@ -298,16 +298,21 @@ let KEY_BINDS = {
     document.addEventListener('keyup',function (e) {
       console.log(e);
         if (currCell) {
+          const keyCode = UTILS.keyCode(e);
+          if (!keyCode) {
+            currCell.textContent = 'Unsupported key; try another';
+            return;
+          }
           // Checks if key already in use, and unbinds it.
           for (let i in KEY_BINDS) {
-            if (e.keyCode === KEY_BINDS[i]) {
+            if (keyCode === KEY_BINDS[i]) {
               KEY_BINDS[i] = void 0;
               document.getElementById(i).innerHTML = KEY_BINDS[i];
             }
           }
           // Binds the key and saves the data.
-          KEY_BINDS[currCell.id] = e.keyCode;
-          currCell.innerHTML = key[e.keyCode];
+          KEY_BINDS[currCell.id] = keyCode;
+          currCell.textContent = key[keyCode] || e.key || e.code || String(keyCode);
           localStorage.setItem('KEY_BINDS', JSON.stringify(KEY_BINDS));
           currCell = 0;
         }

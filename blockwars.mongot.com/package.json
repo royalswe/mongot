@@ -3,29 +3,43 @@
   "version": "1.0.1",
   "description": "tetris clone from blip.se",
   "main": "app.js",
+  "config": {
+    "cookie": "s3cr3t",
+    "VAPID_PUBLIC_KEY": "BKrXs1lDyex_9fhG8RgroVC76JH35Pxx5yvzaBVnKkueRouaWZ3I_FoLe5eETO6uvBXE2IeqdaB3PNr3t7Nc6Bk",
+    "VAPID_PRIVATE_KEY": "38garh1Uf39h--At7LysfLQzF7YNw--_SaILnNfGlm8",
+    "VAPID_SUBJECT": "mailto:blipmini@gmail.com",
+    "DOMAIN": "http://192.168.1.10:5200"
+  },
   "scripts": {
-    "dev": "COOKIE_SECRET=s3cr3t node app.js",
+    "dev": "COOKIE_SECRET=$npm_package_config_cookie VAPID_PUBLIC_KEY=$npm_package_config_VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY=$npm_package_config_VAPID_PRIVATE_KEY VAPID_SUBJECT=$npm_package_config_VAPID_SUBJECT node app.js",
+    "dev:nw": "DOMAIN=$npm_package_config_DOMAIN COOKIE_SECRET=$npm_package_config_cookie VAPID_PUBLIC_KEY=$npm_package_config_VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY=$npm_package_config_VAPID_PRIVATE_KEY VAPID_SUBJECT=$npm_package_config_VAPID_SUBJECT node app.js",
     "start": "node app.js",
     "gulp": "gulp",
     "test": "node --test test/*.test.js",
+    "test:build": "npm run build && node --test test/build/*.test.js && playwright test e2e/staged-build.spec.js",
     "test:e2e": "playwright test",
     "test:all": "npm test && npm run test:e2e"
   },
   "author": "roYal",
   "license": "ISC",
   "dependencies": {
+    "web-push": "^3.6.7",
     "ws": "^8.22.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.20.2",
     "@babel/preset-env": "^7.20.2",
     "@playwright/test": "^1.64.1",
-    "gulp": "^4.0.2",
+    "gulp": "^5.0.1",
     "gulp-babel": "^8.0.0",
     "gulp-clean-css": "^4.3.0",
     "gulp-concat": "^2.6.1",
-    "gulp-imagemin": "^7.1.0",
+    "gulp-imagemin": "^9.2.0",
     "gulp-uglify": "^3.0.2",
-    "merge-stream": "^2.0.0"
+    "imagemin-gifsicle": "^7.0.0",
+    "imagemin-mozjpeg": "^10.0.0",
+    "imagemin-optipng": "^8.0.0",
+    "imagemin-svgo": "^10.0.1"
   },
   "babel": {
     "presets": [

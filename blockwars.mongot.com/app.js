@@ -2,7 +2,6 @@
 const http = require('http');
 const express = require('express');
 const sessions = require('client-sessions');
-const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const flash = require('express-flash');
 const middleware = require('../middleware');
@@ -40,17 +39,17 @@ let server = http.createServer(app).listen(port);
  */
 app.use(express.static(__dirname + '/public'));
 
+app.get('/service-worker.js', (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.sendFile(__dirname + '/public/js/service-worker.js');
+});
+
 /**
  * The special rules are shared with the server bot, so they live in game/
  */
 app.get('/js/special-rules.js', (req, res) => res.sendFile(__dirname + '/game/special-rules.js'));
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-
-/**
- * Service worker
- */
-//app.use(require('./serviceworker'));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 /**
  * Session rules
@@ -78,6 +77,11 @@ app.use(
  */
 app.use(middleware.cookieAuth);
 
+const notifications = require('./serviceworker')({
+  origin: process.env.DOMAIN || require('./config.json').DOMAIN
+});
+app.use(notifications.router);
+
 /**
  * Routes
  */
@@ -95,4 +99,4 @@ app.use(function (error, req, res, next) {
   res.send('500: Internal Server Error - ' + error);
 });
 
-require('./game/server.js').initialize(server);
+require('./game/server.js').initialize(server, { notifications });

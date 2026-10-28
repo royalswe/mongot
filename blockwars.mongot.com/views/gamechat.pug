@@ -1,6 +1,6 @@
 extends base
 block head
-  - var title = 'Game chat'
+  - const title = 'Game chat'
     style.
       section#chatroom {
         height: 100%;
@@ -59,4 +59,3 @@ block body
             username + ':</span> ' +
             messages[i].message + '</div>');
     }
-

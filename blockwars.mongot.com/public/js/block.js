@@ -179,7 +179,7 @@ Block.prototype.blockControll = function () {
 
     let keyUpp = (e) => {
         let keyPress = pressedKeys.has(e.pointerId) ? pressedKeys.get(e.pointerId) :
-            (isNumeric(e.target.id) ? parseInt(e.target.id) : e.keyCode);
+            (isNumeric(e.target.id) ? parseInt(e.target.id) : UTILS.keyCode(e));
         pressedKeys.delete(e.pointerId);
 
         if (keyPress === this.DASkey){
@@ -196,7 +196,7 @@ Block.prototype.blockControll = function () {
             return;
         }
 
-        let keyPress = isNumeric(e.target.id) ? parseInt(e.target.id) : e.keyCode;
+        let keyPress = isNumeric(e.target.id) ? parseInt(e.target.id) : UTILS.keyCode(e);
         if (e.pointerId !== undefined) { pressedKeys.set(e.pointerId, keyPress); }
 
         switch (keyPress) {
@@ -249,14 +249,15 @@ Block.prototype.blockControll = function () {
                     //     this.arena.matrix[19].fill(1);
                     //    //this.tetris.special.performSpecial(14);
                     break;
-                case 89: // Y test
-                    var special = [16];//[Math.floor(Math.random() * (18 - 8 + 1)) + 8];
+                case 89: { // Y test
+                    const special = [16];//[Math.floor(Math.random() * (18 - 8 + 1)) + 8];
                     this.arena.events.emit('special', 'add-special', special);
                     break;
-                case 72: // H test
-                    var yy = Math.floor((Math.random() * 20) + 1);
-                    var xx = Math.floor((Math.random() * 9) + 1);
-                    var img = Math.floor(Math.random() * (19 - 8 + 1)) + 8;
+                }
+                case 72: { // H test
+                    const yy = Math.floor((Math.random() * 20) + 1);
+                    const xx = Math.floor((Math.random() * 9) + 1);
+                    const img = Math.floor(Math.random() * (19 - 8 + 1)) + 8;
                     this.arena.events.emit('special', 'add-special', [11, 11, 11]);
                     //this.tetris.arena.matrix[yy][xx] = img;
                     this.arena.clear();
@@ -269,6 +270,7 @@ Block.prototype.blockControll = function () {
 
 
                     break;
+                }
             }
         }
 

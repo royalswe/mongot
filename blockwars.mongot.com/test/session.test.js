@@ -143,7 +143,11 @@ describe('starting a game', () => {
         mock.timers.tick(240000);
 
         assert.equal(typesOf(a).filter(t => t === 'speed-up-blocks').length, 1);
+        mock.timers.tick(240000);
+        assert.equal(typesOf(a).filter(t => t === 'speed-up-blocks').length, 2);
         session.dispose();
+        mock.timers.tick(240000);
+        assert.equal(typesOf(a).filter(t => t === 'speed-up-blocks').length, 2);
     });
 });
 

@@ -33,7 +33,7 @@ module.exports = defineConfig({
         }
     ],
     webServer: {
-        command: 'node -r ./e2e/stub-models.js app.js',
+        command: 'node e2e/start-server.js',
         url: `${ORIGIN}/lobby`,
         timeout: 30000,
         reuseExistingServer: false,

@@ -3,8 +3,9 @@ const WebSocket = require('ws');
 const Session = require('./session');
 const Client = require('./client');
 const fs = require('fs');
-const gameChat = require('../gameChat.json');
-const lobbyChat = require('../blockwarChat.json');
+const chatFiles = require('./chat-files');
+const gameChat = require(chatFiles.game);
+const lobbyChat = require(chatFiles.lobby);
 const sessions = new Map();
 const Lobby = new(require('./lobby'))();
 const Status = require('./status');
@@ -120,7 +121,7 @@ function nameGenerator() {
     return name;
 }
 
-exports.initialize = (server) => {
+exports.initialize = (server, { notifications } = {}) => {
 
     const wsLobby = new WebSocket.Server({
         noServer: true,
@@ -139,6 +140,7 @@ exports.initialize = (server) => {
         socket.on('message', msg => {
             const data = JSON.parse(msg);
             if (data.type === "init_lobby") {
+                if (socket.username) { return; }
                 broadcastRooms();
                 const randomNr = Math.floor(1000 + Math.random() * 9000);
                 socket.username = (data.user === 'guest') ? 'guest' + randomNr : data.user.username;
@@ -147,6 +149,12 @@ exports.initialize = (server) => {
                     type: 'user_notification',
                     msg: socket.username + ' arrived to the lobby'
                 });
+                const alreadyPresent = [...Lobby.clients].some(client =>
+                    client !== socket && client.username === socket.username);
+                if (notifications && !alreadyPresent) {
+                    notifications.notifyArrival(socket.username).catch(error =>
+                        console.error('Failed to send lobby arrival notifications:', error.message));
+                }
 
                 Lobby.send(socket, {
                     type: 'render_messages',
@@ -166,7 +174,9 @@ exports.initialize = (server) => {
                 if (lobbyChat.length > 80) {
                     lobbyChat.shift();
                 }
-                fs.writeFile('blockwarChat.json', JSON.stringify(lobbyChat), () => { });
+                fs.writeFile(chatFiles.lobby, JSON.stringify(lobbyChat), err => {
+                    if (err) { console.error('Failed to save lobby chat:', err); }
+                });
 
                 Lobby.roomEmit({
                     type: data.type,
@@ -177,7 +187,9 @@ exports.initialize = (server) => {
                     return;
                 } // only for gods
                 lobbyChat.splice(data.index, 1);
-                fs.writeFile('blockwarChat.json', JSON.stringify(lobbyChat), () => { });
+                fs.writeFile(chatFiles.lobby, JSON.stringify(lobbyChat), err => {
+                    if (err) { console.error('Failed to save lobby chat:', err); }
+                });
                 Lobby.roomEmit({
                     type: 'render_messages',
                     messages: lobbyChat
@@ -306,7 +318,7 @@ exports.initialize = (server) => {
                 }
                 else { // log chat from game room
                     gameChat.push({message: _message, username: client.id, room: session.id});
-                    fs.writeFile('gameChat.json', JSON.stringify(gameChat), (err) => { if(err) console.log(err); });
+                    fs.writeFile(chatFiles.game, JSON.stringify(gameChat), (err) => { if(err) console.log(err); });
                 }
 
                 client.roomEmit(data);

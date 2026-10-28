@@ -256,11 +256,11 @@ Session.prototype.speedUpBlocks = function(){
     // console.log('kör');
 
     clearTimeout(this.blockSpeedIntervall);
-    var interval = 240000; // ms
-    var expected = Date.now() + interval;
+    const interval = 240000; // ms
+    let expected = Date.now() + interval;
     
     let step = () => {
-        var dt = Date.now() - expected; // the drift (positive for overshooting)
+        const dt = Date.now() - expected; // the drift (positive for overshooting)
         if (dt > interval) {
             console.log("blockSpeedIntervall dt: " + dt);
         }
