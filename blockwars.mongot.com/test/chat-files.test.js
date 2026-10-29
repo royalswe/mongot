@@ -39,9 +39,9 @@ for (const failStartup of [false, true]) {
             const vm = require('node:vm');
             const root = ${JSON.stringify(root)};
             vm.runInThisContext('(function(require) {' +
-                fs.readFileSync(path.join(root, 'e2e/start-server.js'), 'utf8') + '\\n})')(name => {
+                fs.readFileSync(path.join(root, 'tests/fixtures/start-server.js'), 'utf8') + '\\n})')(name => {
                 if (name === './stub-models') { return {}; }
-                if (name !== '../app') { return require(name); }
+                if (name !== '../../app') { return require(name); }
                 const directory = process.env.CHAT_DATA_DIR;
                 console.log(directory);
                 const paths = require(path.join(root, 'game/chat-files.js'));

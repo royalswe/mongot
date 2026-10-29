@@ -103,6 +103,49 @@ worker scope/UI, but do not contact external browser push services.
   exclusion of deployment configuration and mutable data, then smoke-test
   staged browser assets against the existing test server.
 
+### Browser test scope
+
+Browser tests live in `tests/e2e/`, grouped into game, lobby and staged-build
+journeys. Page objects in `tests/pages/` own selectors and player actions;
+`tests/fixtures/` owns visitors, signed test sessions, sockets and the isolated
+server. Fixtures close extra browser contexts and sockets even on assertion
+failures. Shared utilities live in `tests/utils/`.
+
+- `npm run test:e2e -- --grep @smoke`: the guest join/play and touch smoke journeys.
+- `npx playwright test --project=desktop`: desktop only.
+- `npx playwright test --project=phone-portrait`: phone portrait only.
+- `npm run test:build`: the separate build project; staging checks do not run
+  opportunistically just because an old `build/` directory exists.
+
+The regular suite covers room discovery, live presence/chat, ranked/unranked
+matches, bots, keyboard/rebinding/settings, Special targeting, accessible
+dialogs, theme contrast/redraw, canvas density, responsive boards, phone
+gestures/panels/elimination, and notification UI/worker integration.
+Phone tests run in portrait and landscape; shared specs run on desktop and
+both phone projects. The server has shared room/account/chat state, so keep one
+worker rather than enabling parallel workers without server isolation.
+Third-party HTTP widgets are blocked and push/wake-lock/vibration APIs are
+simulated where needed; external push delivery and real hardware are not tested.
+
+Prefer one browser journey per distinct user risk, not one test per implementation
+change. Keep timing/key mapping, gesture thresholds, scoring/session edge cases
+and Special algorithms in the existing `test/` unit suite. Do not duplicate their
+full input matrices in Playwright. Keep browser-specific regressions when they
+exercise real event wiring, focus, rendering or network integration.
+Use semantic locators and auto-retrying assertions, not fixed sleeps, fabricated
+DOM overlays, replacement gameplay methods or exact decorative pixel positions.
+Canvas gameplay has no accessible DOM state: the game page object centralizes
+the small test-only bridge used to inspect the real piece and seed Specials/rows.
+
+The lean-suite refactor intentionally drops exact bevel colors, arrow placement,
+decorative frame styles, target-flash-only checks, repeated viewport
+sweeps and socket-only duplicate unit coverage. The pre-refactor baseline had
+186 passes, 14 skips and two failures (guest join-button opacity and an exact
+12px sidebar gap). Those cosmetic assertions were replaced by real joining and
+non-overlapping sidebar checks; this does not establish that guest join-button
+dimming works or change application behavior. Failure screenshots and traces
+are saved under `test-results/`.
+
 Playwright's server launcher creates fresh empty chat files in a temporary
 directory for each test-server run, overriding any inherited `CHAT_DATA_DIR`.
 Tests share that temporary data within the run; they do not write to the

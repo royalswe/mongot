@@ -15,9 +15,10 @@
     "dev:nw": "DOMAIN=$npm_package_config_DOMAIN COOKIE_SECRET=$npm_package_config_cookie VAPID_PUBLIC_KEY=$npm_package_config_VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY=$npm_package_config_VAPID_PRIVATE_KEY VAPID_SUBJECT=$npm_package_config_VAPID_SUBJECT node app.js",
     "start": "node app.js",
     "gulp": "gulp",
+    "build": "gulp stage",
     "test": "node --test test/*.test.js",
-    "test:build": "npm run build && node --test test/build/*.test.js && playwright test e2e/staged-build.spec.js",
-    "test:e2e": "playwright test",
+    "test:build": "npm run build && node --test test/build/*.test.js && playwright test --project=build",
+    "test:e2e": "playwright test --project=desktop --project=phone-portrait --project=phone-landscape",
     "test:all": "npm test && npm run test:e2e"
   },
   "author": "roYal",

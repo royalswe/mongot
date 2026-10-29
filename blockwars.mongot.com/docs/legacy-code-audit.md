@@ -101,7 +101,7 @@ selects another directory. Both JSON array files must exist; missing/invalid
 data still fails explicitly. Lobby persistence failures are now logged rather
 than ignored.
 
-[e2e/start-server.js](../e2e/start-server.js) creates fresh empty chat files in
+[start-server.js](../tests/fixtures/start-server.js) creates fresh empty chat files in
 a temporary directory before loading the test models and application. It
 overrides inherited chat-directory configuration and removes its directory on
 normal exit, startup failure, SIGINT or SIGTERM (not SIGKILL). Data is shared
@@ -407,7 +407,7 @@ Filesystem callbacks themselves remain valid Node APIs. The concern is error/com
 
 - Five unit-test files cover bots, sessions, lobby messaging, Special rules and gestures. [package.json](../package.json#L10) uses `node:test`; mock timers in [session-fixtures.js](../test/helpers/session-fixtures.js#L61) make Node version compatibility relevant. No Node engine range is declared.
 - Eighteen browser spec files cover gameplay/protocol, input, accessibility, canvas, layout, panels, targeting, themes and mobile interaction. [playwright.config.js](../playwright.config.js#L18) configures Chromium desktop and emulated Pixel 7 portrait/landscape, not Firefox, WebKit or physical-device validation.
-- Browser tests start the app with in-memory model stubs. [stub-models.js](../e2e/stub-models.js#L3) accepts legacy database callbacks, so passing these tests would not prove compatibility with the production Mongoose/MongoDB setup.
+- Browser tests start the app with in-memory model stubs. [stub-models.js](../tests/fixtures/stub-models.js#L3) accepts legacy database callbacks, so passing these tests would not prove compatibility with the production Mongoose/MongoDB setup.
 - No tests or builds were run for this read-only audit. Earlier modal-specific validation is not a modernization baseline.
 
 ## Behavior-preserving staged plan

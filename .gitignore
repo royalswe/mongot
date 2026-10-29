@@ -12,3 +12,5 @@ general.mongot.com/playwright-report/
 blockwars.mongot.com/test-results/
 blockwars.mongot.com/playwright-report/
 blockwars.mongot.com/build/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/

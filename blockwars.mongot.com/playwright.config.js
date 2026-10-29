@@ -1,39 +1,47 @@
 'use strict';
 
 const { defineConfig, devices } = require('@playwright/test');
-const { COOKIE_SECRET, accounts } = require('./e2e/accounts');
+const { COOKIE_SECRET, accounts } = require('./tests/fixtures/accounts');
 
 const PORT = 5283;
 const ORIGIN = `http://localhost:${PORT}`;
 
 module.exports = defineConfig({
-    testDir: './e2e',
+    testDir: './tests/e2e',
     testMatch: '**/*.spec.js',
     fullyParallel: false,
     workers: 1,
+    forbidOnly: !!process.env.CI,
     reporter: 'list',
     use: {
-        baseURL: ORIGIN
+        baseURL: ORIGIN,
+        trace: 'retain-on-failure',
+        screenshot: 'only-on-failure'
     },
     projects: [
         {
             name: 'desktop',
-            testIgnore: '**/*.mobile.spec.js',
+            testIgnore: ['**/*.mobile.spec.js', '**/build/**'],
             use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } }
         },
         {
             name: 'phone-portrait',
-            testMatch: '**/*.mobile.spec.js',
+            testMatch: ['**/*.mobile.spec.js', '**/*.shared.spec.js'],
             use: { ...devices['Pixel 7'] }
         },
         {
             name: 'phone-landscape',
-            testMatch: '**/*.mobile.spec.js',
+            testMatch: ['**/*.mobile.spec.js', '**/*.shared.spec.js'],
             use: { ...devices['Pixel 7 landscape'] }
+        },
+        {
+            name: 'build',
+            testMatch: '**/build/*.spec.js',
+            use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } }
         }
     ],
     webServer: {
-        command: 'node e2e/start-server.js',
+        command: 'node tests/fixtures/start-server.js',
         url: `${ORIGIN}/lobby`,
         timeout: 30000,
         reuseExistingServer: false,
