@@ -3,6 +3,26 @@
 const {test, expect} = require('@playwright/test');
 const {sessionCookie} = require('./accounts');
 
+test('joining a room dims its button for guests after live updates', async ({page}) => {
+    await page.goto('/lobby', {waitUntil: 'domcontentloaded'});
+    await expect(page.locator('#allrooms tbody tr').first()).toBeVisible();
+    const renderRoom = () => page.evaluate(() => lobby.renderRooms({rooms: [{
+        name: 'joined-button-check', ranking: 'no', status: 'waiting', players: [], activePlayers: []
+    }]}));
+    await renderRoom();
+    const button = page.locator('[data-room="joined-button-check"]');
+    await expect(button).toHaveCSS('opacity', '1');
+    const popupPromise = page.waitForEvent('popup');
+    await button.click();
+    const popup = await popupPromise;
+    await expect(button).toHaveCSS('opacity', '0.5');
+    await renderRoom();
+    await expect(button).toHaveCSS('opacity', '0.5');
+    await popup.close();
+    await renderRoom();
+    await expect(button).toHaveCSS('opacity', '1');
+});
+
 test('lobby lists open ranked and unranked rooms', async ({page}) => {
     await page.goto('/lobby', {waitUntil: 'domcontentloaded'});
 

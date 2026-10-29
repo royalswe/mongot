@@ -8,9 +8,14 @@ block body
 
   p.flash-message-ie
   section#lobby
-    h1 Blockwar Lobby
+    header.lobby-heading
+      p.lobby-eyebrow Multiplayer Tetris
+      h1 Blockwar Lobby
+      p.lobby-intro Find an open room and jump into a match, or watch a game already in progress.
     #allrooms
+      h2.lobby-section-heading Public rooms
       table
+        caption.visually-hidden Available public Blockwars rooms
         thead
           tr
             th
@@ -82,14 +87,13 @@ block body
           button.notification-help-close(type='button', onclick='NOTIFICATION.closeHelp();') Close explanation
 
     section#lobby_chat
+      h2.lobby-section-heading Lobby chat
       div#messages
       div#chat_input
         //input#message(type='text', autocomplete="off", placeholder='#{(user) ? "Enter your message here" : "Login to use the chat"}')
         input#message(type="text", autocomplete="off", placeholder="Enter your message here")
         input#send(type='submit', value='Send')
     section#users_online
-
-
   script
     if user
       | var user = !{JSON.stringify(user)}

@@ -7,7 +7,7 @@
     "cookie": "s3cr3t",
     "VAPID_PUBLIC_KEY": "BKrXs1lDyex_9fhG8RgroVC76JH35Pxx5yvzaBVnKkueRouaWZ3I_FoLe5eETO6uvBXE2IeqdaB3PNr3t7Nc6Bk",
     "VAPID_PRIVATE_KEY": "38garh1Uf39h--At7LysfLQzF7YNw--_SaILnNfGlm8",
-    "VAPID_SUBJECT": "mailto:blipmini@gmail.com",
+    "VAPID_SUBJECT": "mailto:miniblip@gmail.com",
     "DOMAIN": "http://192.168.1.10:5200"
   },
   "scripts": {

@@ -175,8 +175,8 @@ Lobby.prototype.renderRooms = function(data) {
 Lobby.prototype.renderConnectedUsers = function(users) {
 
   let onlineList = document.getElementById("users_online");
-  onlineList.innerHTML = '<p id="user_online_list">Users in lobby (' + users.length + ")</p>";
-    
+  onlineList.innerHTML = '<h4 class="lobby-section-heading" id="user_online_list">Users in lobby (' + users.length + ")</h4>";
+
   document.title = "Lobby (" + users.length + ")";
 
   for (let i = 0; i < users.length; i++) {

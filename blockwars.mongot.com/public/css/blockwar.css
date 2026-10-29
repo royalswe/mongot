@@ -1714,12 +1714,6 @@ html.theme-classic .winner {
 }
 
 /* Seat and ready */
-html.theme-classic #take_seat,
-html.theme-classic #player_ready {
-  border-radius: 8px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
 html.theme-classic #take_seat {
   background-image: linear-gradient(#f5a243, #dc862a);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 4px 0 #9a5a14, 0 8px 14px rgba(0, 0, 0, 0.4);
