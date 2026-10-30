@@ -122,8 +122,11 @@ test('bundle source order agrees with the active templates', async () => {
 });
 
 test('staging does not copy deployment configuration, shared packages or mutable data', () => {
-    assert.deepEqual(fs.readdirSync(stage).sort(), ['game', 'public', 'views']);
-    for (const excluded of ['node_modules', 'config.json', '.env', 'blockwarChat.json', 'gameChat.json', 'app.js', 'routes']) {
+    assert.deepEqual(fs.readdirSync(stage).sort(), ['app.js', 'game', 'public', 'routes', 'serviceworker.js', 'views']);
+    for (const filename of ['app.js', 'serviceworker.js', ...files(path.join(root, 'routes')).map(filename => path.relative(root, filename))]) {
+        assert.deepEqual(fs.readFileSync(path.join(stage, filename)), fs.readFileSync(path.join(root, filename)), filename);
+    }
+    for (const excluded of ['node_modules', 'package.json', 'config.json', '.env', 'blockwarChat.json', 'gameChat.json']) {
         assert.equal(fs.existsSync(path.join(stage, excluded)), false, excluded);
     }
     assert.equal(fs.existsSync(path.join(stage, 'public/js/dist')), false);

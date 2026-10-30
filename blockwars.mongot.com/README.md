@@ -179,7 +179,7 @@ preserved. Tests compare copied fonts, vendor resources and sounds byte for byte
 The former `fs.Stats` warning no longer occurs during the verified build,
 including with `NODE_OPTIONS=--throw-deprecation`; legacy transitive packages
 can still exist elsewhere in the toolchain.
-The ignored `build/` directory is an asset staging tree, not a standalone
+The ignored `build/` directory is an application staging tree, not a standalone
 application or a clean/deleting deployment. Tasks overwrite matching files but
 do not remove stale files from previous builds.
 
@@ -203,6 +203,9 @@ the normal build does not use that VM API.
 **This is a deployment operation, not a local validation command.**
 The individual `gulp js`, `css`, `views`, `img` and `fonts` tasks retain their
 production destinations; `gulp assets` copies runtime resources and sounds.
+`gulp backend` copies the application entry point, notification service and routes;
+the default `npm run gulp` deployment includes this task. Restart the production
+Node/PM2 process after deploying backend changes; Gulp does not restart it.
 `gulp jsDev` still creates bundles under `public/js/dist`.
 
 Both production and local staging use the same task implementations. Output
@@ -211,16 +214,19 @@ includes:
 - Legacy game/lobby bundles and compiled settings/service-worker scripts.
 - Individual browser scripts loaded by the current templates.
 - Game server code, including the shared Special rules.
+- Application entry point (`app.js`), notification service (`serviceworker.js`) and routes.
 - Templates, CSS, images, fonts and licenses, vendor resources and sounds.
 
 Game/lobby bundle source ordering matches the active template ordering.
 Templates still load individual game/lobby scripts; this change does not
 silently switch the live application to bundles.
 
-The output deliberately excludes `app.js`, routes, package installations,
+The output deliberately excludes package manifests/installations,
 configuration/secrets, account models/middleware and chat data. Those remain
-owned by the existing server deployment process. Deploy route/entry-point
-changes through that process; copying assets alone does not deploy them.
+owned by the existing server deployment process. Ensure runtime dependencies
+are installed in the shared layout and notification environment variables are
+configured before restarting the server. After restart, `/notifications/config`
+must return HTTP 200 with JSON, even when push is not configured.
 
 See the [legacy-code audit](docs/legacy-code-audit.md) for completed
 modernization batches and remaining deployment uncertainties.

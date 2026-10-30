@@ -51,6 +51,13 @@ function javascript(output) {
   ]);
 }
 
+function backendFiles(output) {
+  return pipeline(
+    src(['app.js', 'serviceworker.js', 'routes/**/*.js'], { base: '.' }),
+    dest(output + '/')
+  );
+}
+
 function styles(output) {
   return pipeline(src('public/css/*.css'), cleanCSS(), dest(output + '/public/css'));
 }
@@ -89,6 +96,7 @@ function views() { return templates(prod); }
 function fonts() { return fontFiles(prod); }
 function img() { return images(prod); }
 function assets() { return resources(prod); }
+function backend() { return backendFiles(prod); }
 
 exports.css = css;
 exports.views = views;
@@ -97,8 +105,10 @@ exports.jsDev = jsDev;
 exports.img = img;
 exports.fonts = fonts;
 exports.assets = assets;
-exports.default = parallel(js, css, views, img, fonts, assets);
+exports.backend = backend;
+exports.default = parallel(js, css, views, img, fonts, assets, backend);
 exports.stage = parallel(
+  function stageBackend() { return backendFiles(stage); },
   function stageJs() { return javascript(stage); },
   function stageCss() { return styles(stage); },
   function stageViews() { return templates(stage); },

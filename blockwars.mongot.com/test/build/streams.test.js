@@ -29,4 +29,8 @@ test('JavaScript build stream completes with Gulp 5 and legacy transforms', asyn
     for (const filename of ['blockwars.min.js', 'lobby.min.js', 'settings.js', 'service-worker.js']) {
         assert.ok(fs.statSync(path.join(output, 'public/js', filename)).size > 0, filename);
     }
+    await exported.backend();
+    for (const filename of ['app.js', 'serviceworker.js', 'routes/main.js']) {
+        assert.deepEqual(fs.readFileSync(path.join(output, filename)), fs.readFileSync(filename), filename);
+    }
 });
