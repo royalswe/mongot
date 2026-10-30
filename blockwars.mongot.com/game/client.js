@@ -1,47 +1,14 @@
-const models = require('../../models');
-const Status = require('./status');
-
 "use strict";
 const Client = function(conn, id) {
     this.socket = conn;
     this.id = id;
+    this.isBot = false;
     this.points = null;
     this.session = null;
     this.state = null;
     this.status = null;
     this.lost = false;
     this.specials = [];
-};
-
-Client.prototype.compareSpecials = function(special) {
-    if (this.specials[0] === special) {
-        this.specials.splice(0, 1); // remove first item
-        return true;
-    }
-    console.log(this.id, this.status, this.session.status + ': stored special is ' + this.specials + '. sending special is ' + special);
-    return false;
-};
-
-Client.prototype.clientLost = function(data) {
-    if (this.status !== Status.client.ready) {
-        return;
-    }
-    this.lost = true;
-
-    if(this.points){
-        const GameEnd = new Date().getTime();
-        const timeDiff = GameEnd - this.session.GameStartTime; //in ms    
-
-        models.User.findOne({ username: this.id }, function(err, user) {
-            if(user && user.game_length_bw < timeDiff){
-                user.game_length_bw = timeDiff;
-                user.save();
-            }
-        });
-    }
-
-    this.roomEmit(data);
-    this.session.isGameOver(data);
 };
 
 /**

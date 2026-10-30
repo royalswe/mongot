@@ -2,13 +2,12 @@ let Chat = function(document, connectionManager) {
     this.document = document;
     this.cm = connectionManager;
     this.events = new Events();
-    this.colors = ["#e01313" , "#3d94f6","orange","#05d005","#ce04ce","#ffffff"];
 
     let timeStamp = Date.now();
 
     document.getElementById("send").addEventListener('click', () => { sendMessage(); }, false);
-    document.getElementById("message").addEventListener("keypress", function(e) {
-        if(e.keyCode === 13){
+    document.getElementById("message").addEventListener("keydown", function(e) {
+        if(e.key === 'Enter' && !e.isComposing){
             sendMessage();
         }
     }, false);
@@ -51,7 +50,7 @@ Chat.prototype.message = function(message){
     }
 
     const msg = '<div class="' +
-        message.type + '"><span style="color:'+ this.colors[colorNr] +'" >' +
+        message.type + '"><span style="color:'+ THEME.get().chat[colorNr] +'" >' +
         message.clientId + ':</span> ' +
         message.message + '</div>';
 
@@ -60,6 +59,7 @@ Chat.prototype.message = function(message){
     // Scroll down chatt automaticly
     const messages = document.getElementById('messages');
     messages.scrollTop = messages.scrollHeight;
+    LAYOUT.noteChatMessage();
 };
 
 Chat.prototype.serverMessage = function(data){
@@ -71,5 +71,5 @@ Chat.prototype.serverMessage = function(data){
     // Scroll down chatt automaticly
     const messages = document.getElementById('messages');
     messages.scrollTop = messages.scrollHeight;
+    LAYOUT.noteChatMessage();
 };
-

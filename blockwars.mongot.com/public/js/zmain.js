@@ -18,9 +18,9 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 window.addEventListener("keydown", function (e) {
-    if (e.ctrlKey && e.keyCode == 67) { // ctrl + c
+    if (e.ctrlKey && UTILS.keyCode(e) === 67) { // ctrl + c
         let input = document.getElementById("message");
-        (input === document.activeElement) ? input.blur() : input.focus(); // enable chat shortcut
+        (input === document.activeElement) ? input.blur() : LAYOUT.focusChat();
     }
 }, false);
 

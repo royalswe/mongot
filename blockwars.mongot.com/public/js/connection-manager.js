@@ -2,7 +2,7 @@ let ConnectionManager = function(document) {
     this.conn = null;
     this.peers = new Map();
     this.readyBtn = false;
-    this.joinBtn = false;
+    this.seatBtn = false;
 
     this.chat = new Chat(document, this);
     this.tetrisManager = new TetrisManager(document);
@@ -68,7 +68,7 @@ ConnectionManager.prototype.initSession = function() {
 
     if (roomName) {
         this.send({
-            type: 'join-session',
+            type: 'enter-room',
             user: user,
             name: roomName,
             ranking: ranking.toLowerCase()
@@ -76,16 +76,17 @@ ConnectionManager.prototype.initSession = function() {
     }
 };
 
-ConnectionManager.prototype.join = function() {
-    this.toggleBtnType("hide-join");
+ConnectionManager.prototype.takeSeat = function() {
+    this.toggleBtnType("hide-seat");
 
     this.localTetris = this.tetrisManager.createLocalPlayer();
     this.showAvailableSeats();
     const state = this.localTetris.serialize();
 
     this.watchEvents();
+    this.watchTargets();
     this.send({
-        type: 'join-game',
+        type: 'take-seat',
         state
     });
 };
@@ -169,10 +170,10 @@ ConnectionManager.prototype.updateManager = function(peers) {
         }
     });
     if(this.peers.size > 4){
-        this.toggleBtnType("hide-join");
+        this.toggleBtnType("hide-seat");
     }
     else if(this.localTetris === null){
-        this.toggleBtnType("join");
+        this.toggleBtnType("seat");
     }
     else if(peers.gamestatus === "running"){
         this.toggleBtnType("hide");
@@ -199,6 +200,8 @@ ConnectionManager.prototype.updatePeer = function(id, fragment, [prop, value]) {
 };
 
 ConnectionManager.prototype.start = function(data) {
+    LAYOUT.setGameRunning(true);
+    TOUCH.gameRunning(true);
     //this.toggleBtnType("hide");
     clearInterval(this.countDownInterval);
     removeElementById("count_down"); // remove countdown if exist
@@ -222,7 +225,7 @@ ConnectionManager.prototype.start = function(data) {
         arena[0].parentNode.removeChild(arena[0]);
     }
   
-    if (this.joinBtn) { this.joinBtn.style.background = "#dc862a99"; } // if spectator return with joinBtn transparent
+    if (this.seatBtn) { this.seatBtn.style.background = "#dc862a99"; } // if spectator return with seatBtn transparent
     if(this.localTetris == null) return;
 
     this.localTetris.arena.clear();
@@ -280,13 +283,16 @@ ConnectionManager.prototype.receive = function(event) {
         case 'log-special':
             this.logSpecial(data);
             break;
+        case 'arena-bounce':
+            if (this.peers.has(data.clientId)) { this.peers.get(data.clientId).bounceRows(data.rows); }
+            break;
         case 'remove-special':
             this.localTetris.special.removeSpecial();
             break;
         case 'use-special-failed':
             this.localTetris.special.sendingSpecial = false; // user can send special again
             break;
-        case 'join-session':
+        case 'enter-room':
             this.localID = data.clientId;
             if(data.isGuest){
                 data.msg = "&#8505; <a style='color: #0088ff' href='https://mongot.com/register'>Register</a> new account or  <a style='color: #0088ff' href='https://mongot.com/login'>login</a> to play in ranked rooms.";
@@ -294,13 +300,13 @@ ConnectionManager.prototype.receive = function(event) {
             }
             else{
                 this.readyBtn = document.getElementById("player_ready");
-                this.joinBtn = document.getElementById("join_game");
-                this.joinBtn.addEventListener('click', () => { this.join(); }, false);
+                this.seatBtn = document.getElementById("take_seat");
+                this.seatBtn.addEventListener('click', () => { this.takeSeat(); }, false);
                 this.readyBtn.addEventListener('click', () => { this.send({ type: "player-ready" }); }, false);
             }
 
             if(data.joinable){
-                this.toggleBtnType("join");
+                this.toggleBtnType("seat");
             }
             if(data.status === "running"){
                 this.start(data);
@@ -315,17 +321,17 @@ ConnectionManager.prototype.receive = function(event) {
                 this.toggleBtnType("hide");
             }
             break;
-        case 'join-game':
+        case 'take-seat':
             this.toggleBtnType("ready");
             this.localTetris.arenaNaming(data);
             this.peers.set(data.id, this.localTetris);
             break;
-        case 'unjoin-arena': {
+        case 'seat-released': {
             if(data.status === "ready"){
                 this.toggleBtnType("ready");
             }
-            if(data.status === "joined"){
-                this.toggleBtnType("join");
+            if(data.status === "seated"){
+                this.toggleBtnType("seat");
                // this.tetrisManager.removeLocalPlayer();
                 this.localTetris = null;
             }
@@ -348,6 +354,7 @@ ConnectionManager.prototype.receive = function(event) {
                 this.peers.get(data.clientId).gameOver('GAME OVER');
                 this.peers.get(data.clientId).stop();
             }
+            if (data.clientId === this.localID) { TOUCH.haptic('lost'); }
             if(data.clientId === this.localID && localStorage.getItem("toggle-sound") !== "off"){
                     this.GameLost.play();
             }
@@ -367,6 +374,9 @@ ConnectionManager.prototype.receive = function(event) {
             break;
         }
         case 'state-winner': {
+            LAYOUT.setGameRunning(false);
+            TOUCH.gameRunning(false);
+            if (data.winner === this.localID) { TOUCH.haptic('won'); }
             if(data.winner === "no-winner"){
                 data.winner = "no one ";
             }
@@ -383,15 +393,12 @@ ConnectionManager.prototype.receive = function(event) {
             li.className = "player-info";
             writeToLog(li);
 
-            let log = document.getElementsByClassName('game-description')[0];
-            log.scrollTop = log.scrollHeight;
-
             if(data.gameTime){
                 data.msg = '<span style="color:#ffffff">&#128337; </span> Game time: '+ data.gameTime;
                 this.chat.serverMessage(data);
             }
 
-            if(this.joinBtn) this.joinBtn.style.removeProperty('background'); // remove transparent joinBtn if necessary
+            if(this.seatBtn) this.seatBtn.style.removeProperty('background'); // remove transparent seatBtn if necessary
 
             this.countDownInterval = setTimeout(() => {
                 let gameOvers = document.getElementsByClassName('gameover');
@@ -408,7 +415,7 @@ ConnectionManager.prototype.receive = function(event) {
                     this.toggleBtnType("ready");
                 }
                 else if(this.peers.size < 5){
-                    this.toggleBtnType("join");
+                    this.toggleBtnType("seat");
                 }
                 this.showAvailableSeats();
             }, 2000);
@@ -488,25 +495,64 @@ ConnectionManager.prototype.watchEvents = function() {
         });
     });
 
+    arena.events.listen('bounce', rows => {
+        this.send({ type: 'arena-bounce', rows });
+    });
+
+};
+
+/**
+ * Clicking or tapping an opponent's Arena sends them your next Special; your own queue sends it to yourself.
+ */
+ConnectionManager.prototype.watchTargets = function() {
+    if (this.targetsBound) { return; }
+    this.targetsBound = true;
+
+    // Enter does what a click does, for keyboard users who tab to an opponent or the queue.
+    document.getElementById('arena_container').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target.matches('.arena[role=button], .special-tube')) { e.target.click(); }
+    });
+
+    document.getElementById('arena_container').addEventListener('click', (e) => {
+        if (!this.localTetris || document.body.classList.contains('tile-mode')) { return; }
+
+        const arena = e.target.closest('.arena');
+        if (!arena) { return; }
+
+        let playerId = null;
+        let flashed = arena;
+        if (arena.classList.contains('local')) {
+            flashed = e.target.closest('.special-tube');
+            playerId = flashed ? this.localID : null;
+        } else {
+            const name = arena.querySelector('.client-name');
+            playerId = name ? name.getAttribute('data-player') : null;
+        }
+
+        if (playerId !== null && this.localTetris.special.sendTo(playerId)) {
+            flashed.classList.add('special-target');
+            setTimeout(() => flashed.classList.remove('special-target'), 500);
+        }
+    });
 };
 
 ConnectionManager.prototype.toggleBtnType = function(type){
-    if(!this.joinBtn){ return; }
+    if(!this.seatBtn){ return; }
 
-    if(type === "join"){
-        this.joinBtn.style.display = "block";
+    if(type === "seat"){
+        this.seatBtn.style.display = "block";
         this.readyBtn.style.display = "none";
     }
     else if(type === "ready"){
-        this.joinBtn.style.display = "none";
+        this.seatBtn.style.display = "none";
         this.readyBtn.style.display = "block";
     }
     else if(type === "hide"){
-        this.joinBtn.style.display = "none";
+        this.seatBtn.style.display = "none";
         this.readyBtn.style.display = "none";
     }
-    else if(type === "hide-join"){
-        this.joinBtn.style.display = "none";
+    else if(type === "hide-seat"){
+        this.seatBtn.style.display = "none";
     }
 };
 
@@ -525,6 +571,7 @@ function removeElementById(id){
 
 function writeToLog(msg){
     document.getElementById("game_log").appendChild(msg);
+    LAYOUT.toast(msg);
 
     const log = document.getElementsByClassName('game-description')[0];
     log.scrollTop = log.scrollHeight;

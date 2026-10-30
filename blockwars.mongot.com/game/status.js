@@ -4,7 +4,7 @@ const status = Object.freeze({
         running: "running"
     },
     client: {
-        joined: "joined",
+        seated: "seated",
         ready: "ready"
     }
 });

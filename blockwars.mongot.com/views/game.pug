@@ -2,22 +2,28 @@ doctype html
 html(lang='en')
   head
     meta(charset='UTF-8')
-    meta(name='viewport', content='width=device-width,user-scalable=no')
+    meta(name='viewport', content='width=device-width, initial-scale=1')
     link(rel='shortcut icon', href='/img/favicon.ico', type='image/x-icon')
-    link(rel='stylesheet', href='/css/blockwar.css?v=1.1')
+    link(rel='stylesheet', href='/css/blockwar.css?v=1.16')
+    link(rel='stylesheet', href='/css/blockwar-phone.css?v=12', media='screen and (max-width: 768px), screen and (max-height: 520px)')
+    script.
+      try { var theme = localStorage.getItem('theme'); document.documentElement.classList.add('theme-' + (theme === 'flat' || theme === 'retro' ? theme : 'classic')); } catch (e) { document.documentElement.classList.add('theme-classic'); }
     title Blockwars
 
   body
     section#top
       .settings-wrapper
-        .settings-action.fa.icon-settings
-        .settings-container
-          li.settings-btn.fa.icon-help(title='How to play')
-          li.settings-btn.fa.icon-keyboard(title='Change controler settings')
-          input#toggle_sound(type='checkbox', checked='', onchange='toggleSound(this)')
-          label.settings-btn.fa(for='toggle_sound' title='Mute sound')
-          input#toggle_fullscreen(type='checkbox', checked='')
+        button#settings_toggle.settings-action.fa.icon-settings(type='button', title='Settings', aria-label='Settings', aria-expanded='false', aria-controls='settings_menu')
+        #settings_menu.settings-container(role='group', aria-label='Settings')
+          button.settings-btn.fa.icon-help(type='button', title='How to play', aria-label='How to play')
+          button.settings-btn.fa.icon-keyboard(type='button', title='Controls', aria-label='Controls')
+          button#theme_toggle.settings-btn.fa.icon-theme(type='button')
+          input#toggle_sound.sr-only(type='checkbox', checked='', onchange='toggleSound(this)')
+          label.settings-btn.fa(for='toggle_sound' title='Sound')
+            span.sr-only Sound
+          input#toggle_fullscreen.sr-only(type='checkbox', checked='')
           label.settings-btn.fa(for='toggle_fullscreen' title='Fullscreen')
+            span.sr-only Fullscreen
 
       .special-description
         img(src='/img/game/special-description.png')
@@ -26,7 +32,12 @@ html(lang='en')
         .game-description
           ul#game_log
             li Welcome to the game
+      .panel-toggles
+        button#keyboard_toggle.panel-toggle.fa.icon-keyboard(type='button', title='Hide keyboard', aria-label='Hide keyboard', aria-expanded='true', aria-controls='keyboard')
+        button#chat_toggle.panel-toggle.fa.icon-chat(type='button', title='Show chat', aria-label='Show chat', aria-expanded='false', aria-controls='chat')
+          span#chat_unread(hidden)
     section#tetris
+      #toasts(aria-live='polite')
       #arena_container
       template#player_template
         .arena.open
@@ -36,116 +47,166 @@ html(lang='en')
       template#local_template
         .arena.local
           canvas.next-block(width='120', height='200')
-          .special-tube
+          .special-tube(role='button', tabindex='0', aria-label='Use your next Special on yourself')
             .specials
             span.current-special-square
           canvas.tetris(width='240', height='464')
           span.current-special
           .client-name
           
-      a#join_game(href='javascript:void(0)', role='button') Join game!
-      a#player_ready(href='javascript:void(0)', role='button') Click when ready!
+      button#take_seat(type='button') Take a seat
+      button#player_ready(type='button') Click when ready!
     section#bottom
+      button#panels_toggle.panel-toggle.fa.icon-collapse(type='button', title='Hide chat and keyboard', aria-label='Hide chat and keyboard', aria-expanded='true', aria-controls='chat keyboard')
       section#chat
-        div#messages
+        .chat-header
+          span Chat
+          button#chat_close(type='button', aria-label='Close chat') &times;
+        div#messages(role='log')
         div#chat_input
-          input#message(type="text", autocomplete="off", placeholder="Chat (ctrl + c)")
+          input#message(type="text", autocomplete="off", aria-label="Chat message", placeholder="Chat (ctrl + c)")
           input#send(type='submit', value='Send')
 
-      section.keyboard
+      section#keyboard.keyboard
         div.keyboard-row
-          #49.keyboard-col 1
-          #50.keyboard-col 2
-          #51.keyboard-col 3
-          #52.keyboard-col 4
-          #53.keyboard-col 5
+          button.keyboard-col(id='49', type='button', tabindex='-1', aria-label='Special 1') 1
+          button.keyboard-col(id='50', type='button', tabindex='-1', aria-label='Special 2') 2
+          button.keyboard-col(id='51', type='button', tabindex='-1', aria-label='Special 3 (yourself)') 3
+          button.keyboard-col(id='52', type='button', tabindex='-1', aria-label='Special 4') 4
+          button.keyboard-col(id='53', type='button', tabindex='-1', aria-label='Special 5') 5
         div.keyboard-row
-          #90.keyboard-col.key_z z
-          #38.keyboard-col.key_upp &uarr;
+          button.keyboard-col.key_z(id='90', type='button', tabindex='-1', aria-label='Rotate left') z
+          button.keyboard-col.key_upp(id='38', type='button', tabindex='-1', aria-label='Rotate right') &uarr;
         div.keyboard-row
-          #32.keyboard-col.key_space SPACE
-          #37.keyboard-col &larr;
-          #40.keyboard-col &darr;
-          #39.keyboard-col &rarr;
+          button.keyboard-col.key_space(id='32', type='button', tabindex='-1', aria-label='Hard drop') SPACE
+          button.keyboard-col(id='37', type='button', tabindex='-1', aria-label='Move left') &larr;
+          button.keyboard-col(id='40', type='button', tabindex='-1', aria-label='Soft drop') &darr;
+          button.keyboard-col(id='39', type='button', tabindex='-1', aria-label='Move right') &rarr;
 
-    #rules_modal(style='display:none;')
+    #rules_modal(style='display:none;', role='dialog', aria-modal='true', aria-label='How to play')
       .rules-popup
-        span.close-rules X
-        // One "tab" for each step in the form:
-        .tab
+        .rules-header
           h2 How to play
-          .screenshot-holder.a
-          .screenshot-explanation.a
-            p
-              | Blockwar is a Tetris variant where the goal is to stay alive for as long as possible until the opponents fill their playing field before your own gets filled.
-            p
-              | To interact with the game use the keys that are shown on the image.
-              br
-              | If you use a device with touh screen then you can use the controll symbols at the bottom of the game to interact with the game.
-              br
-              | If the controls panel or the chat aren't visible then change the size of the game window to see them.
+          button.close-rules.modal-close(type='button', aria-label='Close How to play') &times;
+        p#rules_progress.rules-progress(role='status', aria-live='polite')
         .tab
-          h2 Collect specials
-          .screenshot-holder.b
-          .screenshot-explanation.b
-            p
-              | For every 2 lines you clear at once, one special item will randomly appear in your field
-            p
-              | When you clear a line that has a special item, it will be transfered to your item queue on the right side of the field
-            p
-              | To use the first item in your item queue, press the players number.
-              br
-              |  The players numbers is shown bellow each player field and you are always number 3.
+          h3 Be the last Player standing
+          p Fit falling blocks into complete horizontal rows to clear them. Keep your Arena from filling up and outlast the other Players.
+          ol.rules-start
+            li
+              strong Take a seat.
+              |  You enter a Room as a Spectator. Choose an open Seat to play.
+            li
+              strong Click when ready!
+              |  The Game starts when every seated Player is Ready.
+            li
+              strong Clear rows and send Specials.
+              |  Help yourself or disrupt an opponent to stay in the Game.
+          .rules-columns
+            section.rules-card
+              h4 Keyboard
+              p These are the default keys. Change them in Settings &gt; Controls.
+              dl.rules-keys
+                dt Move
+                dd
+                  kbd &larr;
+                  = ' '
+                  kbd &rarr;
+                dt Rotate right / left
+                dd
+                  kbd &uarr;
+                  = ' / '
+                  kbd Z
+                dt Soft drop
+                dd
+                  kbd &darr;
+                dt Hard drop
+                dd
+                  kbd Space
+            section.rules-card
+              h4 Touch
+              ul
+                li Drag across your Arena to move.
+                li Tap its left or right half to rotate in that direction.
+                li Hold or drag down to soft drop; flick down to hard drop.
+              p Prefer buttons? Enable On-screen buttons in Controls.
+          p.rules-tip Need more space? On desktop, use the bottom chevron to hide chat and the keyboard. On phones, toggle them separately with the chat and keyboard icons.
         .tab
-          h2 Special description
+          h3 Collect and use Specials
+          ol.rules-start
+            li
+              strong Create.
+              |  Clear 2 or 3 rows with one piece to create one Special, or 4 rows to create two. Specials appear on blocks remaining in your Arena, so an empty Arena cannot receive one.
+            li
+              strong Collect.
+              |  Clear a row containing a Special to add it to your queue beside your Arena.
+            li
+              strong Choose a target.
+              |  You always use the first Special in your queue. Its name is shown beside your Arena.
+          .rules-columns
+            section.rules-card
+              h4 Keyboard and on-screen buttons
+              p Press a Player's number (1 &ndash; 5) to send your next Special to that Player. The numbers appear below the Arenas.
+              p
+                strong You are always number 3.
+                |  Use helpful Specials on yourself and harmful ones on opponents. Number keys can be changed in Controls.
+            section.rules-card
+              h4 Touch targeting
+              p Tap an opponent's Arena to send your next Special to them.
+              p Tap your own Special queue to use the next Special on yourself.
+          p.rules-tip Watch out for Mines! Clearing a row containing a Mine eliminates you instead of giving you a Special.
+        .tab
+          h3 Know your Specials
+          p Every Special affects its target's Arena. Choose carefully: a helpful Special can also help an opponent.
           ul.specials-list
             li
               span
-              | <b>Add row</b> - Add one line at the bottom with an hole
+              | <b>Add row</b> - Adds a row at the bottom with one gap.
             li
               span
-              | <b>Remove row</b> - Removes the row at the bottom
+              | <b>Remove row</b> - Removes the bottom row.
             li
               span
-              | <b>Earthquake</b> - Scramble all lines horizontal
+              | <b>Earthquake</b> - Scrambles the blocks within each row.
             li
               span
-              | <b>Clear specials</b> - Converts all special items to regular blocks
+              | <b>Clear specials</b> - Turns Specials and Mines into ordinary blocks.
             li
               span
-              | <b>Shotgun</b> - Creates random holes in the field
+              | <b>Shotgun</b> - Blasts random holes in the blocks.
             li
               span
-              | <b>Gravity</b> - Pushes blocks downwards, filling all gaps and clearing all whole rows
+              | <b>Gravity</b> - Drops blocks into gaps and clears completed rows.
             li
               span
-              | <b>Clear arena</b> - Removes all blocks from the field
+              | <b>Clear arena</b> - Removes every block.
             li
               span
-              | <b>Switch arena</b> - Swap your field with the opponents
+              | <b>Switch arena</b> - Swaps your Arena with the target's.
             li
               span
-              | <b>Monster</b> - Builds a monster with blocks
+              | <b>Monster</b> - Replaces the blocks with a monster-shaped stack.
             li
               span
-              | <b>Mini bomb</b> - Change all specials to deadly mines
+              | <b>Mini bomb</b> - Turns Specials into deadly Mines.
             li
               span
-              | <b>Mine</b> -You lose the game if you collect this
+              | <b>Mine</b> - Eliminates you if you clear its row. Avoid collecting it!
             li
               span
-              | <b>Milkshake</b> - Scramble all lines vertical
+              | <b>Milkshake</b> - Scrambles blocks vertically.
 
         .rules-buttons
           button#prevBtn(type='button') Previous
           button#nextBtn(type='button') Next
 
-        .steps
+        .steps(aria-hidden='true')
           span.step
           span.step
           span.step
 
-    #controler_settings
+    #controler_settings(role='dialog', aria-modal='true', aria-label='Controls')
+      button.close-controls.modal-close(type='button', aria-label='Close Controls') &times;
       h2 Controls
       p
         | Click on the control you want to change, then press any key.
@@ -195,27 +256,107 @@ html(lang='en')
             th Special 5
             td#special5
               | 5
+      h3 Handling
       table#DAS_ARR
         tbody
           tr
-            th DAS
+            th
+              label(for='os_repeat') Turn off keyboard repeat
             td
-              .number-input
-                button(onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
-                input#DAS(min='0' max='30' name='DAS' value='0' type='number')
-                button.plus(onclick="this.parentNode.querySelector('input[type=number]').stepUp()") 
-            td         
+              input#os_repeat(type='checkbox')
+            td
           tr
-            th ARR
+            th
+              label(for='DAS') DAS
             td
               .number-input
-                button(onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
-                input#ARR(min='0' max='30' name='ARR' value='10' type='number')
-                button.plus(onclick="this.parentNode.querySelector('input[type=number]').stepUp()")
-      p.explanation DAS is delayed auto shift (How long you have to hold down the button before a piece starts flying to the wall).<br>ARR is auto repeat rate (how quickly the pieces move from right to left.)<br>Set DAS to 0 to disable this functions.
+                button(type='button', aria-label='Decrease DAS', onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
+                input#DAS(min='0' max='500' name='DAS' value='167' type='number', aria-label='DAS in milliseconds')
+                button.plus(type='button', aria-label='Increase DAS', onclick="this.parentNode.querySelector('input[type=number]').stepUp()")
+            td.unit ms
+          tr
+            th
+              label(for='ARR') ARR
+            td
+              .number-input
+                button(type='button', aria-label='Decrease ARR', onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
+                input#ARR(min='0' max='200' name='ARR' value='33' type='number', aria-label='ARR in milliseconds')
+                button.plus(type='button', aria-label='Increase ARR', onclick="this.parentNode.querySelector('input[type=number]').stepUp()")
+            td.unit ms
+          tr
+            th
+              label(for='DCD') DCD
+            td
+              .number-input
+                button(type='button', aria-label='Decrease DCD', onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
+                input#DCD(min='0' max='200' name='DCD' value='0' type='number', aria-label='DCD in milliseconds')
+                button.plus(type='button', aria-label='Increase DCD', onclick="this.parentNode.querySelector('input[type=number]').stepUp()")
+            td.unit ms
+          tr
+            th
+              label(for='SDF') SDF
+            td
+              .number-input
+                button(type='button', aria-label='Decrease SDF', onclick="this.parentNode.querySelector('input[type=number]').stepDown()")
+                input#SDF(min='2' max='41' name='SDF' value='16' type='number', aria-label='SDF, soft drop speed as a multiple of gravity, 41 is instant')
+                button.plus(type='button', aria-label='Increase SDF', onclick="this.parentNode.querySelector('input[type=number]').stepUp()")
+            td.unit#SDF_unit ×
+          tr
+            th
+              label(for='ghost_piece') Ghost piece
+            td
+              input#ghost_piece(type='checkbox')
+            td
+      p.explanation
+        | Use keyboard repeat lets your operating system's key repeat move the block, like DAS 0 used to; DAS, ARR and DCD are then not used.
+        br
+        | DAS (delayed auto shift) is how long you hold left or right before the block starts sliding by itself.
+        br
+        | ARR (auto repeat rate) is the time between each step of that slide; 0 sends it straight to the wall.
+        br
+        | DCD (DAS cut delay) pauses the slide for a moment after you rotate or a new block appears; 0 turns it off.
+        br
+        | SDF (soft drop factor) is how many times faster than gravity Move Down drops; 41 (∞) drops to the floor at once.
+        br
+        | Ghost piece shows where the block will land.
+
+      h3 Effects
+      table#effect_settings
+        tbody
+          tr
+            th
+              label(for='arena_bounce') Arena bounce
+            td
+              input#arena_bounce(type='checkbox', checked='')
+      p.explanation Arena bounce shakes a player's Arena when they clear two or more rows at once, harder for four.
+
+      h3 Touch
+      table#touch_settings
+        tbody
+          tr
+            th
+              label(for='touch_sensitivity') Drag sensitivity
+            td
+              input#touch_sensitivity(type='range', min='0.5', max='2', step='0.1', value='1')
+          tr
+            th
+              label(for='touch_buttons') On-screen buttons
+            td
+              input#touch_buttons(type='checkbox')
+          tr
+            th
+              label(for='touch_haptics') Vibration
+            td
+              input#touch_haptics(type='checkbox')
+          tr
+            th
+              label(for='touch_wakelock') Keep screen on
+            td
+              input#touch_wakelock(type='checkbox')
+      p.explanation Drag the playfield to move, tap its left or right half to rotate, hold or drag down to drop faster and flick down to drop at once.
 
       div.close-controler-modal
-        a(href='javascript:void(0)', role='button') Done
+        button(type='button') Done
 
     script
       if user
@@ -227,13 +368,21 @@ html(lang='en')
     //- script(src='/js/blockwars.min.js')
 
     script(src='/js/modules/utils.js')
+    script(src='/js/modules/canvas-fit.js')
+    script(src='/js/modules/layout.js')
+    script(src='/js/modules/gestures.js')
+    script(src='/js/modules/handling.js')
+    script(src='/js/modules/touch.js')
+    script(src='/js/modules/a11y.js')
     script(src='/js/modules/tetris-utils.js')
+    script(src='/js/modules/theme.js')
     script(src='/js/modules/screen-settings.js')
     script(src='/js/connection-manager.js')
     script(src='/js/tetris-manager.js')
     script(src='/js/events.js')
     script(src='/js/arena.js')
     script(src='/js/block.js')
+    script(src='/js/special-rules.js')
     script(src='/js/special.js')
     script(src='/js/tetris.js')
     script(src='/js/chat.js')

@@ -1,6 +1,6 @@
 extends base
 block head
-  - var title = 'How to play'
+  - const title = 'How to play'
   style.
     body{background-color: #E0E0E0}
 
@@ -183,25 +183,25 @@ block body
   script.
     (function() {
 
-      var page = document.getElementsByClassName('page');
-      for (var i = 0; i < page.length; i++) {
+      const page = document.getElementsByClassName('page');
+      for (let i = 0; i < page.length; i++) {
         page[i].style.display = 'none';
       }
 
-      var hash = document.location.hash;
+      let hash = document.location.hash;
       if(hash === ''){ hash = '#english'; }
 
       document.querySelector(hash).style.display = '';
       document.querySelector('a[href="'+hash+'"]').parentNode.classList.add("active");
 
       window.addEventListener("hashchange",function(){
-        for (var i = 0; i < page.length; i++) {
+        for (let i = 0; i < page.length; i++) {
           page[i].style.display = 'none';
         }
 
         document.querySelector('.nav-parent.active').classList.remove('active');
         
-        var hash = document.location.hash;
+        const hash = document.location.hash;
         document.querySelector('a[href="'+hash+'"]').parentNode.classList.add("active");
         document.querySelector(hash).style.display = '';
       });

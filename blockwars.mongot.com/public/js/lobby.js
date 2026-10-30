@@ -100,8 +100,8 @@ let Lobby = function(){
     return false;
   };
   
-  document.getElementById("message").addEventListener("keypress", function(e) {
-    if (e.keyCode === 13 ) {
+  document.getElementById("message").addEventListener("keydown", function(e) {
+    if (e.key === 'Enter' && !e.isComposing) {
       document.getElementById("send").click();
     }
   });
@@ -175,8 +175,8 @@ Lobby.prototype.renderRooms = function(data) {
 Lobby.prototype.renderConnectedUsers = function(users) {
 
   let onlineList = document.getElementById("users_online");
-  onlineList.innerHTML = '<p id="user_online_list">Users in lobby (' + users.length + ")</p>";
-    
+  onlineList.innerHTML = '<h4 class="lobby-section-heading" id="user_online_list">Users in lobby (' + users.length + ")</h4>";
+
   document.title = "Lobby (" + users.length + ")";
 
   for (let i = 0; i < users.length; i++) {

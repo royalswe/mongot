@@ -48,12 +48,12 @@ Arena.prototype.sweepRow = function(callback) {
 
     if(rowNumbers.length > 0){      
         this.tetris.drawSweepRow(rowNumbers, () => {
+            if (rowCount > 1) { this.events.emit('bounce', rowCount); }
             for (; rowCount > 1; rowCount -= 2) {
                 this.createSpecial();
             }
             this.events.emit('matrix', this.matrix);   
             
-            this.tetris.block.dropInterval = this.tetris.block.DROP_SLOW; // Remove fast moving block 
             return callback();      
         });
     }

@@ -18,3 +18,17 @@ The login flow is owned by `mongot.com`; game subdomains should consume that ide
 For browser authentication to work across subdomains, the portal must issue the cookie with a parent-domain scope such as `mongot.com` (or `.mongot.com`), and the Snake server must use the same `COOKIE_SECRET`. The cookie domain option is currently commented out in `mongot.com/app.js`, so do not assume cross-subdomain cookie sharing is enabled by the checked-in configuration. Keep this requirement in mind when changing auth or local/prod setup.
 
 See `snake.mongot.com/AGENTS.md` for Snake-specific instructions and `snake.mongot.com/README.md` for its development setup.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked as local markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default triage label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Multi-context: root `GLOSSARY-MAP.md` points to per-game glossaries (e.g. `blockwars.mongot.com/GLOSSARY.md`), with ADRs in `<game>/docs/adr/`. See `docs/agents/domain.md`.

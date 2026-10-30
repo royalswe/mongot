@@ -3,9 +3,10 @@ const AI = require('./ai');
 const RandomPieceGenerator = require('./random_piece_generator');
 const Grid = require('./grid');
 const Status = require('../status');
+const Client = require('../client');
 
 const Bot = function(session, name){
-    this.socket = new mockClient();
+    Client.call(this, new mockClient(), name);
 
     this.opponents = [];
 
@@ -21,8 +22,9 @@ const Bot = function(session, name){
 
     this.session = null;
     this.id = name;
+    this.isBot = true;
     this.state = {"arena":{"matrix":this.grid.cells},"block":{"matrix":[],"pos":{"x":1,"y":1}}};
-    this.status = Status.client.joined;
+    this.status = Status.client.seated;
     this.points = 1500;
     this.lost = false;
     this.stop = false;
@@ -48,6 +50,9 @@ const Bot = function(session, name){
 
     this.init();
 };
+
+Bot.prototype = Object.create(Client.prototype); // send and broadcast come from Client
+Bot.prototype.constructor = Bot;
 
 Bot.prototype.init = function (){
     this.socket.on('error', (err) => console.log('bot socket: ', err));
@@ -176,6 +181,10 @@ Bot.prototype.endTurn = function(){
         this.broadcast(data);
         
         return false; 
+    }
+
+    if (rows.cleared > 1) {
+        this.broadcast({ type: "arena-bounce", rows: Math.min(rows.cleared, 4) });
     }
 
     for (; rows.cleared > 1; rows.cleared -= 2) { // create special every two rows
@@ -370,27 +379,6 @@ Bot.prototype.createSpecial = function() {
     console.log(this.status, this.lost, this.stop);
     console.log(this.session.status);
     console.log('--------------createSpecial-------------------');
-};
-
-Bot.prototype.broadcast = function(data){
-    data.clientId = this.id;
-    for (let client of this.session.clients) {
-        client.send(data);
-    }
-};
-
-/**
- * Send to local client only
- */
-Bot.prototype.send = function(event) {
-    const data = JSON.stringify(event);
-    const client = this.socket;
-    client.send(data, function ack(err) {
-        if (client.readyState !== 1){ return; }
-        if (err) { 
-            console.log(this.id, err); 
-        }
-    });
 };
 
 function countRowTypes(grid){
