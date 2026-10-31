@@ -91,7 +91,7 @@ function installRandom(options = {}) {
     };
 }
 
-function createTable({seats = [{}, {}], mapId = 'original', room = 'test-room', seed = null, realRandom = false} = {}) {
+function createTable({seats = [{}, {}], mapId = 'original', room = 'test-room', seed = null, realRandom = false, allowBots = true} = {}) {
     const clock = installClock();
     const random = installRandom({seed, realRandom});
     const broadcasts = [];
@@ -105,7 +105,7 @@ function createTable({seats = [{}, {}], mapId = 'original', room = 'test-room', 
             aggression: seat.bot.aggression !== undefined ? seat.bot.aggression : 0.5
         }, id, COLORS[id]) :
         fakeSocket(id, seat));
-    const board = new GameBoard(sockets, io, room, mapId);
+    const board = new GameBoard(sockets, io, room, mapId, undefined, {allowBots: allowBots});
     const map = countryHandler.getMap(mapId);
 
     const info = () => board.getGameInfo();

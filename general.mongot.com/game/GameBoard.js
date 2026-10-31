@@ -11,6 +11,9 @@ let rating = require('./rating');
 // Must not overlap botProfiles usernames: bots.username is unique.
 const BOT_NAMES = ['Ranger', 'Sentinel', 'Guardian', 'Keeper'];
 const TURN_EVENTS = ['deploy', 'next_turn', 'battle', 'tactical_move'];
+const RECONNECT_GRACE = 30000;
+// A fast-forwarded bot match that has not ended after this many phases is a stalemate and is abandoned.
+const FAST_FORWARD_PHASE_LIMIT = 4000;
 const BOT_DELAYS = {
     deployInitial: 120,     // Initial delay for deployment (maintains test compatibility)
     deployStep: 400,        // Delay between placing individual units during regular deploy phase
@@ -23,10 +26,12 @@ const BOT_DELAYS = {
 };
 
 // sockets.js passes its lobby updates in, so this module does not depend on it.
-const noLobby = {returnRoom() {}, updatePlayerList() {}};
+const noLobby = {returnRoom() {}, updatePlayerList() {}, matchAbandoned() {}};
 
-let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby) {
+// allowBots: whether a bot takes over a seat whose player gave up or did not return; otherwise the seat drops out.
+let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby, settings = {}) {
 
+    const allowBots = settings.allowBots !== false;
     let PlayerList = {};
     let botControllers = {};
     let map = countryHandler.getMap(mapId);
@@ -43,6 +48,14 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
     let actionHistory = [];
     const actionHistoryLimit = 40;
     let gameOver = false;
+    let everyoneDeployFinished = false;
+    let graceTimers = {};
+    let fastForward = false;
+    let fastForwardPhases = 0;
+
+    function botDelay(name) {
+        return fastForward ? 0 : BOT_DELAYS[name];
+    }
     let phaseTimer = 122000;
     let GameStart;
     let gameInfra = io.of('/game_infra'); // The namespace
@@ -67,13 +80,17 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
         for(let i = 0; i<sockets.length; i += 1){
             // After a bot takeover PlayerList holds the bot's name, so match on the original socket.
             if((PlayerList[i].username === socket.username || sockets[i].username === socket.username) && !PlayerList[i].surrender){
+                // Only giving up or being conquered loses the seat; a dropped connection can always reclaim it.
                 if (PlayerList[i].countries.length <= 0 || PlayerList[i].lost === 'surrender') { return; }
                 delete botControllers[i];
+                clearTimeout(graceTimers[i]);
+                delete graceTimers[i];
                 PlayerList[i].username = socket.username;
                 PlayerList[i].botControlled = false;
                 lobby.returnRoom(room, socket, PlayerList[i].color); // Update lobby and join room
                 sockets.splice(i, 1, socket);
                 PlayerList[i].lost = false;
+                gameInfra.in(room).emit('message', {type: 'serverMessage', message: socket.username + ' is back and has retaken their seat.'});
                 socket.send({type: 'player_rejoin', mission: PlayerList[i].mission}); // Show players mission
                 socket.send({type: 'update_gold', gold: PlayerList[i].gold});
                 let gold = updateGoldIncome(i);
@@ -86,20 +103,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
                     Game.prototype.everyoneDeploy(i);
                 }
                 else {
-                    if (ap === i) {
-                        Game.prototype.nextTurnButton();
-                        switch (phase) {
-                            case Game.Phase.deploy:
-                                Game.prototype.deploy();
-                                break;
-                            case Game.Phase.battle:
-                                Game.prototype.battle();
-                                break;
-                            case Game.Phase.tacticalMove:
-                                Game.prototype.tacticalMove();
-                                break;
-                        }
-                    }
+                    if (ap === i) { Game.prototype.resumeTurn(); }
                     socket.send({
                         type: 'current_player',
                         bool: ap === i,
@@ -126,10 +130,17 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
     // Called by the server when a seated player's socket closes, so nothing depends on what other browsers report.
     this.playerDisconnected = function (socket) {
         const id = sockets.indexOf(socket);
-        if (id !== -1) { Game.prototype.leaveGame(id); }
+        // A bot already plays for a surrendered player, so their departure must not interrupt the bot's turn.
+        if (id !== -1 && !botControllers[id]) { Game.prototype.leaveGame(id); }
+    };
+
+    // True while at least one seat is still played by a human, including one inside the reconnect window.
+    this.hasHumanPlayers = function () {
+        return sockets.some((socket, id) => !getController(id).isBot);
     };
 
     this.getRematchPlayers = function (connectedPlayers) {
+        if (!allowBots) { return sockets.filter((socket) => connectedPlayers.indexOf(socket) !== -1); }
         return sockets.map((socket, id) => {
             if (connectedPlayers.indexOf(socket) !== -1) {
                 delete botControllers[id];
@@ -173,9 +184,48 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
         return gameOver;
     };
 
-    this.destroy = function () {
+    function destroyBoard() {
         gameOver = true;
         clearTimeout(timer);
+        Object.keys(graceTimers).forEach((id) => clearTimeout(graceTimers[id]));
+        graceTimers = {};
+    }
+
+    this.destroy = destroyBoard;
+
+    // With nobody left to watch, bots play out the match without their pacing delays.
+    this.setFastForward = function (enabled) {
+        fastForward = Boolean(enabled);
+        fastForwardPhases = 0;
+    };
+
+    // Ends the reconnect window for everyone who is away: bots take their seats or they sit out.
+    this.replaceAbsentPlayers = function () {
+        Object.keys(PlayerList).forEach((id) => {
+            if (PlayerList[id].lost === null) { Game.prototype.replaceAbsentPlayer(Number(id)); }
+        });
+    };
+
+    // A match closed before anyone won: every player whose seat a bot took over is charged a loss.
+    // Ratings are only settled against a winner, so points stay unchanged. Returns the charged usernames.
+    this.abandon = function () {
+        return Game.prototype.abandonMatch();
+    };
+
+    Game.prototype.abandonMatch = function () {
+        if (gameOver) { return []; }
+        const charged = [];
+        sockets.forEach((socket, id) => {
+            if (!botControllers[id] || socket.isBot || socket.isGuest) { return; }
+            charged.push(socket.username);
+            if (process.env.NODE_ENV !== 'test') {
+                models.User.updateOne({username: socket.username}, {$inc: {games_lost_general: 1}},
+                    function (err) { if (err) { console.log(err); } });
+            }
+        });
+        gameInfra.in(room).emit('message', {type: 'game_over', message: 'The match was closed without a winner.'});
+        destroyBoard();
+        return charged;
     };
 
     this.kickoutPlayer = function (player) {
@@ -216,6 +266,10 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
      * Will change the game phase
      */
     Game.prototype.nextTurn = function () {
+        if (fastForward && !gameOver && (fastForwardPhases += 1) > FAST_FORWARD_PHASE_LIMIT) {
+            this.abandonMatch();
+            return lobby.matchAbandoned(room);
+        }
         phase = nextPhase;
         clearTimeout(timer);
         phaseDeadline = phase === Game.Phase.gameOver ? null : Date.now() + phaseTimer;
@@ -361,7 +415,24 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
             }
 
             ap = ap >= Object.keys(PlayerList).length - 1 ? 0 : ap + 1; // change active player
-            if (PlayerList[ap].lost === false) { return; }
+            // A player inside the reconnect window still gets the turn, so others cannot skip past them.
+            if (PlayerList[ap].lost !== true) { return; }
+        }
+    };
+
+    // Hands the current phase to whoever now controls the active seat (a returning player or a stand-in bot).
+    Game.prototype.resumeTurn = function () {
+        this.nextTurnButton();
+        switch (phase) {
+            case Game.Phase.deploy:
+                this.deploy();
+                break;
+            case Game.Phase.battle:
+                this.battle();
+                break;
+            case Game.Phase.tacticalMove:
+                this.tacticalMove();
+                break;
         }
     };
 
@@ -386,10 +457,9 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
     Game.prototype.everyoneDeploy = function (player = 'all') {
         this.refreshGoldIncome();
 
-        let count = 0;
         if(player === 'all'){
             setTimeout(() => { // Collect gold if player wait out the time
-                if (count < Object.keys(PlayerList).length) {
+                if (!everyoneDeployFinished) {
                     for (let i = 0; i < Object.keys(PlayerList).length; i += 1) {
                         this.collectGoldIncome(i);
                         this.updateGold(i);
@@ -427,19 +497,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
                     }
 
                     // Check if all player is done for the next round
-                    count = 0;
-                    for (let i in PlayerList) {
-                        if(PlayerList[i].gold < config.ARMY_COST || PlayerList[i].lost === true || PlayerList[i].lost === null){
-                            count += 1;
-                            if (count === Object.keys(PlayerList).length) {
-                                for(let i = 0; i < count; i += 1){
-                                    this.collectGoldIncome(i);
-                                    this.updateGold(i);
-                                }
-                                return this.nextTurn();
-                            }
-                        }
-                    }
+                    if (everyoneHasDeployed()) { return this.finishEveryoneDeploy(); }
                 }
                 catch (ex){
                     return gameInfra.in(room).emit("error", ex.message);
@@ -448,6 +506,21 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
             if (getController(index).isBot) { this.botDeploy(index, 'everyone_deploy'); }
         });
     };
+
+    Game.prototype.finishEveryoneDeploy = function () {
+        if (everyoneDeployFinished || phase !== Game.Phase.everyoneDeploy) { return; }
+        everyoneDeployFinished = true;
+        for (let i = 0; i < Object.keys(PlayerList).length; i += 1) {
+            this.collectGoldIncome(i);
+            this.updateGold(i);
+        }
+        return this.nextTurn();
+    };
+
+    function everyoneHasDeployed() {
+        return Object.keys(PlayerList).every((i) =>
+            PlayerList[i].gold < config.ARMY_COST || PlayerList[i].lost === true || PlayerList[i].lost === null);
+    }
 
     Game.prototype.botDeploy = function (id, eventName) {
         const bot = getController(id);
@@ -465,30 +538,30 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
             }
 
             const deployStep = () => {
-                if (gameOver || phase !== Game.Phase.deploy || ap !== id) { return; }
+                if (!botHasTurn(id, bot, Game.Phase.deploy)) { return; }
 
                 if (PlayerList[id] && PlayerList[id].gold >= config.ARMY_COST) {
                     const country = botStrategy.deploymentTarget(PlayerList, id, continents);
                     if (country) {
-                        getController(id).serverAction('deploy', country.id, id);
+                        bot.serverAction('deploy', country.id, id);
                         if (PlayerList[id] && PlayerList[id].gold >= config.ARMY_COST) {
-                            setTimeout(deployStep, BOT_DELAYS.deployStep);
+                            setTimeout(deployStep, botDelay('deployStep'));
                             return;
                         }
                     }
                 }
 
-                if (!gameOver && phase === Game.Phase.deploy && ap === id) {
+                if (botHasTurn(id, bot, Game.Phase.deploy)) {
                     setTimeout(() => {
-                        if (!gameOver && phase === Game.Phase.deploy && ap === id) {
+                        if (botHasTurn(id, bot, Game.Phase.deploy)) {
                             this.nextTurn();
                         }
-                    }, BOT_DELAYS.deployEnd);
+                    }, botDelay('deployEnd'));
                 }
             };
 
             deployStep();
-        }, BOT_DELAYS.deployInitial);
+        }, botDelay('deployInitial'));
     };
 
     Game.prototype.buyUnit = function (id, country, owner) {
@@ -545,27 +618,28 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
     };
 
     Game.prototype.botTacticalMove = function (id) {
+        const bot = getController(id);
         setTimeout(() => {
-            if (gameOver || phase !== Game.Phase.tacticalMove || ap !== id) { return; }
+            if (!botHasTurn(id, bot, Game.Phase.tacticalMove)) { return; }
 
             const move = botStrategy.chooseMove(PlayerList, id);
             if (move) {
                 const available = getCountryUnits(id, move.from);
                 const moveUnits = Math.min(available - 1, move.units || Math.max(1, available - 1));
                 if (moveUnits > 0) {
-                    getController(id).serverAction('tactical_move', move.from, move.to, id, moveUnits);
+                    bot.serverAction('tactical_move', move.from, move.to, id, moveUnits);
                     return;
                 }
             }
 
-            if (!gameOver && phase === Game.Phase.tacticalMove && ap === id) {
+            if (botHasTurn(id, bot, Game.Phase.tacticalMove)) {
                 setTimeout(() => {
-                    if (!gameOver && phase === Game.Phase.tacticalMove && ap === id) {
+                    if (botHasTurn(id, bot, Game.Phase.tacticalMove)) {
                         this.nextTurn();
                     }
-                }, BOT_DELAYS.tacticalEnd);
+                }, botDelay('tacticalEnd'));
             }
-        }, BOT_DELAYS.tacticalInitial);
+        }, botDelay('tacticalInitial'));
     };
 
     Game.prototype.battle = function () {
@@ -634,39 +708,40 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
     };
 
     Game.prototype.botBattle = function (id) {
+        const bot = getController(id);
         let attempts = 0;
         const maxAttempts = Math.max(15, (PlayerList[id] && PlayerList[id].countries ? PlayerList[id].countries.length : 10) * 3);
 
         const battleStep = () => {
-            if (gameOver || phase !== Game.Phase.battle || ap !== id) { return; }
+            if (!botHasTurn(id, bot, Game.Phase.battle)) { return; }
 
             if (attempts < maxAttempts) {
                 attempts += 1;
-                const attack = botStrategy.chooseAttack(PlayerList, id, getController(id).aggression, continents);
+                const attack = botStrategy.chooseAttack(PlayerList, id, bot.aggression, continents);
                 if (attack) {
                     const beforeUnits = getCountryUnits(id, attack.from);
-                    getController(id).serverAction('battle', attack.from, attack.to, attack.defender, attack.units);
+                    bot.serverAction('battle', attack.from, attack.to, attack.defender, attack.units);
                     const afterUnits = PlayerList[id] && PlayerList[id].countries.some((c) => c.id === attack.from)
                         ? getCountryUnits(id, attack.from)
                         : 0;
 
-                    if (beforeUnits !== afterUnits && !gameOver && phase === Game.Phase.battle && ap === id) {
-                        setTimeout(battleStep, BOT_DELAYS.battleStep);
+                    if (beforeUnits !== afterUnits && botHasTurn(id, bot, Game.Phase.battle)) {
+                        setTimeout(battleStep, botDelay('battleStep'));
                         return;
                     }
                 }
             }
 
-            if (!gameOver && phase === Game.Phase.battle && ap === id) {
+            if (botHasTurn(id, bot, Game.Phase.battle)) {
                 setTimeout(() => {
-                    if (!gameOver && phase === Game.Phase.battle && ap === id) {
+                    if (botHasTurn(id, bot, Game.Phase.battle)) {
                         this.nextTurn();
                     }
-                }, BOT_DELAYS.battleEnd);
+                }, botDelay('battleEnd'));
             }
         };
 
-        setTimeout(battleStep, BOT_DELAYS.battleInitial);
+        setTimeout(battleStep, botDelay('battleInitial'));
     };
 
     Game.prototype.determineVictor = function () {
@@ -706,26 +781,17 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
 
         let nameAndIncPoints = [];
         const rankedMatch = matchIsRanked();
-        const ratedPlayers = [];
-        sockets.forEach((socket, id) => {
-            const controller = getController(id);
-            const place = id === winner.id ? 1 : 2;
-            ratedPlayers.push({id: 'seat-' + id, rating: Number(controller.points) || 850, place: place, socket: controller});
-            if (controller !== socket) {
-                ratedPlayers.push({id: 'forfeit-' + id, rating: Number(socket.points) || 1600, place: 2, socket: socket});
-            }
-        });
-        const updatedRatings = rating.calculate(ratedPlayers);
+        const results = rateSeats(winner.id);
 
-        updatedRatings.forEach((result) => {
-            const socket = result.socket;
+        results.forEach((result) => {
+            const participant = result.participant;
             const isWinner = result.place === 1;
             if (rankedMatch) {
-                socket.points = result.rating;
+                participant.points = result.rating;
             }
-            if (socket.isBot) {
+            if (participant.isBot) {
                 if (rankedMatch && process.env.NODE_ENV !== 'test') {
-                    models.Bot.updateOne({key: socket.botKey}, {
+                    models.Bot.updateOne({key: participant.botKey}, {
                         $inc: {
                             points_general: result.change,
                             games_won_general: isWinner ? 1 : 0,
@@ -734,7 +800,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
                     }, {upsert: true}, function (err) { if (err) { console.log(err); } });
                 }
             }
-            else if (!socket.isGuest) {
+            else if (!participant.isGuest) {
                 const increments = {
                     games_won_general: isWinner ? 1 : 0,
                     games_lost_general: isWinner ? 0 : 1
@@ -743,19 +809,26 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
                     increments.points_general = result.change;
                 }
                 if (process.env.NODE_ENV !== 'test') {
-                    models.User.updateOne({username: socket.username}, {
+                    models.User.updateOne({username: participant.username}, {
                         $inc: increments
                     }, function (err) { if (err) { console.log(err); } });
                 }
-                nameAndIncPoints.push(socket.username);
+                nameAndIncPoints.push(participant.username);
             }
 
             const outcome = isWinner ? 'won' : 'lost';
             const points = result.change > 0 ? '+' + result.change : result.change;
             gameInfra.in(room).emit('message', {
                 type: 'game_over',
-                message: '<span style="color:' + (isWinner ? '#ffd700' : '#ffffff') + '">' + socket.username + ' ' + outcome + (rankedMatch ? ' (' + points + ' rating).' : ' (unranked).') + '</span>'
+                message: '<span style="color:' + (isWinner ? '#ffd700' : '#ffffff') + '">' + participant.username + ' ' + outcome + (rankedMatch ? ' (' + points + ' rating).' : ' (unranked).') + '</span>'
             });
+            if (result.standIn) {
+                gameInfra.in(room).emit('message', {
+                    type: 'game_over',
+                    message: '<span style="color:' + (result.standInWon ? '#ffd700' : '#ffffff') + '">' + result.standIn.username +
+                        (result.standInWon ? ' won' : ' finished') + ' as a stand-in for ' + participant.username + ' (unrated).</span>'
+                });
+            }
         });
 
         if (!rankedMatch) {
@@ -781,15 +854,15 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
         let logId = new Date().getTime();
         let logDate = new Date();
         if (process.env.NODE_ENV !== 'test') {
-            updatedRatings.forEach((result) => {
-                const participant = result.socket;
+            results.forEach((result) => {
+                const participant = result.participant;
                 let logGame = new models.Games({
                     id: logId,
                     username: participant.username,
                     userAgent: participant.request.headers['user-agent'],
                     gameTime: gameTime,
                     points: participant.points,
-                    players: updatedRatings.length,
+                    players: results.length,
                     ip: participant.ip,
                     won: result.place === 1,
                     date: logDate
@@ -830,6 +903,7 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
 
                 const quitter = sockets[id].username;
                 PlayerList[id].surrender = true;
+                if (!allowBots) { return retirePlayer(id, 'surrender', this); }
                 takeOverWithBot(id, 'surrender', this);
                 gameInfra.in(room).emit('message', { type: 'serverMessage', message: '<span style="color: #ffffff">&#9873;</span> ' + quitter + ' surrendered. A bot has taken over.' });
 
@@ -845,24 +919,48 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
     Game.prototype.leaveGame = function (id) {
         if (PlayerList[id] == null || PlayerList[id].lost === true || PlayerList[id].lost === null || gameOver ) { return; }// Don't want surrenders to run this code OR if the game is over
 
+        // The seat keeps its turns while the player is away; the others wait for it instead of skipping it.
         PlayerList[id].lost = null;
-        gameInfra.in(room).emit('message', { type: 'serverMessage', message: PlayerList[id].username + ' lost connection and has 30 seconds to return before a bot takes over.' });
-        if (ap === id) { // If active player leaving then end his round
-            if(phase !== Game.Phase.tacticalMove){
-                this.collectGoldIncome(id);
-            }
-            returnConqueredCountries(id);
-            nextPhase = Game.Phase.deploy;
-            this.nextTurn();
-        }
-        setTimeout(() => {
-            if (PlayerList[id].lost === null && !gameOver) {
-                PlayerList[id].lost = false;
-                takeOverWithBot(id, 'disconnect', this);
-                this.determineVictor();
-            }
-        }, 30000);
+        gameInfra.in(room).emit('message', { type: 'serverMessage', message: PlayerList[id].username + ' lost connection and has 30 seconds to return' +
+            (allowBots ? ' before a bot takes over.' : ' or leaves the game.') });
+        clearTimeout(graceTimers[id]);
+        graceTimers[id] = setTimeout(() => this.replaceAbsentPlayer(id), RECONNECT_GRACE);
     };
+
+    // The reconnect window is over: a bot takes the seat, or without bots the player sits out.
+    Game.prototype.replaceAbsentPlayer = function (id) {
+        clearTimeout(graceTimers[id]);
+        delete graceTimers[id];
+        if (gameOver || PlayerList[id].lost !== null) { return; }
+        if (!allowBots) { return retirePlayer(id, 'disconnect', this); }
+        PlayerList[id].lost = false;
+        takeOverWithBot(id, 'disconnect', this);
+        if (ap === id && phase !== Game.Phase.everyoneDeploy) { this.resumeTurn(); }
+        this.determineVictor();
+    };
+
+    // Each seat is rated once, at its original player's rating, so opponents' points do not depend on who finished it.
+    // A player whose seat a stand-in bot took over always takes a loss, ranked behind every seat that stayed.
+    // Stand-in bots are not rated themselves.
+    function rateSeats(winnerId) {
+        const seats = sockets.map((socket, id) => ({
+            seat: id,
+            rating: Number(getController(id).points) || 850,
+            place: id === winnerId ? 1 : 2
+        }));
+        const seatResults = rating.calculate(seats);
+        return seatResults.map((result) => {
+            const controller = getController(result.seat);
+            const socket = sockets[result.seat];
+            if (controller === socket) {
+                return {participant: socket, place: result.place, change: result.change, rating: result.rating};
+            }
+            const deserted = rating.calculate(seats.map((seat) => seat.seat === result.seat ? Object.assign({}, seat, {place: 3}) : seat))
+                .find((candidate) => candidate.seat === result.seat);
+            return {participant: socket, place: 2, change: deserted.change, rating: deserted.rating,
+                standIn: controller, standInWon: result.place === 1};
+        });
+    }
 
     function checkIfNeighbour(fromCountry, toCountry) {
         let neighbours = PlayerList[ap].countries.find(x=> x.id === fromCountry).neighbour;
@@ -880,6 +978,11 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
 
     function removeListeners(controller, eventNames) {
         eventNames.forEach((eventName) => controller.removeAllListeners(eventName));
+    }
+
+    // A bot's queued steps stop once its seat is handed back to the returning player.
+    function botHasTurn(id, bot, turnPhase) {
+        return !gameOver && phase === turnPhase && ap === id && getController(id) === bot;
     }
 
     function getController(id) {
@@ -902,28 +1005,47 @@ let GameBoard = function (sockets, io, room, mapId = 'original', lobby = noLobby
             username = username + '-' + suffix;
             suffix += 1;
         }
+        // A stand-in plays at the rating of the player it replaces, so opponents are rated against that player.
         const bot = new BotPlayer({
             key: 'takeover-' + username.toLowerCase(),
             username: username,
-            points_general: 850,
+            points_general: Number(humanSocket.points) || 850,
             aggression: 0.5
         }, id, player.color);
+        bot.isStandIn = true;
 
         botControllers[id] = bot;
         player.botControlled = true;
         player.conceded = reason === 'surrender';
         player.username = bot.username;
-        if (process.env.NODE_ENV !== 'test') {
-            // Match on username so older per-room takeover records are adopted instead of colliding.
-            models.Bot.updateOne({username: bot.username}, {
-                $set: {key: bot.botKey},
-                $setOnInsert: {points_general: bot.points}
-            }, {upsert: true, setDefaultsOnInsert: false}, function (err) { if (err) { console.log(err); } });
-        }
         removeListeners(humanSocket, TURN_EVENTS.concat(['everyone_deploy', 'surrender']));
         gameInfra.in(room).emit('bot_takeover', {id: id, username: bot.username, reason: reason});
         if (phase === Game.Phase.everyoneDeploy) {
             gameInstance.everyoneDeploy(id);
+        }
+    }
+
+    // Without bots a player who gives up or does not return drops out: no more turns or income, but their
+    // territories stay on the map for the others to conquer. They are rated as a loser if the match ends without them.
+    // A player who only lost connection can still come back and reclaim the seat while the match is running.
+    function retirePlayer(id, reason, gameInstance) {
+        const player = PlayerList[id];
+        const wasActive = ap === id && phase !== Game.Phase.everyoneDeploy;
+        player.lost = true;
+        player.conceded = reason === 'surrender';
+        removeListeners(sockets[id], TURN_EVENTS.concat(['everyone_deploy', 'surrender']));
+        gameInfra.in(room).emit('message', {type: 'serverMessage', message: reason === 'surrender' ?
+            '<span style="color: #ffffff">&#9873;</span> ' + player.username + ' surrendered and is out of the game.' :
+            player.username + ' did not return in time and sits out until they rejoin.'});
+
+        if (wasActive) {
+            returnConqueredCountries(id);
+            nextPhase = Game.Phase.deploy;
+            return gameInstance.nextTurn(); // the next player's deploy also checks for a sole survivor
+        }
+        gameInstance.determineVictor();
+        if (!gameOver && phase === Game.Phase.everyoneDeploy && everyoneHasDeployed()) {
+            gameInstance.finishEveryoneDeploy();
         }
     }
 

@@ -1354,7 +1354,7 @@ test('a lone guest can return to a bot match and the lobby keeps counting the bo
     }
 });
 
-test('an abandoned bot match is removed after the grace period and the lobby keeps an open table', async ({page, browser}) => {
+test('an abandoned bot match is played out after the grace period and the lobby keeps an open table', async ({page, browser}) => {
     const roomName = await firstRoomName(page, 3);
     const lobby = await browser.newPage();
     try {
@@ -1368,10 +1368,119 @@ test('an abandoned bot match is removed after the grace period and the lobby kee
         await lobby.goto('/lobby');
         await expect(lobbyRow(lobby, roomName)).toContainText('game in progress');
         await page.goto('about:blank');
-        await expect(lobbyRow(lobby, roomName)).toHaveCount(0, {timeout: 10000});
+        await expect(lobbyRow(lobby, roomName)).toHaveCount(0, {timeout: 25000});
         expect(await lobby.locator('#allrooms tbody tr').filter({hasText: '0/3'}).filter({hasText: 'open'}).count()).toBeGreaterThan(0);
     }
     finally {
+        await lobby.close();
+    }
+});
+
+test('without bot opponents, the last opponent giving up hands the win to the other player', async ({page, browser}) => {
+    const roomName = await firstRoomName(page);
+    await page.goto('/game?room=' + encodeURIComponent(roomName));
+    await expect(page.locator('#map_choice')).toBeVisible();
+    await expect(page.locator('#allow_bots')).not.toBeChecked();
+    await page.locator('label#red').click();
+    const winnerName = await page.locator('#player_list .player-username').first().innerText();
+
+    const secondPage = await browser.newPage();
+    try {
+        secondPage.on('dialog', (dialog) => dialog.accept());
+        await secondPage.goto('/game?room=' + encodeURIComponent(roomName));
+        await expect(secondPage.locator('.popup')).toBeVisible();
+        await secondPage.locator('label#blue').click();
+        await expect(secondPage.locator('.phase-message')).toContainText('Everyone deploy', {timeout: 12000});
+
+        await secondPage.locator('.surrender-flag').click();
+
+        await expect(page.locator('#messages')).toContainText('surrendered and is out of the game');
+        await expect(page.locator('#messages')).toContainText(winnerName + ' won');
+        await expect(page.locator('#messages')).not.toContainText('A bot now controls');
+    }
+    finally {
+        await secondPage.close();
+    }
+});
+
+test('a player who lost connection reclaims their seat from the stand-in bot', async ({page, browser}) => {
+    test.setTimeout(90000);
+    const roomName = await firstRoomName(page, 3);
+    await page.goto('/game?room=' + encodeURIComponent(roomName));
+    await expect(page.locator('#map_choice')).toBeVisible();
+    await page.locator('#allow_bots').check();
+    await page.locator('label#red').click();
+    const returningName = await page.locator('#player_list .player-username').first().innerText();
+
+    const secondPage = await browser.newPage();
+    try {
+        await secondPage.goto('/game?room=' + encodeURIComponent(roomName));
+        await expect(secondPage.locator('.popup')).toBeVisible();
+        await secondPage.locator('label#blue').click();
+        await page.locator('#start_bots').click();
+        await expect(page.locator('.phase-message')).toContainText('Everyone deploy', {timeout: 12000});
+
+        await page.goto('about:blank');
+        await expect(secondPage.locator('#messages')).toContainText('did not return. A bot now controls that faction.', {timeout: 40000});
+
+        await page.goto('/game?room=' + encodeURIComponent(roomName));
+        await expect(page.locator('.phase-info')).toContainText('Welcome back');
+        await expect(secondPage.locator('#messages')).toContainText(returningName + ' is back and has retaken their seat.');
+        await expect(page.locator('.surrender-flag')).toBeVisible();
+    }
+    finally {
+        await secondPage.close();
+    }
+});
+
+async function startBotMatchAndSurrender(page, roomName) {
+    page.on('dialog', (dialog) => dialog.accept());
+    await page.goto('/game?room=' + encodeURIComponent(roomName));
+    await expect(page.locator('#map_choice')).toBeVisible();
+    await page.locator('#allow_bots').check();
+    await page.locator('label#red').click();
+    await page.locator('#start_bots').click();
+    await expect(page.locator('.phase-message')).toContainText('Everyone deploy', {timeout: 12000});
+    await page.locator('.surrender-flag').click();
+    await expect(page.locator('#messages')).toContainText('surrendered. A bot now controls that faction.');
+}
+
+test('a bot-only match plays out fast once its surrendered player leaves, then the room is removed', async ({page, browser}) => {
+    const roomName = await firstRoomName(page, 3);
+    const lobby = await browser.newPage();
+    try {
+        await startBotMatchAndSurrender(page, roomName);
+        await lobby.goto('/lobby');
+        await expect(lobbyRow(lobby, roomName)).toContainText('game in progress');
+
+        await page.goto('about:blank');
+        // At normal pace three bots need many minutes; without delays the match ends in seconds.
+        await expect(lobbyRow(lobby, roomName)).toHaveCount(0, {timeout: 20000});
+    }
+    finally {
+        await lobby.close();
+    }
+});
+
+test('a bot-only match keeps running for a spectator and is removed when they leave', async ({page, browser}) => {
+    const roomName = await firstRoomName(page, 3);
+    const spectator = await browser.newPage();
+    const lobby = await browser.newPage();
+    try {
+        await startBotMatchAndSurrender(page, roomName);
+        await spectator.goto('/game?room=' + encodeURIComponent(roomName));
+        await expect(spectator.locator('.phase-info')).toContainText('You are a guest');
+        await lobby.goto('/lobby');
+
+        await page.goto('about:blank');
+        await lobby.waitForTimeout(4000); // past the grace period
+        await expect(lobbyRow(lobby, roomName)).toContainText('game in progress');
+
+        await spectator.goto('about:blank');
+        await expect(lobbyRow(lobby, roomName)).toHaveCount(0, {timeout: 20000});
+    }
+    finally {
+        await spectator.close();
         await lobby.close();
     }
 });
