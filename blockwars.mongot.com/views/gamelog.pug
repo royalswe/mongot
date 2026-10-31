@@ -38,36 +38,45 @@ block head
         text-align: left;
         cursor: ns-resize;
       }
+      .table-sort-button {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      th[aria-sort="ascending"] .table-sort-button::after {
+        content: " \\25B2";
+      }
+      th[aria-sort="descending"] .table-sort-button::after {
+        content: " \\25BC";
+      }
       h2{
         text-align: center;
       }
 
-  script(src='/resources/jquery-3.3.1.slim.min.js')
-  script(src='/resources/jquery.tablesorter-2.31.0.min.js')
+  script(src='/js/table-sort.js', defer)
 
 block body
-  
-  script.
-    $(function() {
-      $("table").tablesorter();
-    });
   
   h2 Sort by clicking the headings
 
   .costum-table-dark
-    table.table
+    table.table(data-sortable)
       thead
         tr
           th(width='2%')
-            | No
+            button.table-sort-button(type='button') No
           th
-            | Game Time
+            button.table-sort-button(type='button') Game Time
           th
-            | winner
+            button.table-sort-button(type='button') winner
           th
-            | Players and points
+            button.table-sort-button(type='button') Players and points
           th
-            | Date
+            button.table-sort-button(type='button') Date
       - for (let i=0; i<logs.length; i++)
 
         tr

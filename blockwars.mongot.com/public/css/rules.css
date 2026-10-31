@@ -215,7 +215,6 @@
   
   .rules-popup .specials-list span {
     display: inline-block;
-    -moz-box-sizing: border-box;
     box-sizing: border-box;
     width: 1.8em;
     height: 1.8em;
@@ -397,21 +396,13 @@
   cursor: not-allowed;
 }
 #DAS_ARR input[type=checkbox] {
-  -webkit-appearance: checkbox;
   appearance: auto;
   width: 1.4em;
   height: 1.4em;
 }
 
 input[type="number"] {
-  -webkit-appearance: textfield;
-  -moz-appearance: textfield;
   appearance: textfield;
-}
-
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
 }
 
 .number-input {
@@ -426,7 +417,7 @@ input[type=number]::-webkit-outer-spin-button {
 
 .number-input button {
   outline:none;
-  -webkit-appearance: none;
+  appearance: none;
   background-color: transparent;
   border: none;
   align-items: center;
@@ -487,13 +478,11 @@ input[type=number]::-webkit-outer-spin-button {
   }
   #touch_settings input[type=checkbox],
   #effect_settings input[type=checkbox] {
-    -webkit-appearance: checkbox;
     appearance: auto;
     width: 1.4em;
     height: 1.4em;
   }
   #touch_settings input[type=range] {
-    -webkit-appearance: auto;
     appearance: auto;
     width: 9em;
   }

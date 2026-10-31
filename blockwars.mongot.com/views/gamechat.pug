@@ -27,35 +27,29 @@ block body
   section#chatroom
     div#messages
 
-  script(src='/resources/jquery-3.3.1.slim.min.js')
   script.
-    messages=(!{JSON.stringify(messages)})
+    const messages = !{JSON.stringify(messages).replace(/</g, '\\u003c')};
+    const messageList = document.getElementById('messages');
+    const userColors = new Map();
+    let currentRoom = null;
 
-    function compare(a, b) {
-        if (a.room < b.room)
-            return -1;
-        if (a.room > b.room)
-            return 1;
-        return 0;
-    }
+    for (const { room, username, message } of messages) {
+      if (room !== currentRoom) {
+        currentRoom = room;
+        const heading = document.createElement('h2');
+        heading.textContent = room;
+        messageList.append(heading);
+      }
 
-    var userColor = {};
+      if (!userColors.has(username)) {
+        const color = (Math.random() * 0x1000000 | 0).toString(16).padStart(6, '0');
+        userColors.set(username, `#${color}`);
+      }
 
-    // messages.sort(compare);
-    var roomName = 'noname';
-    for (var i=0; i<messages.length; i++){
-        if (roomName !== messages[i].room) {
-            roomName = messages[i].room
-            $('#messages').append('<h2 class="">'+ messages[i].room +'</h2>');
-        }
-
-        var username = messages[i].username;
-        if(!(username in userColor)){
-          userColor[username] = "#"+((1<<24)*Math.random()|0).toString(16);
-        }
-
-        $('#messages').append(
-            '<div><span style="color: '+ userColor[username] +'" >' +
-            username + ':</span> ' +
-            messages[i].message + '</div>');
+      const row = document.createElement('div');
+      const name = document.createElement('span');
+      name.style.color = userColors.get(username);
+      name.textContent = `${username}:`;
+      row.append(name, document.createTextNode(` ${message}`));
+      messageList.append(row);
     }

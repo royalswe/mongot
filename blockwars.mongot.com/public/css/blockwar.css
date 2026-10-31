@@ -31,8 +31,6 @@ body {
 input,
 *:focus,
 *:active {
-  -webkit-appearance: none;
-  -moz-appearance: none;
   appearance: none;
   outline: none;
 }
@@ -45,7 +43,6 @@ h1 {
 /*** Top section ***/
 section#top {
   text-align: center;
-  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -104,7 +101,6 @@ section#top {
 section#tetris {
   position: relative;
   text-align: center;
-  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -168,12 +164,6 @@ canvas.next-block {
   float: right;
   clear: right;
   overflow: hidden;
-}
-
-@-moz-document url-prefix() {
-  .special-tube {
-    width: 7.5%;
-  }
 }
 
 .special-tube img {
@@ -670,7 +660,6 @@ section#chat input[type=submit]:hover {
 section.keyboard {
   width: 53%;
   float: right;
-  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -690,8 +679,6 @@ section.keyboard {
   padding: 2.5% 3%;
   margin: 0% 1%;
   background: #0e0e0e;
-  -webkit-border-radius: 5px;
-  -moz-border-radius: 5px;
   border-radius: 5px;
   width: 10%;
   display: inline-block;

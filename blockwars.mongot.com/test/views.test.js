@@ -48,6 +48,25 @@ test('highscore renders every crown boundary without leaking between rows', () =
     assert.equal((html.match(/<td>2:5<\/td>/g) || []).length, cases.length);
 });
 
+test('game tables use native sortable controls without jQuery assets', () => {
+    for (const [name, locals] of [['gamelog', { logs: [] }], ['highscore', { highscores: [] }]]) {
+        const html = render(name, locals);
+        assert.match(html, /\/js\/table-sort\.js/);
+        assert.match(html, /data-sortable/);
+        assert.match(html, /class="table-sort-button"/);
+        assert.doesNotMatch(html, /jquery|tablesorter|\$\(/i);
+    }
+    assert.doesNotMatch(render('gamechat', { messages: [] }), /jquery|\$\(/i);
+});
+
+test('game chat data cannot escape its script and is rendered as text', () => {
+    const html = render('gamechat', {
+        messages: [{ room: '</script><script>', username: '<img>', message: '<script>alert(1)</script>' }]
+    });
+    assert.match(html, /\\u003c\/script>/);
+    assert.doesNotMatch(html, /<script><script>alert/);
+});
+
 test('game log keeps row numbering and data with a block-scoped loop', () => {
     const logs = ['Alice', 'Bob'].map(winner => ({
         winner, game_time: 125000, players: '"Alice" "Bob"',

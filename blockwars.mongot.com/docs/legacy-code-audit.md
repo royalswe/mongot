@@ -373,7 +373,7 @@ The root dependency lists in [package.json](../package.json#L16) and [package-lo
 
 The lockfile contains nine package deprecation annotations, including Chokidar 2, fsevents 1, source-map helpers and an unsupported SVGO version. Examples: [package-lock.json](../package-lock.json#L2945), [package-lock.json](../package-lock.json#L4850), and [package-lock.json](../package-lock.json#L9387). Deprecation metadata alone does not establish an exploitable vulnerability or production impact.
 
-[highscore.pug](../views/highscore.pug#L63) references vendored jQuery 3.3.1 and tablesorter 2.31.0. Vendor source was excluded. The Howler filename in [game.pug](../views/game.pug#L312) does not establish its version.
+The earlier audit identified vendored jQuery 3.3.1 and tablesorter 2.31.0 in the high-score, game-log and game-chat pages. These dependencies have since been removed: chat uses DOM APIs, and the two tables use the native sorter in [table-sort.js](../public/js/table-sort.js). The Howler filename in [game.pug](../views/game.pug#L312) does not establish its version.
 
 **Recommendation:** determine which build tasks and vendor assets are actually used, then update one dependency group at a time with output and browser checks. Avoid mass upgrades based only on package age.
 

@@ -1,7 +1,3 @@
-body, html {
-    height: 100%
-}
-
 #header_buttons button, .close-popup {
     text-decoration: none;
     cursor: pointer
@@ -445,12 +441,7 @@ section#chatroom {
 
 g {
     -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none
+    user-select: none;
 }
 
 circle {
@@ -510,18 +501,6 @@ text {
     paint-order: stroke
 }
 
-@supports (-ms-accelerator:true) {
-    text {
-        cursor: pointer
-    }
-}
-
-@supports (-ms-ime-align:auto) {
-    text {
-        cursor: pointer
-    }
-}
-
 .bounce {
     fill: var(--paper-light);
     fill-opacity: .35;
@@ -567,37 +546,20 @@ text {
     transition: .3s ease-in-out;
 }
 .chat-notifier{
-    -webkit-animation: flash 1s;
-    animation: flash 1s;
-    animation-iteration-count: 2;
+    animation: flash 1s 2;
 }
 .chat-notifier-repeat{
-    -webkit-animation: flash 1s;
-    animation: flash 1s;
-    animation-iteration-count: infinite;
+    animation: flash 1s infinite;
 }
 #game_header img, #header_buttons {
     box-sizing: border-box
 }
 
-/* Push */
-@-webkit-keyframes hvr-push {
-    50% {
-        -webkit-transform: scale(0.8);
-        transform: scale(0.8);
-    }
-    100% {
-        -webkit-transform: scale(1);
-        transform: scale(1);
-    }
-}
 @keyframes hvr-push {
     50% {
-        -webkit-transform: scale(0.8);
         transform: scale(0.8);
     }
     100% {
-        -webkit-transform: scale(1);
         transform: scale(1);
     }
 }
@@ -610,16 +572,7 @@ text {
     background: var(--paper);
     border: 3px solid var(--ink);
     box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 5px var(--red);
-}
-#game_header img {
-    -webkit-animation-name: hvr-push;
-    animation-name: hvr-push;
-    -webkit-animation-duration: 0.3s;
-    animation-duration: 0.3s;
-    -webkit-animation-timing-function: linear;
-    animation-timing-function: linear;
-    -webkit-animation-iteration-count: 1;
-    animation-iteration-count: 1;
+    animation: hvr-push .3s linear;
 }
 .svg-content {
     display: block;
@@ -1217,10 +1170,6 @@ body:has(.show-gold) .gold-region-label {
     margin: 0 0 6px
 }
 
-#match_rank:empty {
-    display: none
-}
-
 #stats .turn-timer {
     white-space: nowrap
 }
@@ -1398,7 +1347,7 @@ body:has(.show-gold) .gold-region-label {
     outline: none;
     box-sizing: border-box;
     font-family: inherit;
-    font-weight: bold;
+    font-weight: 700;
     letter-spacing: 0;
     text-transform: uppercase;
     color: var(--paper);
@@ -1443,19 +1392,18 @@ body:has(.show-gold) .gold-region-label {
 .input-unit-bar .add {
     min-width: 0;
     border: 0;
-    box-sizing : border-box;
+    box-sizing: border-box;
     color: var(--paper);
     font-family: inherit;
-    font-weight: bold;
+    font-weight: 700;
     font-size: 1.3em;
     cursor: pointer;
     transition: 0.1s linear;
     background-color: var(--ink);
     border-bottom: 2px solid var(--ink);
     display: flex;
-    justify-content: center; /* align horizontal */
-    align-items: center; /* align vertical */
-    -webkit-user-select: none;
+    justify-content: center;
+    align-items: center;
     -webkit-touch-callout: none;
     user-select: none;
 }
@@ -1522,29 +1470,19 @@ body:has(.show-gold) .gold-region-label {
     background: var(--mustard);
     color: var(--ink);
 }
-.input-unit-bar #unit_output::selection{color: #000}
-.input-unit-bar #unit_output::-moz-selection { color: #000}
+.input-unit-bar #unit_output::selection {
+    color: #000;
+}
 
 input[type="range"]::-moz-range-track {
     border: inherit;
     background: transparent;
 }
-input[type=range]::-moz-focus-outer {
+
+input[type="range"]::-moz-focus-outer {
     border: 0;
 }
-input[type="range"]::-ms-track {
-    border: inherit;
-    color: transparent; /* don't drawn vertical reference line */
-    background: transparent;
-}
-input[type="range"]::-ms-fill-lower,
-input[type="range"]::-ms-fill-upper {
-    background: transparent;
-}
-input[type="range"]::-ms-tooltip {
-    display: none;
-}
-/* thumb */
+
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 24px;
@@ -1595,7 +1533,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /*Mobile */
-@media only screen and (max-width:480px) {
+@media screen and (max-width: 480px) {
     body {
         grid-template-columns: 0% minmax(0, 1fr)
     }

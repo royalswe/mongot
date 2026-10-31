@@ -38,6 +38,21 @@ block head
       text-align: left;
       cursor: ns-resize;
     }
+    .table-sort-button {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    th[aria-sort="ascending"] .table-sort-button::after {
+      content: " \\25B2";
+    }
+    th[aria-sort="descending"] .table-sort-button::after {
+      content: " \\25BC";
+    }
     h1{
       text-align: center;
       padding: 10px;
@@ -60,35 +75,29 @@ block head
       text-align: center;
     }
 
-  script(src='/resources/jquery-3.3.1.slim.min.js')
-  script(src='/resources/jquery.tablesorter-2.31.0.min.js')
+  script(src='/js/table-sort.js', defer)
 
 block body
   - function msToMinutesAndSeconds(ms) { const s = parseInt((ms/1000)%60); const m = parseInt((ms/(1000*60))%60); return m+":"+s; }
-  
-  script.
-    $(function() {
-      $("table").tablesorter();
-    });
   
   h1 High Score
 
   h2 Sort by clicking the headings
 
   .costum-table-dark
-    table.table
+    table.table(data-sortable)
       thead
         tr
           th(width='2%')
-            | No
+            button.table-sort-button(type='button') No
           th
-            | Username
+            button.table-sort-button(type='button') Username
           th
-            | Points
+            button.table-sort-button(type='button') Points
           th
-            | Won/Lost
+            button.table-sort-button(type='button') Won/Lost
           th
-            | Longest game
+            button.table-sort-button(type='button') Longest game
       - for (let i=0; i<highscores.length; i++)
 
         - const points = highscores[i].points_bw;
