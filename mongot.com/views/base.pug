@@ -14,7 +14,7 @@ html
     meta(http-equiv='Content-Type', content='text/html; charset=UTF-8')
     meta(name='viewport', content='width=device-width, initial-scale=1')
     
-    link(rel='stylesheet', type='text/css', href='/css/style.css?v=1.0')
+    link(rel='stylesheet', type='text/css', href='/css/style.css?v=3.0')
     link(rel='stylesheet', type='text/css', href='/resources/font-awesome.min.css')
 
   body
@@ -22,15 +22,15 @@ html
       ul#header
         li
           a(href='/') <i class="fa fa-home" aria-hidden="true"></i> Home
+        li
+          a(href='/#games') <i class="fa fa-gamepad" aria-hidden="true"></i> Games
         if user
-          li.user_menu
+          li.account-menu
             a(href='/logout') <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-          li.user_menu
             a(href='/profile') <i class="fa fa-user" aria-hidden="true"></i> #{user.username}
         else
-          li.user_menu
+          li.account-menu
             a(href='/login') <i class="fa fa-sign-in" aria-hidden="true"></i> Login
-          li.user_menu
             a(href='/register') <i class="fa fa-user-plus" aria-hidden="true"></i> Register
 
     noscript

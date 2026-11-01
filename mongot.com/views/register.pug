@@ -4,32 +4,34 @@ block head
   
 block body
 
-  form(method="post")
-    .form-block
-      h1 Register
-      p#register_error #{error}
+  main
+    form(method="post")
+      .form-block
+        h1 Register
+        p.lead Create one account for every mongot game.
+        p#register_error #{error}
 
-      input(type="hidden", name="_csrf", value=csrfToken)
-      input#g-recaptcha-response(type="hidden", name="g-recaptcha-response")
-      input(type="hidden", name="action", value=validate_captcha)
-      input#username(type='text', name="username", required=true, maxlength="16", minlength="2" placeholder='Username', value=username)
-      
-      //- .checkbox
-      //-   input(type="checkbox" name="email_toggle" checked)
-      //-   div
-      //-   label(for='login')
-      //-     span.on Enabled
-      //-     span.off Disabled
-      //-     | email
-      //-     span.off.disable-general-text you will not be able to play General
-      label(for='login') Email is not mandatory but is needed to play general
-      input#email(type="email", name="email", placeholder='Email', value=email)
-      input#password(type="password", name="password", minlength="4", required=true, placeholder='Password')
-      input#password-confirm(type="password", name="confirmpassword", required=true, placeholder='Confirm password')
-      input(type="submit" id="register" value="register")
+        input(type="hidden", name="_csrf", value=csrfToken)
+        input#g-recaptcha-response(type="hidden", name="g-recaptcha-response")
+        input(type="hidden", name="action", value=validate_captcha)
+        label(for='username') Username
+        input#username.icon-user(type='text', name="username", required=true, maxlength="16", minlength="2", autocomplete="username", autofocus, value=username)
+        p.hint 2-16 characters: letters, numbers, underscore and hyphen.
 
-      div#result
-      div.flash-message.info Email is used to activate account and reset forgotten password only.<br> We will not share or spam your email
+        label(for='email') Email (optional)
+        input#email.icon-mail(type="email", name="email", autocomplete="email", value=email)
+        p.hint Needed to save your progress and to reset a forgotten password.
+
+        label(for='password') Password
+        input#password.icon-lock(type="password", name="password", minlength="4", required=true, autocomplete="new-password")
+        label(for='password-confirm') Confirm password
+        input#password-confirm.icon-lock(type="password", name="confirmpassword", required=true, autocomplete="new-password")
+        input(type="submit" id="register" value="Register")
+
+        div#result
+        div.flash-message.info We only use your email to activate your account and reset a forgotten password. We will never share or spam it.
+
+        p.form-links Already have an account? <a href="/login">Login</a>
 
   script(src='https://www.google.com/recaptcha/api.js?render=6LfhkTkdAAAAAKFz0uyxngYmmrMQeIYuspM610it')
   script.

@@ -3,11 +3,15 @@ block head
   - var title = 'Forgot password'
 
 block body
-  form(method="post")
-    .form-block
-      h1 Forgot Password
-      p Forgot your account's password? Enter your email address and we'll send you a recovery link.
+  main
+    form(method="post")
+      .form-block
+        h1 Forgot Password
+        p.lead Enter your email address and we'll send you a recovery link.
 
-      input(type="hidden", name="_csrf", value=csrfToken)
-      input#email(type="email", name="email", required=true, placeholder='Email', autofocus)
-      input(type="submit" id="login" value="Send Recovery Email")
+        input(type="hidden", name="_csrf", value=csrfToken)
+        label(for='email') Email
+        input#email.icon-mail(type="email", name="email", required=true, autocomplete="email", autofocus)
+        input(type="submit" id="login" value="Send recovery email")
+
+        p.form-links <a href="/login">Back to login</a>
