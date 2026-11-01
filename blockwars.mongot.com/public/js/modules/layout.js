@@ -67,7 +67,7 @@ const LAYOUT = (function () {
     };
 
     container.addEventListener('click', (e) => {
-        if (!PHONE.matches || !isTileMode()) { return; }
+        if (!PHONE.matches || !isTileMode() || e.target.closest('.add-bot-btn')) { return; }
         const arena = e.target.closest('.arena');
         if (arena) { arena.classList.toggle('enlarged'); }
     });

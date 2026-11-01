@@ -276,7 +276,9 @@ exports.initialize = (server, { notifications } = {}) => {
                     if (session.hasFreeSeat()) { // create bot
                         const _bots = [...session.clients].filter(c => c.isBot);
                         if(_bots.length >= 4) return; // max 4 bots so player can join
-                        const BotName = "#Bot-" + _bots.length;
+                        let botIndex = 0;
+                        while ([...session.clients].some(c => c.id === "#Bot-" + botIndex)) { botIndex++; }
+                        const BotName = "#Bot-" + botIndex;
                         const bot = new Bot(session, BotName);
                         session.join(bot);
                         session.broadcastSession();

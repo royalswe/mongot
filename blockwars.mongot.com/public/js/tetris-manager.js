@@ -36,14 +36,15 @@ TetrisManager.prototype.createLocalPlayer = function () {
     return tetris;
 };
 
-TetrisManager.prototype.createPlayer = function () {
+TetrisManager.prototype.createPlayer = function (preferredArena) {
     const element = this.document.importNode(this.template.content, true).children[0];
 
     const tetris = new Tetris(element);
     tetris.element.className = "arena closed";
 
-    // replace new arena with an open
-    const sibling = this.document.getElementsByClassName('arena open')[0];
+    // replace the preferred arena if it is still open, else the first open one
+    const sibling = preferredArena && preferredArena.isConnected && preferredArena.classList.contains('open') ?
+        preferredArena : this.document.getElementsByClassName('arena open')[0];
     sibling.parentNode.insertBefore(tetris.element, sibling);
     sibling.remove();
     //this.instances.push(tetris);
@@ -85,5 +86,16 @@ TetrisManager.prototype.removePlayer = function (tetris, gamestatus) {
         span.innerHTML = "Seat open";
         span.className = "open-seat";
         element.appendChild(span);
+
+        element.appendChild(this.createAddBotButton());
     }
+};
+
+TetrisManager.prototype.createAddBotButton = function () {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "add-bot-btn";
+    btn.textContent = "Add bot";
+    btn.setAttribute("aria-label", "Add bot");
+    return btn;
 };

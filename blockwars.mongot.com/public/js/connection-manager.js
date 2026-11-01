@@ -9,6 +9,8 @@ let ConnectionManager = function(document) {
     this.localTetris = null;
     this.localID = null;
     this.countDownInterval = null;
+    this.roster = new Map(); // id -> { isBot, lost } for every seated player
+    this.gameRunning = false;
 
     this.CountDownSound = new Howl({ src: ["sounds/get-ready.mp3"], volume: 0.4 });
     this.GameWon = new Howl({ src: ["sounds/winner.mp3"] });
@@ -22,6 +24,7 @@ let ConnectionManager = function(document) {
 
 ConnectionManager.prototype.connect = function(address) {
     this.tetrisManager.initArenas();
+    this.watchBotControls();
     
     this.conn = new WebSocket(address);
 
@@ -105,6 +108,7 @@ ConnectionManager.prototype.showAvailableSeats = function() {
         span.className = "open-seat";
         
         elem[i].appendChild(span);
+        elem[i].appendChild(this.tetrisManager.createAddBotButton());
     }
 
     let bg = document.getElementsByClassName('empty-arena');
@@ -148,11 +152,41 @@ ConnectionManager.prototype.countDown = function() {
     }, 1000);
 };
 
+/**
+ * Add bot and Lose bots do the same as the chat commands of the same name.
+ */
+ConnectionManager.prototype.watchBotControls = function() {
+    const sendCommand = (message) => { this.send({ type: 'state-chat', message }); };
+
+    document.getElementById('arena_container').addEventListener('click', (e) => {
+        const btn = e.target.closest('.add-bot-btn');
+        if (!btn) { return; }
+        this.botArena = btn.closest('.arena'); // the bot takes the Arena that was pressed
+        sendCommand('Add bot');
+    });
+    document.querySelectorAll('.lose-bots-btn').forEach(btn => {
+        btn.addEventListener('click', () => sendCommand('Lose bots'));
+    });
+};
+
+// Lose bots only works once every Player still in the Game is a bot.
+ConnectionManager.prototype.updateLoseBots = function() {
+    const alive = [...this.roster.values()].filter(p => !p.lost);
+    const usable = this.gameRunning && alive.length > 0 && alive.every(p => p.isBot);
+    document.querySelectorAll('.lose-bots-btn').forEach(btn => { btn.hidden = !usable; });
+};
+
 ConnectionManager.prototype.updateManager = function(peers) {
+    this.gameRunning = peers.gamestatus === "running";
+    this.roster = new Map(peers.clients.map(c => [c.id, { isBot: c.isBot === true, lost: c.lost === true }]));
+    this.updateLoseBots();
+
     peers.clients.forEach(client => {
         if (peers.you === client.id) { return; }
         else if (!this.peers.has(client.id)) {
-            const tetris = this.tetrisManager.createPlayer();
+            const preferred = client.isBot ? this.botArena : null;
+            if (client.isBot) { this.botArena = null; }
+            const tetris = this.tetrisManager.createPlayer(preferred);
             tetris.unserialize(client.state);
             this.peers.set(client.id, tetris);
             tetris.arenaNaming(client);
@@ -224,6 +258,11 @@ ConnectionManager.prototype.start = function(data) {
     while (arena[0]) {
         arena[0].parentNode.removeChild(arena[0]);
     }
+    removeElementsByClass("add-bot-btn");
+
+    this.gameRunning = true;
+    if (data.type === 'game-start') { this.roster.forEach(p => { p.lost = false; }); }
+    this.updateLoseBots();
   
     if (this.seatBtn) { this.seatBtn.style.background = "#dc862a99"; } // if spectator return with seatBtn transparent
     if(this.localTetris == null) return;
@@ -350,6 +389,8 @@ ConnectionManager.prototype.receive = function(event) {
             this.countDown();
             break;
         case 'state-lost':
+            if (this.roster.has(data.clientId)) { this.roster.get(data.clientId).lost = true; }
+            this.updateLoseBots();
             if (this.peers.has(data.clientId)) {
                 this.peers.get(data.clientId).gameOver('GAME OVER');
                 this.peers.get(data.clientId).stop();
@@ -376,6 +417,8 @@ ConnectionManager.prototype.receive = function(event) {
         case 'state-winner': {
             LAYOUT.setGameRunning(false);
             TOUCH.gameRunning(false);
+            this.gameRunning = false;
+            this.updateLoseBots();
             if (data.winner === this.localID) { TOUCH.haptic('won'); }
             if(data.winner === "no-winner"){
                 data.winner = "no one ";
@@ -514,7 +557,7 @@ ConnectionManager.prototype.watchTargets = function() {
     });
 
     document.getElementById('arena_container').addEventListener('click', (e) => {
-        if (!this.localTetris || document.body.classList.contains('tile-mode')) { return; }
+        if (!this.localTetris || document.body.classList.contains('tile-mode') || e.target.closest('.add-bot-btn')) { return; }
 
         const arena = e.target.closest('.arena');
         if (!arena) { return; }

@@ -89,6 +89,22 @@ section#top {
   display: none;
 }
 
+#lose_bots {
+  display: none !important;
+}
+
+#lose_bots_phone {
+  display: inline-flex;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+#lose_bots_phone[hidden] {
+  display: none !important;
+}
+
 #chat_unread {
   position: absolute;
   top: 0;
@@ -267,6 +283,15 @@ section#tetris {
   width: 100%;
   font-size: 10px;
   text-align: center;
+}
+
+#arena_container > .arena:not(.local) .add-bot-btn {
+  left: 0;
+  top: 55%;
+  width: 100%;
+  min-height: 28px;
+  font-size: 10px;
+  padding: 4px 2px;
 }
 
 #arena_container > .arena:not(.local) .gameover {

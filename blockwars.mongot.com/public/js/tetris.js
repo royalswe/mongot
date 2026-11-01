@@ -271,6 +271,9 @@ Tetris.prototype.arenaNaming = function (client) {
     if (this.element.querySelector(".open-seat")) {
         this.element.querySelector(".open-seat").remove();
     }
+    if (this.element.querySelector(".add-bot-btn")) {
+        this.element.querySelector(".add-bot-btn").remove();
+    }
     if (client.status === "ready" && client.gamestatus === "waiting") {
         this.playerReady();
     }

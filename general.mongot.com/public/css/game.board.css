@@ -1052,7 +1052,7 @@ text {
 
 #game_header {
     color: var(--paper);
-    background: linear-gradient(to top, var(--mustard) 0 4px, var(--red) 4px 8px, var(--ink) 8px);
+    background: linear-gradient(to top, var(--mustard) 0 4px, var(--mustard) 4px 4px, var(--ink) 4px);
     display: grid;
     grid-template-columns: 64px 136px minmax(0, 1fr) 170px;
     grid-template-areas: "phase controls info stats";

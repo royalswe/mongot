@@ -55,4 +55,17 @@ test.describe('Playing a match', () => {
         await game.ready.click();
         await game.expectStarted();
     });
+
+    test('a free arena has an Add bot button and Lose bots appears once only bots play', async ({openPlayer}) => {
+        const {game} = await openPlayer('alice@test.local', uniqueRoom('bot-btn'));
+        const playerPage = game.page;
+        await game.takeSeat();
+        await playerPage.locator('.arena').last().locator('.add-bot-btn').click();
+        await expect(game.target('#Bot-0')).toBeVisible();
+        await expect(playerPage.locator('.arena').last().locator('.client-name')).toHaveAttribute('data-player', '#Bot-0');
+        await game.ready.click();
+        await game.expectStarted();
+        await expect(playerPage.locator('.add-bot-btn')).toHaveCount(0);
+        await expect(playerPage.locator('.lose-bots-btn:visible')).toHaveCount(0);
+    });
 });

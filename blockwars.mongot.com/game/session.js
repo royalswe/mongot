@@ -339,7 +339,8 @@ Session.prototype.broadcastSession = function (){
                         status: client.status,
                         state: client.state,
                         lost: client.lost,
-                        points: client.points
+                        points: client.points,
+                        isBot: client.isBot === true
                     };
                 }),
             },

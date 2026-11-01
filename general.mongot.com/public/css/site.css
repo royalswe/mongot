@@ -105,14 +105,13 @@ footer {
     left: 0;
     padding: 5px max(20px, calc((100% - 1240px) / 2));
     background: var(--ink);
-    border-top: 4px solid var(--red);
     color: var(--paper);
+    font-family: "Varela Round", "Lucida Grande", Helvetica, Arial, sans-serif;
+    font-size: 14px;
 }
 
 .footer-text {
     float: left;
-    margin-top: 18px;
-    font-size: 15px;
 }
 
 .footer-text a {

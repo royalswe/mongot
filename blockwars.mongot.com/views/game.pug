@@ -33,6 +33,7 @@ html(lang='en')
           ul#game_log
             li Welcome to the game
       .panel-toggles
+        button#lose_bots_phone.lose-bots-btn(type='button', hidden, title='Surrender all bots', aria-label='Lose bots') Lose bots
         button#keyboard_toggle.panel-toggle.fa.icon-keyboard(type='button', title='Hide keyboard', aria-label='Hide keyboard', aria-expanded='true', aria-controls='keyboard')
         button#chat_toggle.panel-toggle.fa.icon-chat(type='button', title='Show chat', aria-label='Show chat', aria-expanded='false', aria-controls='chat')
           span#chat_unread(hidden)
@@ -57,6 +58,7 @@ html(lang='en')
       button#take_seat(type='button') Take a seat
       button#player_ready(type='button') Click when ready!
     section#bottom
+      button#lose_bots.lose-bots-btn(type='button', hidden, title='Surrender all bots', aria-label='Lose bots') Lose bots
       button#panels_toggle.panel-toggle.fa.icon-collapse(type='button', title='Hide chat and keyboard', aria-label='Hide chat and keyboard', aria-expanded='true', aria-controls='chat keyboard')
       section#chat
         .chat-header

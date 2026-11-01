@@ -409,6 +409,41 @@ html.theme-retro .current-special {
   left: -0;
 }
 
+.add-bot-btn {
+  position: absolute;
+  top: 52%;
+  left: 6%;
+  width: 88%;
+  min-height: 38px;
+  padding: 8px 4px;
+  font-size: 0.85em;
+  font-weight: bold;
+  font-family: inherit;
+  color: #fff;
+  background-color: #2e7d32;
+  border: 1px solid #4caf50;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  z-index: 5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.15s ease;
+  touch-action: manipulation;
+}
+
+.add-bot-btn:hover {
+  background-color: #388e3c;
+}
+
+.add-bot-btn:active {
+  background-color: #1b5e20;
+}
+
+.arena:nth-child(3) .add-bot-btn {
+  width: 100%;
+  left: 0;
+}
+
 .client-name {
   position: absolute;
   width: 88%;
@@ -891,6 +926,50 @@ section.keyboard {
   content: "\f077";
 }
 
+#lose_bots {
+  position: absolute;
+  right: 60px;
+  bottom: 100%;
+  z-index: 40;
+}
+
+#lose_bots_phone {
+  display: none;
+}
+
+.lose-bots-btn {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 6px;
+  background: #c62828;
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.lose-bots-btn:hover {
+  background: #d32f2f;
+}
+
+.lose-bots-btn:active {
+  background: #b71c1c;
+}
+
+.lose-bots-btn[hidden] {
+  display: none !important;
+}
+
 #panels_toggle {
   position: absolute;
   right: 8px;
@@ -1215,6 +1294,19 @@ html.theme-flat {
   outline: 1px solid var(--line);
 }
 
+.theme-flat .add-bot-btn {
+  border-radius: 0;
+  box-shadow: none;
+  background-color: #388e3c;
+  border: none;
+}
+
+.theme-flat .lose-bots-btn {
+  border-radius: 0;
+  box-shadow: none;
+  background: #d32f2f;
+}
+
 .theme-flat .loser {
   color: var(--danger);
 }
@@ -1493,6 +1585,26 @@ html.theme-retro .open-seat {
   animation: retro-blink 1.2s steps(1) infinite;
 }
 
+html.theme-retro .add-bot-btn {
+  border-radius: 0;
+  border: 2px solid var(--neon-cyan);
+  background-color: var(--retro-panel);
+  color: var(--neon-green, #39ff14);
+  font-family: var(--pixel);
+  font-size: 0.45em;
+  box-shadow: none;
+}
+
+html.theme-retro .lose-bots-btn {
+  border-radius: 0;
+  border: 2px solid var(--neon-pink);
+  background-color: var(--retro-panel);
+  color: var(--neon-pink);
+  font-family: var(--pixel);
+  font-size: 0.5em;
+  box-shadow: none;
+}
+
 @keyframes retro-blink {
   50% {
     color: var(--neon-pink);
@@ -1690,6 +1802,18 @@ html.theme-classic .open-seat {
   background: linear-gradient(#2f5aa8, #1d3a78);
   border-radius: 4px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+html.theme-classic .add-bot-btn {
+  background: linear-gradient(to bottom, #388e3c 0%, #1b5e20 100%);
+  border: 1px solid #0d3813;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+html.theme-classic .lose-bots-btn {
+  background: linear-gradient(to bottom, #d32f2f 0%, #b71c1c 100%);
+  border: 1px solid #7f0000;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 html.theme-classic .loser {
