@@ -20,7 +20,9 @@ function initSortableTables(documentRef) {
     const body = table.tBodies[0];
 
     headers.forEach((header, columnIndex) => {
-      header.setAttribute('aria-sort', 'none');
+      if (!header.getAttribute('aria-sort')) {
+        header.setAttribute('aria-sort', 'none');
+      }
       header.querySelector('button').addEventListener('click', () => {
         const direction = header.getAttribute('aria-sort') === 'ascending' ? 'descending' : 'ascending';
         headers.forEach(cell => cell.setAttribute('aria-sort', 'none'));

@@ -1,37 +1,31 @@
 extends base
 block head
   - const title = 'Game chat'
-  style.
-    section#chatroom {
-      height: 100%;
-      width: 100%;
-    }
-    #messages {
-      padding: 7px;
-      border: 5px ridge #B5B4B4;
-      background-color: #000;
-      color: #fff;
-      font-size: 11px
-    }
-    h2{ text-align: center; }
-    #messages div { margin-bottom: 5px }
-    #messages .name-red {  color: #e01313  }
-    #messages .name-blue {  color: #3d94f6  }
-    #messages .name-orange {  color: orange  }
-    #messages .name-green {  color: #05d005  }
-    #messages .name-purple {  color: #ce04ce  }
-    #messages .name-black {  color: #9C9C9C  }
+
+block pageStyles
+  link(rel='stylesheet', href='/css/pages.css?v=4')
 
 block body
-
-  section#chatroom
-    div#messages
+  main.page-shell.chat-archive
+    header.page-heading
+      p.page-kicker Room history
+      h1 Game chat
+      p.page-intro Messages are grouped by room. Names and messages are displayed as text.
+    section#chatroom(aria-label='Archived room messages')
+      div#messages(role='log', aria-live='off')
 
   script.
     const messages = !{JSON.stringify(messages).replace(/</g, '\\u003c')};
     const messageList = document.getElementById('messages');
     const userColors = new Map();
     let currentRoom = null;
+
+    if (messages.length === 0) {
+      const emptyState = document.createElement('p');
+      emptyState.className = 'empty-state';
+      emptyState.textContent = 'No archived messages yet.';
+      messageList.append(emptyState);
+    }
 
     for (const { room, username, message } of messages) {
       if (room !== currentRoom) {

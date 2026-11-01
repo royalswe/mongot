@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 480">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M20 0H0V20" fill="none" stroke="#2b2f38" stroke-width="1"/>
+    </pattern>
+    <g id="b">
+      <rect width="20" height="20"/>
+      <rect width="20" height="4" fill="#fff" opacity=".22"/>
+      <rect y="16" width="20" height="4" fill="#000" opacity=".22"/>
+      <rect width="2" height="20" fill="#000" opacity=".12"/>
+    </g>
+    <g id="field">
+      <rect width="200" height="440" fill="#14171c"/>
+      <rect width="200" height="440" fill="url(#grid)"/>
+    </g>
+    <g id="stackMain">
+      <use href="#b" x="0" y="420" fill="#e86317"/><use href="#b" x="20" y="420" fill="#e86317"/>
+      <use href="#b" x="40" y="420" fill="#f1ca58"/><use href="#b" x="60" y="420" fill="#f1ca58"/>
+      <use href="#b" x="80" y="420" fill="#33749b"/><use href="#b" x="100" y="420" fill="#33749b"/>
+      <use href="#b" x="140" y="420" fill="#83d8c2"/><use href="#b" x="160" y="420" fill="#83d8c2"/>
+      <use href="#b" x="180" y="420" fill="#a77bd8"/>
+      <use href="#b" x="0" y="400" fill="#e86317"/><use href="#b" x="20" y="400" fill="#d9534f"/>
+      <use href="#b" x="40" y="400" fill="#d9534f"/><use href="#b" x="80" y="400" fill="#33749b"/>
+      <use href="#b" x="100" y="400" fill="#1c90f3"/><use href="#b" x="120" y="400" fill="#1c90f3"/>
+      <use href="#b" x="140" y="400" fill="#83d8c2"/><use href="#b" x="160" y="400" fill="#a77bd8"/>
+      <use href="#b" x="180" y="400" fill="#a77bd8"/>
+      <use href="#b" x="0" y="380" fill="#e86317"/><use href="#b" x="20" y="380" fill="#d9534f"/>
+      <use href="#b" x="100" y="380" fill="#1c90f3"/><use href="#b" x="160" y="380" fill="#a77bd8"/>
+      <use href="#b" x="180" y="380" fill="#a77bd8"/>
+      <use href="#b" x="0" y="360" fill="#e86317"/>
+      <use href="#b" x="80" y="80" fill="#f1ca58"/><use href="#b" x="100" y="80" fill="#f1ca58"/>
+      <use href="#b" x="120" y="80" fill="#f1ca58"/><use href="#b" x="100" y="100" fill="#f1ca58"/>
+    </g>
+    <g id="stackA">
+      <use href="#b" x="0" y="420" fill="#33749b"/><use href="#b" x="20" y="420" fill="#33749b"/>
+      <use href="#b" x="40" y="420" fill="#33749b"/><use href="#b" x="60" y="420" fill="#83d8c2"/>
+      <use href="#b" x="80" y="420" fill="#83d8c2"/><use href="#b" x="100" y="420" fill="#d9534f"/>
+      <use href="#b" x="120" y="420" fill="#d9534f"/><use href="#b" x="140" y="420" fill="#f1ca58"/>
+      <use href="#b" x="160" y="420" fill="#f1ca58"/>
+      <use href="#b" x="0" y="400" fill="#33749b"/><use href="#b" x="40" y="400" fill="#83d8c2"/>
+      <use href="#b" x="60" y="400" fill="#83d8c2"/><use href="#b" x="100" y="400" fill="#d9534f"/>
+      <use href="#b" x="120" y="400" fill="#d9534f"/><use href="#b" x="140" y="400" fill="#f1ca58"/>
+      <use href="#b" x="160" y="400" fill="#f1ca58"/>
+      <use href="#b" x="60" y="380" fill="#e86317"/><use href="#b" x="80" y="380" fill="#e86317"/>
+      <use href="#b" x="100" y="380" fill="#e86317"/><use href="#b" x="80" y="360" fill="#e86317"/>
+    </g>
+    <g id="stackB">
+      <use href="#b" x="20" y="420" fill="#a77bd8"/><use href="#b" x="40" y="420" fill="#a77bd8"/>
+      <use href="#b" x="60" y="420" fill="#1c90f3"/><use href="#b" x="80" y="420" fill="#1c90f3"/>
+      <use href="#b" x="100" y="420" fill="#1c90f3"/><use href="#b" x="120" y="420" fill="#e86317"/>
+      <use href="#b" x="140" y="420" fill="#e86317"/><use href="#b" x="160" y="420" fill="#83d8c2"/>
+      <use href="#b" x="180" y="420" fill="#83d8c2"/>
+      <use href="#b" x="40" y="400" fill="#a77bd8"/><use href="#b" x="60" y="400" fill="#a77bd8"/>
+      <use href="#b" x="100" y="400" fill="#f1ca58"/><use href="#b" x="120" y="400" fill="#f1ca58"/>
+      <use href="#b" x="160" y="400" fill="#83d8c2"/>
+      <use href="#b" x="100" y="380" fill="#f1ca58"/><use href="#b" x="120" y="380" fill="#f1ca58"/>
+    </g>
+    <g id="stackC">
+      <use href="#b" x="0" y="420" fill="#d9534f"/><use href="#b" x="20" y="420" fill="#d9534f"/>
+      <use href="#b" x="40" y="420" fill="#e86317"/><use href="#b" x="60" y="420" fill="#e86317"/>
+      <use href="#b" x="80" y="420" fill="#33749b"/><use href="#b" x="100" y="420" fill="#33749b"/>
+      <use href="#b" x="120" y="420" fill="#33749b"/><use href="#b" x="140" y="420" fill="#a77bd8"/>
+      <use href="#b" x="180" y="420" fill="#a77bd8"/>
+      <use href="#b" x="0" y="400" fill="#d9534f"/><use href="#b" x="20" y="400" fill="#d9534f"/>
+      <use href="#b" x="60" y="400" fill="#e86317"/><use href="#b" x="80" y="400" fill="#e86317"/>
+      <use href="#b" x="120" y="400" fill="#33749b"/><use href="#b" x="180" y="400" fill="#a77bd8"/>
+      <use href="#b" x="0" y="380" fill="#f1ca58"/><use href="#b" x="20" y="380" fill="#f1ca58"/>
+      <use href="#b" x="180" y="380" fill="#a77bd8"/>
+      <use href="#b" x="0" y="360" fill="#f1ca58"/><use href="#b" x="20" y="360" fill="#f1ca58"/>
+      <use href="#b" x="180" y="360" fill="#a77bd8"/>
+    </g>
+    <g id="stackD">
+      <use href="#b" x="0" y="420" fill="#1c90f3"/><use href="#b" x="20" y="420" fill="#1c90f3"/>
+      <use href="#b" x="40" y="420" fill="#83d8c2"/><use href="#b" x="60" y="420" fill="#83d8c2"/>
+      <use href="#b" x="80" y="420" fill="#83d8c2"/><use href="#b" x="120" y="420" fill="#f1ca58"/>
+      <use href="#b" x="140" y="420" fill="#f1ca58"/><use href="#b" x="160" y="420" fill="#e86317"/>
+      <use href="#b" x="180" y="420" fill="#e86317"/>
+      <use href="#b" x="0" y="400" fill="#1c90f3"/><use href="#b" x="40" y="400" fill="#83d8c2"/>
+      <use href="#b" x="120" y="400" fill="#f1ca58"/><use href="#b" x="140" y="400" fill="#f1ca58"/>
+      <use href="#b" x="180" y="400" fill="#e86317"/>
+      <use href="#b" x="180" y="380" fill="#e86317"/>
+    </g>
+  </defs>
+
+  <rect width="760" height="480" fill="#272a33"/>
+
+  <rect x="16" y="125" width="110" height="230" fill="#363b47" stroke="#181b21" stroke-width="3"/>
+  <rect x="16" y="100" width="110" height="18" fill="#363b47"/><rect x="21" y="106" width="40" height="6" fill="#454c5a"/>
+  <g transform="translate(21 130) scale(.5)"><use href="#field"/><use href="#stackA"/></g>
+
+  <rect x="131" y="125" width="110" height="230" fill="#363b47" stroke="#181b21" stroke-width="3"/>
+  <rect x="131" y="100" width="110" height="18" fill="#363b47"/><rect x="136" y="106" width="40" height="6" fill="#454c5a"/>
+  <g transform="translate(136 130) scale(.5)"><use href="#field"/><use href="#stackB"/></g>
+
+  <rect x="519" y="125" width="110" height="230" fill="#363b47" stroke="#181b21" stroke-width="3"/>
+  <rect x="519" y="100" width="110" height="18" fill="#363b47"/><rect x="524" y="106" width="40" height="6" fill="#454c5a"/>
+  <g transform="translate(524 130) scale(.5)"><use href="#field"/><use href="#stackC"/></g>
+
+  <rect x="634" y="125" width="110" height="230" fill="#363b47" stroke="#181b21" stroke-width="3"/>
+  <rect x="634" y="100" width="110" height="18" fill="#363b47"/><rect x="639" y="106" width="40" height="6" fill="#454c5a"/>
+  <g transform="translate(639 130) scale(.5)"><use href="#field"/><use href="#stackD"/></g>
+
+  <rect x="270" y="10" width="220" height="460" fill="#363b47" stroke="#181b21" stroke-width="4"/>
+  <g transform="translate(280 20)"><use href="#field"/><use href="#stackMain"/></g>
+  <rect x="278" y="18" width="204" height="444" fill="none" stroke="#e86317" stroke-width="3"/>
+</svg>

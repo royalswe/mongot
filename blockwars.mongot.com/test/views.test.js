@@ -26,6 +26,30 @@ test('inherited templates keep their page titles with lexical declarations', () 
     }
 });
 
+test('shared header keeps account links grouped across guest and signed-in pages', () => {
+    const guest = render('index');
+    assert.match(guest, /<li class="account-menu"><a href="https:\/\/mongot\.com\/login"[\s\S]*?Login[\s\S]*?<a href="https:\/\/mongot\.com\/register"[\s\S]*?Register/);
+    assert.match(guest, /<footer>/);
+
+    const signedIn = render('index', { user: { username: 'PlayerOne' } });
+    assert.match(signedIn, /<li class="account-menu"><a href="https:\/\/mongot\.com\/logout"[\s\S]*?Logout[\s\S]*?<a href="https:\/\/mongot\.com\/profile"[\s\S]*?PlayerOne/);
+});
+
+test('home puts the hero copy before its board image', () => {
+    const html = render('index');
+    assert.ok(html.indexOf('class="hero-copy"') < html.indexOf('class="hero-board"'));
+    assert.match(html, /src="\/img\/hero-board\.svg"/);
+});
+
+test('rules titles live inside the language panel so the tabs wrap the whole page', () => {
+    const html = render('rules');
+    const panel = html.indexOf('id="lang_content"');
+    assert.ok(panel > -1);
+    assert.ok(html.indexOf('<h1>') > panel);
+    assert.match(html, /<article class="page" id="english"><h1>How to play<\/h1>/);
+    assert.match(html, /<article class="page" id="swedish"><h1>Hur man spelar<\/h1>/);
+});
+
 test('highscore renders every crown boundary without leaking between rows', () => {
     const cases = [
         [899, 0], [900, 1], [1299, 1], [1300, 2], [1499, 2],
@@ -45,7 +69,13 @@ test('highscore renders every crown boundary without leaking between rows', () =
         assert.ok(html.includes(`<td>${i + 1}</td>`));
         assert.ok(html.includes(`Player${i}</a>`));
     }
-    assert.equal((html.match(/<td>2:5<\/td>/g) || []).length, cases.length);
+    assert.equal((html.match(/<td>2:05<\/td>/g) || []).length, cases.length);
+});
+
+test('record pages show useful empty states', () => {
+    assert.match(render('highscore', { highscores: [] }), /No ranked games yet/);
+    assert.match(render('gamelog', { logs: [] }), /No completed games yet/);
+    assert.match(render('gamechat', { messages: [] }), /No archived messages yet/);
 });
 
 test('game tables use native sortable controls without jQuery assets', () => {
@@ -77,6 +107,7 @@ test('game log keeps row numbering and data with a block-scoped loop', () => {
     assert.ok(html.includes('<td>2</td>'));
     assert.ok(html.includes('<td>Alice</td>'));
     assert.ok(html.includes('<td>Bob</td>'));
+    assert.ok(html.includes('<td>2:05</td>'));
     assert.equal((html.match(/2026-10-27 18:00/g) || []).length, 2);
 });
 

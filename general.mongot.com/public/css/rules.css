@@ -1,8 +1,7 @@
-/* How to play. */
 main#rules {
-    max-width: 960px;
+    width: min(960px, calc(100% - 40px));
     margin: 32px auto 48px;
-    padding: 0 24px;
+    padding: 0;
 }
 
 .lang-menu {
@@ -64,15 +63,6 @@ main#rules .lang-menu .active a {
     line-height: 1;
     text-align: left;
     text-transform: uppercase;
-}
-
-#rules h1::after {
-    content: '';
-    display: block;
-    width: 140px;
-    height: 6px;
-    margin-top: 8px;
-    background: linear-gradient(to right, var(--red) 0 50%, var(--mustard) 50% 100%);
 }
 
 main#rules h4 {

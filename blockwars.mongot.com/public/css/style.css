@@ -23,8 +23,13 @@ body {
     padding-bottom: 4rem;
     position: relative;
 }
+body > header {
+    background-color: #292e3a;
+    border-bottom: 1px solid #343946;
+    box-shadow: 0 1px 1px 0 rgba(0,0,0,0.3);
+}
 .lobby-body {
-    padding-bottom: 350px !important;
+    padding-bottom: 170px;
     /* background: #0c0c0c url('img/bg_tetris.jpg') top center no-repeat;
     background-color: #174972; */
     color: #d8d8d8;
@@ -35,20 +40,20 @@ input, *:focus, *:active {
     outline: none;;
 }
 ul#header {
-    list-style-type: none;
-    margin: 0;
+    width: min(1240px, calc(100% - 40px));
+    margin: 0 auto;
     padding: 0;
     overflow: hidden;
-    /* background-color: #333; */
-
-    background-color: #292e3a;
-    border-bottom: 1px solid #343946;
-    box-shadow: 0 1px 1px 0 rgba(0,0,0,0.3);
+    list-style: none;
+    background-color: transparent;
 }
 ul#header li {
-     float: left;
+    float: left;
 }
-ul#header li.user_menu {
+ul#header li.account-menu {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     float: right;
 }
 ul#header li a {
@@ -61,12 +66,17 @@ ul#header li a {
 ul#header li a:hover {
     background-color: #111;
 }
+ul#header li a:focus-visible,
+footer a:focus-visible {
+    outline: 2px solid #69B4DF;
+    outline-offset: 3px;
+}
 footer{
     position: absolute;
     right: 0;
     bottom: 0;
     left: 0;
-    padding: 5px;
+    padding: 5px max(20px, calc((100% - 1240px) / 2));
     background-color: #292e3a;
     border-bottom: 1px solid #343946;
     box-shadow: 0 1px 1px 0 rgba(0,0,0,0.3);
@@ -80,6 +90,20 @@ footer .footer-text {
 .footer-text a{
     color: #d8d8d8;
     text-decoration: none;
+}
+footer .footer-text a:hover {
+    color: #d8d8d8;
+}
+@media screen and (max-width: 760px) {
+    ul#header {
+        width: calc(100% - 40px);
+    }
+    ul#header li a {
+        padding: 14px 8px;
+    }
+    footer {
+        padding: 5px 20px;
+    }
 }
 #lobby{
     display: grid;

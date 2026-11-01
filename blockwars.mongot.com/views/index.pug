@@ -1,33 +1,39 @@
 extends base
 block head
   - const title = 'Blockwars'
-  link(rel='stylesheet', type='text/css', href='/css/home.css?v=1.2')
+
+block pageStyles
+  link(rel='stylesheet', href='/css/pages.css?v=4')
 
 block body
-  div#myHeader.container.theme.padding
-    .center
-      h1.xxxlarge.animate-bottom Blockwars
-      h2 Multiplayer Tetris variant where you compete against others
-      .padding-32
+  main.page-shell.home-page
+    section.hero
+      .hero-copy
+        p.page-kicker Multiplayer block battles
+        h1 Blockwars
+        p.hero-tagline Stack falling blocks, clear rows and send Specials to outlast up to four opponents. Jump into an open room and play as a guest.
+        .hero-actions
+          a.action-link(href='/lobby')
+            i.fa.fa-play(aria-hidden='true')
+            | Join a game
+          a.action-link.secondary(href='/rules')
+            i.fa.fa-book(aria-hidden='true')
+            | Read the rules
+        p.hero-note Ranked rooms and points are available to registered players.
+      .hero-board
+        img(src='/img/hero-board.svg', width='760', height='480', alt='Five Blockwars Arenas side by side, with your Arena in the center and a Tetris piece falling')
+        span.sticker Play with bots
 
-  .row-padding.center
-    a.third(href='/lobby')
-      .card-2.padding-top
-        h4 Lobby
-        br
-        i.fa.fa-globe.margin-bottom.text-theme
-        p Join games in lobby to compete with others and earn you ranking.
-        p Note that ranked games is only available for registered users.
-    a.third(href='/highscore')
-      .card-2.padding-top
-        h4 High Score
-        br
-        i.fa.fa-trophy.margin-bottom.text-theme
+    section.features(aria-label='Explore Blockwars')
+      a.feature(href='/lobby')
+        i.feature-icon.fa.fa-globe(aria-hidden='true')
+        h2 Lobby
+        p Join an open room or watch a game. Guests play unranked; register to earn rank.
+      a.feature(href='/highscore')
+        i.feature-icon.fa.fa-trophy(aria-hidden='true')
+        h2 High Score
         p See which players have the best rank in Blockwars.
-    a.third(href='/rules')
-      .card-2.padding-top
-        h4 How to play
-        br
-        i.fa.fa-leanpub.margin-bottom.text-theme
-        p First time playing? You can find the rules here.
-        p The rules are available in both Swedish and English.
+      a.feature(href='/rules')
+        i.feature-icon.fa.fa-book(aria-hidden='true')
+        h2 How to play
+        p First time playing? Learn the controls and the twelve Specials.

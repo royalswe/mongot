@@ -34,16 +34,6 @@
     text-transform: uppercase;
 }
 
-.hero-title::after {
-    content: '';
-    display: block;
-    width: 100%;
-    max-width: 360px;
-    height: 18px;
-    margin-top: 14px;
-    background: linear-gradient(var(--red) 0 6px, transparent 6px 9px, var(--mustard) 9px 15px, transparent 15px);
-}
-
 .hero-tagline {
     margin: 18px 0 26px;
     color: #4a3f33;

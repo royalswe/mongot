@@ -14,8 +14,8 @@ html
     meta(http-equiv='Content-Type', content='text/html; charset=UTF-8')
     meta(name='viewport', content='width=device-width, initial-scale=1')
     link(rel='stylesheet', type='text/css', href='/resources/font-awesome.min.css')
-    link(rel='stylesheet', type='text/css', href='/css/retro.css?v=1.0')
-    link(rel='stylesheet', type='text/css', href='/css/site.css?v=2.0')
+    link(rel='stylesheet', type='text/css', href='/css/retro.css?v=1.2')
+    link(rel='stylesheet', type='text/css', href='/css/site.css?v=2.2')
     block styles
 
   body
@@ -28,14 +28,12 @@ html
         li
           a(href='/highscore') <i class="fa fa-trophy" aria-hidden="true"></i> High Score
         if user
-          li.user_menu
+          li.account-menu
             a(href='https://mongot.com/logout') <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-          li.user_menu
             a(href='https://mongot.com/profile') <i class="fa fa-user" aria-hidden="true"></i> #{user.username}
         else
-          li.user_menu
+          li.account-menu
             a(href='https://mongot.com/login') <i class="fa fa-sign-in" aria-hidden="true"></i> Login
-          li.user_menu
             a(href='https://mongot.com/register') <i class="fa fa-user-plus" aria-hidden="true"></i> Register
 
     noscript

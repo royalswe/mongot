@@ -8,9 +8,9 @@
         "chat online";
     gap: 22px 26px;
     align-items: start;
-    max-width: 1280px;
+    width: min(1240px, calc(100% - 40px));
     margin: 0 auto;
-    padding: 6px 24px 24px;
+    padding: 6px 0 24px;
 }
 
 section#lobby {
