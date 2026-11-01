@@ -1,3 +1,9 @@
+<script lang="ts">
+	import { useState } from '#lib/stores/state.svelte';
+
+	const states = useState();
+</script>
+
 <header class="site-header">
 	<nav class="site-nav" aria-label="Main navigation">
 		<a class="brand-mark" href="/" aria-label="Snake home">
@@ -6,7 +12,7 @@
 		</a>
 		<ul class="site-links">
 			<li>
-				<a href="/" aria-label="Home"
+				<a href="https://mongot.com" aria-label="Home"
 					><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a
 				>
 			</li>
@@ -20,16 +26,32 @@
 			</li>
 		</ul>
 		<ul class="account-links">
-			<li>
-				<a href="https://mongot.com/register"
-					><i class="fa fa-user-plus" aria-hidden="true"></i> Sign up</a
-				>
-			</li>
-			<li>
-				<a href="https://mongot.com/login"
-					><i class="fa fa-sign-in" aria-hidden="true"></i> Log in</a
-				>
-			</li>
+			{#if states.accountUsername}
+				<li>
+					<a
+						class="account-name"
+						href={`https://mongot.com/user/${encodeURIComponent(states.accountUsername)}`}
+					>
+						<i class="fa fa-user" aria-hidden="true"></i><span>{states.accountUsername}</span>
+					</a>
+				</li>
+				<li>
+					<a href="https://mongot.com/logout"
+						><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a
+					>
+				</li>
+			{:else}
+				<li>
+					<a href="https://mongot.com/register"
+						><i class="fa fa-user-plus" aria-hidden="true"></i> Sign up</a
+					>
+				</li>
+				<li>
+					<a href="https://mongot.com/login"
+						><i class="fa fa-sign-in" aria-hidden="true"></i> Log in</a
+					>
+				</li>
+			{/if}
 		</ul>
 	</nav>
 </header>
@@ -136,6 +158,11 @@
 
 	.account-links li:first-child a {
 		color: var(--muted);
+	}
+
+	.account-name span {
+		max-width: 12rem;
+		overflow-wrap: anywhere;
 	}
 
 	@media (max-width: 720px) {

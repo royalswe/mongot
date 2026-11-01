@@ -1,9 +1,7 @@
-export default (document.cookie = 'cookiename=value');
 import { useState } from '#lib/stores/state.svelte';
 
 const states = useState();
-// check with server if user is logged in, if so, set user in state;
-fetch('https://localhost:5300/api/authenticate', {
+fetch('/api/authenticate', {
 	method: 'POST',
 	credentials: 'include'
 })
@@ -15,9 +13,9 @@ fetch('https://localhost:5300/api/authenticate', {
 		}
 	})
 	.then((res) => {
-		states.you = res;
-		console.log('username:', res);
+		states.accountUsername = res && res !== 'guest' ? res : null;
 	})
 	.catch((err) => {
+		states.accountUsername = null;
 		console.log('could not fetch user', err);
 	});

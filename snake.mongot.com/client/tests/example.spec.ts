@@ -1,5 +1,47 @@
 import { expect, test } from '@playwright/test';
 
+test('shows the account username instead of login links in the header', async ({ page }) => {
+	await page.route('**/api/authenticate', (route) => {
+		expect(new URL(route.request().url()).origin).toBe('http://localhost:4174');
+		return route.fulfill({ body: 'Alice' });
+	});
+	await page.goto('/');
+	const header = page.getByRole('navigation', { name: 'Main navigation' });
+	await expect(header.getByRole('link', { name: 'Alice', exact: true })).toHaveAttribute(
+		'href',
+		'https://mongot.com/user/Alice'
+	);
+	await expect(header.getByRole('link', { name: 'Log out' })).toHaveAttribute(
+		'href',
+		'https://mongot.com/logout'
+	);
+	await expect(header.locator('.account-links li').nth(1)).toHaveText('Log out');
+	await expect(header.getByRole('link', { name: 'Sign up' })).toHaveCount(0);
+	await expect(header.getByRole('link', { name: 'Log in' })).toHaveCount(0);
+	await expect(header.getByRole('link', { name: 'Home', exact: true })).toHaveAttribute(
+		'href',
+		'https://mongot.com'
+	);
+	await page.getByRole('link', { name: /Browse lobby/i }).click();
+	await expect(header.getByRole('link', { name: 'Alice', exact: true })).toBeVisible();
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(header.getByRole('link', { name: 'Alice', exact: true })).toBeVisible();
+	await expect(header.getByRole('link', { name: 'Log out' })).toBeVisible();
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+for (const status of [200, 401]) {
+	test(`shows login links for a guest with authentication status ${status}`, async ({ page }) => {
+		await page.route('**/api/authenticate', (route) => route.fulfill({ status, body: 'guest' }));
+		await page.goto('/');
+		const header = page.getByRole('navigation', { name: 'Main navigation' });
+		await expect(header.getByRole('link', { name: 'Sign up' })).toBeVisible();
+		await expect(header.getByRole('link', { name: 'Log in' })).toBeVisible();
+		await expect(header.getByRole('link', { name: 'Log out' })).toHaveCount(0);
+		await expect(header.getByRole('link', { name: 'guest', exact: true })).toHaveCount(0);
+	});
+}
+
 test('renders the Snake home page', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByRole('heading', { name: /One more square/ })).toBeVisible();

@@ -16,6 +16,7 @@ let gameStatus = $state<GameStatus>('waiting');
 let playerStatus = $state<PlayeStatus>('spectating');
 let clients = $state<Client[]>([]);
 let you = $state('');
+let accountUsername = $state<string | null>(null);
 let error = $state<string | undefined>('');
 let lastOutcome = $state<string | undefined>(undefined);
 
@@ -44,6 +45,12 @@ export function useState() {
 		},
 		set you(value) {
 			you = value;
+		},
+		get accountUsername() {
+			return accountUsername;
+		},
+		set accountUsername(value) {
+			accountUsername = value;
 		},
 		get error() {
 			return error;
