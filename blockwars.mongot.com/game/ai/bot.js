@@ -243,6 +243,7 @@ Bot.prototype.decideSpecial = function(special) {
 
     const hasOpponents = activeOpponents.length > 0;
     const hasMultipleSpecials = this.specials.length >= 2;
+    const isQueueCrowded = this.specials.length >= 3;
 
     const highestOpponentBy = (prop) => {
         if (!hasOpponents) return null;
@@ -351,6 +352,10 @@ Bot.prototype.decideSpecial = function(special) {
             if (bestOpponent && isSelfInDanger && (bestOpponent.arenaStats.score - selfStats.score >= 50)) {
                 return { use: true, target: bestOpponent };
             }
+            // Cycle if queue is crowded
+            if (isQueueCrowded) {
+                return { use: true, target: bestOpponent };
+            }
             return { use: false };
         }
 
@@ -362,6 +367,10 @@ Bot.prototype.decideSpecial = function(special) {
                 const target = lowOpps.reduce((lowest, cur) => cur.arenaStats.maxHeight < lowest.arenaStats.maxHeight ? cur : lowest);
                 return { use: true, target };
             }
+            // Cycle if queue is crowded
+            if (isQueueCrowded) {
+                return { use: true, target: highestOpponentBy('maxHeight') };
+            }
             return { use: false };
         }
 
@@ -372,6 +381,10 @@ Bot.prototype.decideSpecial = function(special) {
                 .reduce((best, cur) => (!best || cur.arenaStats.specialsCount > best.arenaStats.specialsCount) ? cur : best, null);
             if (oppWithSpecials) {
                 return { use: true, target: oppWithSpecials };
+            }
+            // Cycle if queue is crowded
+            if (isQueueCrowded) {
+                return { use: true, target: highestOpponentBy('maxHeight') };
             }
             return { use: false };
         }

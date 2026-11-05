@@ -19,17 +19,10 @@ const app = express();
 mongoose.connect(config.PROD_DB)
     .catch(err => console.log(err));
 
-//mongoose.connect(config.PROD_DB);
-
 /**
  * Tell express that we are using pug as view templates
  */
 app.set('view engine', 'pug');
-
-/**
- * Use flash messages
- */
-app.use(flash());
 
 /**
  * Helmet secure Express by setting various HTTP headers
@@ -78,12 +71,20 @@ app.use(
         activeDuration: 3600 * 1000 * 24 * 30, // cookie expire after 30 days if user is not active
         cookie: {
             sameSite: 'strict',
+            domain: '.mongot.com',
+            path: '/'
             //     maxAge: 3600 * 1000 * 24 * 365,
             //     httpOnly: true,
             //     domain: 'mongot.com'
         }
     })
 );
+
+/**
+ * Use flash messages
+ */
+app.use(flash());
+
 /**
  * Middleware, Refresh session on page loads
  */

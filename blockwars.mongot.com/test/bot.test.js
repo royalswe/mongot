@@ -268,6 +268,22 @@ describe('bot specials decision and usage', () => {
         assert.equal(dMine.target.id, 'oppSpecials');
     });
 
+    test('held specials (16, 17, 18) cycle to an opponent when the queue is crowded', () => {
+        const { bot } = sessionWithBot();
+        const opp = createOpponent('opp', 15, 15, 0);
+        bot.opponents = [opp];
+
+        for (const s of [16, 17, 18]) {
+            bot.specials = [s, 8];
+            assert.equal(bot.decideSpecial(s).use, false);
+
+            bot.specials = [s, 8, 9];
+            const decision = bot.decideSpecial(s);
+            assert.equal(decision.use, true);
+            assert.equal(decision.target.id, 'opp');
+        }
+    });
+
     test('handles empty opponents gracefully without error', () => {
         const { bot } = sessionWithBot();
         bot.opponents = [];
