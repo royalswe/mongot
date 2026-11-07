@@ -5,6 +5,7 @@
     grid-template-areas:
         "title title"
         "rooms news"
+        "rooms alerts"
         "chat online";
     gap: 22px 26px;
     align-items: start;
@@ -21,7 +22,7 @@ section#lobby h1 {
     grid-area: title;
 }
 
-#allrooms, #news_box, section#lobby_chat, section#users_online {
+#allrooms, #news_box, #lobby_notifications, section#lobby_chat, section#users_online {
     border: 3px solid var(--ink);
     background-color: var(--paper-light);
     box-shadow: 6px 6px 0 var(--ink);
@@ -165,26 +166,158 @@ img.browsers {
     color: var(--ink);
 }
 
-#toggle_notification {
-    display: none;
+#lobby_notifications {
+    grid-area: alerts;
+    padding: 16px;
+    text-align: left;
 }
 
-label[for=toggle_notification] {
-    display: block;
-    margin: 10px auto 0;
+.notification-heading {
+    margin: 0 0 8px;
+    font-size: 20px;
+}
+
+.notification-intro {
+    margin: 0 0 14px;
+    line-height: 1.3;
+}
+
+.notification-control {
+    position: relative;
+}
+
+.notification-control label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 68px;
+    padding: 12px;
+    border: 3px solid var(--ink);
+    background: var(--paper-light);
+    box-shadow: 3px 3px 0 var(--ink);
     cursor: pointer;
 }
 
-input[type=checkbox]#toggle_notification + label {
-    width: 44px;
-    height: 44px;
+.notification-control label:hover {
+    background: var(--mustard);
+}
+
+.notification-bell {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
     background: url(../img/icons/bell-off.svg) no-repeat center / contain;
 }
 
-input[type=checkbox]:checked#toggle_notification + label {
-    width: 44px;
-    height: 44px;
-    background: url(../img/icons/bell.svg) no-repeat center / contain;
+.notification-control-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.notification-control-copy > span {
+    font-size: 13px;
+}
+
+.notification-state {
+    padding: 4px 8px;
+    border: 2px solid var(--ink);
+    background: var(--paper);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+#toggle_notification {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+}
+
+#toggle_notification:checked + label {
+    background: #d7ecd2;
+}
+
+#toggle_notification:checked + label .notification-bell {
+    background-image: url(../img/icons/bell.svg);
+}
+
+#toggle_notification:checked + label .notification-state {
+    background: var(--green);
+    color: var(--paper);
+}
+
+#toggle_notification:focus-visible + label {
+    outline: 3px solid var(--blue);
+    outline-offset: 3px;
+}
+
+#toggle_notification:disabled + label {
+    opacity: .55;
+    cursor: wait;
+}
+
+.notification-status {
+    margin: 10px 0 0;
+    min-height: 1.3em;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+#notification-details {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 3px solid var(--ink);
+}
+
+#notification-details summary {
+    padding: 6px 0;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#notification-details summary:focus-visible,
+.notification-help-close:focus-visible {
+    outline: 3px solid var(--blue);
+    outline-offset: 3px;
+}
+
+.notification-help-lead {
+    font-weight: 700;
+}
+
+#notification-help ul {
+    margin: 10px 0;
+    padding-left: 18px;
+}
+
+#notification-help li {
+    margin-bottom: 10px;
+    line-height: 1.3;
+}
+
+.notification-help-close {
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 3px solid var(--ink);
+    background: var(--paper-light);
+    color: var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.notification-help-close:hover {
+    background: var(--mustard);
+}
+
+.notification-help-close:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--ink);
 }
 
 section#lobby_chat {
@@ -340,6 +473,7 @@ section#users_online img {
         grid-template-areas:
             "title"
             "rooms"
+            "alerts"
             "chat"
             "online";
         padding: 6px 12px 20px;

@@ -3,8 +3,15 @@
   "version": "1.0.1",
   "description": "Clone from blip.se general",
   "main": "app.js",
+  "config": {
+    "cookie": "s3cr3t",
+    "VAPID_PUBLIC_KEY": "BEjK-T4xq910AGfKQ09xIF_hCgBUTebFj2ZPaHilzouo8ca3kjJAmX4WjgQp8n8Yg02Bu5hwp97MLu0a14OP4RY",
+    "VAPID_PRIVATE_KEY": "DKXVoEGfQpXxVwcnYHag-UGkcg2eR7c_n-ABJgTcx7M",
+    "VAPID_SUBJECT": "mailto:blipmini@gmail.com",
+    "DOMAIN": "http://localhost:5100"
+  },
   "scripts": {
-    "dev": "COOKIE_SECRET=s3cr3t node app.js",
+    "dev": "COOKIE_SECRET=$npm_package_config_cookie VAPID_PUBLIC_KEY=$npm_package_config_VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY=$npm_package_config_VAPID_PRIVATE_KEY VAPID_SUBJECT=$npm_package_config_VAPID_SUBJECT DOMAIN=$npm_package_config_DOMAIN node app.js",
     "gulp": "gulp",
     "test": "node --test test/*.test.js",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=game/** --test-coverage-include=public/js/ranks.js test/*.test.js",

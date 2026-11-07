@@ -38,41 +38,6 @@ lobbyChat.on('users_online', function (users, guests) {
     }
 });
 
-function toggleNotificationPermissions(input) {
-    if (!("Notification" in window)) {
-        return alert("Sorry but your browser does not support desktop notification");
-    }
-    else if (Notification.permission === 'granted') {
-        localStorage.setItem('notification-permissions', input.checked ? 'granted' : 'denied');
-    }
-    else if (Notification.permission === 'denied') {
-        localStorage.setItem('notification-permissions', 'denied');
-        input.checked = false;
-    }
-    else if (Notification.permission === 'default') {
-        Notification.requestPermission(function(choice) {
-            if (choice === 'granted') {
-                localStorage.setItem('notification-permissions', input.checked ? 'granted' : 'denied');
-            } else {
-                localStorage.setItem('notification-permissions', 'denied');
-                input.checked = false;
-            }
-        });
-    }
-}
-
-if (("Notification" in window) && getNotificationPermissions() === 'granted') { // check checkbox if notification is granted
-    document.getElementById('toggle_notification').checked = true;
-}
-
-function getNotificationPermissions() {
-    if (Notification.permission === 'granted') {
-        return localStorage.getItem('notification-permissions');
-    } else {
-        return Notification.permission;
-    }
-}
-
 function escapeHtml(value) {
     const element = document.createElement('div');
     element.textContent = String(value == null ? '' : value);
@@ -161,24 +126,9 @@ document.getElementById('message').addEventListener('keydown', function (event) 
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-    const PlayerArrivedSound = new Howl({src: ['sounds/join-lobby.mp3']});
-
-    let arrivedTimestamp = Date.now();
     lobbyChat.on('user_notification', function (data) {
-        if (getNotificationPermissions() === 'granted' && arrivedTimestamp < Date.now()) {
-            arrivedTimestamp = Date.now()+60000;
-            spawnNotification('img/users-icon.png', data);
-        }
+        NOTIFICATION.userNotification(data);
     });
-
-    function spawnNotification(theIcon, theTitle) {
-        const options = {
-            icon: theIcon,
-        }
-        const n = new Notification(theTitle, options);
-        PlayerArrivedSound.play();
-        setTimeout(n.close.bind(n), 3000);
-    }
 
     document.getElementById('messages').addEventListener('click', function (event) {
         if (!event.target.closest('.remove-message')) { return; }

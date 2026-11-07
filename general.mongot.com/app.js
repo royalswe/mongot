@@ -48,13 +48,14 @@ const server = http.createServer(app).listen(port);
  * Makes it possible to get static files from view
  */
 app.use(express.static(__dirname + '/public'));
+
+app.get('/service-worker.js', (req, res) => {
+    res.set('Cache-Control', 'no-cache');
+    res.sendFile(__dirname + '/public/js/service-worker.js');
+});
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-/**
- * Service worker
- */
-app.use(require('./serviceworker'));
 
 /**
  * Session rules
@@ -91,6 +92,14 @@ app.use(flash());
 app.use(process.env.NODE_ENV === 'test' ? identity.testCookieAuth : middleware.cookieAuth);
 
 /**
+ * Lobby arrival notifications over Web Push
+ */
+const notifications = require('./serviceworker')({
+    origin: process.env.DOMAIN || config.DOMAIN
+});
+app.use(notifications.router);
+
+/**
  * Routes
  */
 app.use(require('./routes/main'));
@@ -106,4 +115,4 @@ app.use(function (error, req, res, next) {
     res.send('500: Internal Server Error - ' + error);
 });
 
-require('./sockets.js').initialize(server);  
+require('./sockets.js').initialize(server, { notifications });  

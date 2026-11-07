@@ -16,6 +16,19 @@ const subscription = {
     }
 };
 
+function matches(doc, query) {
+    if (query.active !== undefined && doc.active !== query.active) { return false; }
+    if (query.app !== undefined) {
+        if (query.app === null) { return doc.app === undefined || doc.app === null; }
+        if (typeof query.app === 'object' && '$exists' in query.app) {
+            return (doc.app !== undefined && doc.app !== null) === query.app.$exists;
+        }
+        if (doc.app !== query.app) { return false; }
+    }
+    if (query.$or) { return query.$or.some(clause => matches(doc, clause)); }
+    return true;
+}
+
 function fixture(options = {}) {
     const docs = [];
     const delivered = [];
@@ -33,7 +46,7 @@ function fixture(options = {}) {
                 Object.assign(doc, update.$set);
             }
         },
-        async find() { return docs.filter(doc => doc.active); }
+        async find(query) { return docs.filter(doc => matches(doc, query)); }
     };
     const notifications = createNotifications({
         origin, model,
@@ -62,12 +75,14 @@ async function serve(t, notifications) {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     t.after(() => new Promise(resolve => server.close(resolve)));
     const url = `http://127.0.0.1:${server.address().port}`;
-    return (method, route = '/notifications/subscription', body = { subscription }, requestOrigin = origin) =>
+    const send = (method, route = '/notifications/subscription', body = { subscription }, requestOrigin = origin) =>
         fetch(url + route, {
             method,
             headers: { origin: requestOrigin, 'content-type': 'application/json' },
             body: method === 'GET' ? undefined : JSON.stringify(body)
         });
+    send.url = url;
+    return send;
 }
 
 test('saved subscriptions receive server arrivals without any recipient page or socket', async t => {
@@ -79,6 +94,7 @@ test('saved subscriptions receive server arrivals without any recipient page or 
     }
     assert.equal(notifications.docs.length, 1);
     assert.equal(notifications.docs[0].username, 'Alice', 'identity must come from the session');
+    assert.equal(notifications.docs[0].app, 'blockwars');
     let response = await request('POST', '/notifications/subscription/status');
     assert.equal((await response.json()).active, true);
 
@@ -103,6 +119,20 @@ test('saved subscriptions receive server arrivals without any recipient page or 
     assert.equal(notifications.delivered.length, 2, 'opt-out must stop off-site delivery');
 });
 
+test('subscriptions tagged for another app do not receive blockwars alerts', async () => {
+    const notifications = fixture();
+    notifications.docs.push({ subscription: JSON.stringify(subscription), username: 'Alice', active: true, app: 'general' });
+    await notifications.notifyArrival('Bob');
+    assert.equal(notifications.delivered.length, 0);
+});
+
+test('legacy subscriptions without an app still receive blockwars alerts', async () => {
+    const notifications = fixture();
+    notifications.docs.push({ subscription: JSON.stringify(subscription), username: 'Alice', active: true });
+    await notifications.notifyArrival('Bob');
+    assert.equal(notifications.delivered.length, 1);
+});
+
 test('requests reject cross-site changes, malformed keys and unsafe endpoints', async t => {
     const notifications = fixture();
     const request = await serve(t, notifications);
@@ -116,6 +146,14 @@ test('requests reject cross-site changes, malformed keys and unsafe endpoints', 
         assert.equal((await request('PUT', undefined, { subscription: invalid })).status, 400);
     }
     assert.equal(notifications.docs.length, 0);
+});
+
+test('a stale configured domain still accepts same-host requests', async t => {
+    const notifications = fixture();
+    const request = await serve(t, notifications);
+    const response = await request('PUT', undefined, { subscription }, request.url);
+    assert.equal(response.status, 200);
+    assert.equal(notifications.docs[0].app, 'blockwars');
 });
 
 test('disabled configuration is explicit and never exposes a private key', async t => {

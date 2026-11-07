@@ -30,6 +30,21 @@ function jsLobby(){
         .pipe(dest(PROD + '/public/js'));
 };
 
+// The browser worker is served at /service-worker.js with root scope.
+function jsServiceWorker(){
+    return src('public/js/service-worker.js')
+        .pipe(babel({
+            presets: ['@babel/preset-env']
+        }))
+        .pipe(terser())
+        .pipe(dest(PROD + '/public/js'));
+};
+
+function manifest(){
+    return src('public/manifest.webmanifest')
+        .pipe(dest(PROD + '/public'));
+};
+
 // Config and chat history (config.json, *Chat.json) stay as they are on the server.
 function moveServerJs(){
     return src(['app.js', 'sockets.js', 'serviceworker.js', 'routes/*.js', 'game/*.js', 'public/js/ranks.js'], {base: '.'})
@@ -88,10 +103,12 @@ function img(){
 
 exports.jsGame = jsGame;
 exports.jsLobby = jsLobby;
+exports.jsServiceWorker = jsServiceWorker;
 exports.moveServerJs = moveServerJs;
 exports.css = css;
 exports.cssGameBoard = cssGameBoard;
 exports.fonts = fonts;
+exports.manifest = manifest;
 exports.views = views;
 exports.img = img;
-exports.default = parallel(jsGame, jsLobby, moveServerJs, css, cssGameBoard, fonts, views, img);
+exports.default = parallel(jsGame, jsLobby, jsServiceWorker, moveServerJs, css, cssGameBoard, fonts, manifest, views, img);

@@ -64,6 +64,7 @@ module.exports.Bot = mongoose.model('Bot', new Schema({
 }, { timestamps: true }));
 
 module.exports.BwNotification = mongoose.model('BwNotification', new Schema({
+    app: { type: String, index: true },
     username: String,
     subscription: String,
     active: {type:Boolean, default: true}

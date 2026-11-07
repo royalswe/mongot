@@ -1,4 +1,5 @@
 {
   "GOLD": 180,
-  "ARMY_COST": 3
+  "ARMY_COST": 3,
+  "DOMAIN": "http://localhost:5100"
 }

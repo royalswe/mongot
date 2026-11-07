@@ -1,6 +1,22 @@
 'use strict';
 const express = require('express');
 
+// A configured DOMAIN can be stale in production, so also accept a request whose
+// Origin matches the host it was actually sent to. Cross-site pages still fail
+// because their Origin host differs from the Host header.
+function sameOrigin(req, expected) {
+    const requestOrigin = req.get('origin');
+    if (!requestOrigin) { return false; }
+    if (expected && requestOrigin === expected) { return true; }
+    let parsed;
+    try {
+        parsed = new URL(requestOrigin);
+    } catch {
+        return false;
+    }
+    return parsed.host === req.get('host');
+}
+
 function validSubscription(subscription) {
     if (!subscription || typeof subscription.endpoint !== 'string' || subscription.endpoint.length > 2048) {
         return false;
@@ -29,6 +45,7 @@ module.exports = function createNotifications({
     webpush = require('web-push'),
     env = process.env,
     origin,
+    app = 'blockwars',
     logger = console,
     now = Date.now
 } = {}) {
@@ -49,7 +66,7 @@ module.exports = function createNotifications({
     });
 
     router.use('/notifications/subscription', (req, res, next) => {
-        if (req.get('origin') !== origin) {
+        if (!sameOrigin(req, origin)) {
             return res.status(403).json({ error: 'Notification settings must be changed from this site.' });
         }
         if (!validSubscription(req.body && req.body.subscription)) {
@@ -79,7 +96,7 @@ module.exports = function createNotifications({
             const subscription = JSON.stringify(req.body.subscription);
             await model.findOneAndUpdate(
                 { subscription },
-                { subscription, username: req.user ? req.user.username : 'guest', active: true },
+                { subscription, app, username: req.user ? req.user.username : 'guest', active: true },
                 { upsert: true }
             );
             res.json({ active: true });
@@ -107,7 +124,11 @@ module.exports = function createNotifications({
         for (const [key, sentAt] of lastSent) {
             if (timestamp - sentAt >= 60000) { lastSent.delete(key); }
         }
-        const docs = await model.find({ active: true });
+        // Subscriptions saved before apps were tagged belong to Blockwars.
+        const docs = await model.find({
+            active: true,
+            $or: [{ app }, { app: { $exists: false } }, { app: null }]
+        });
         await Promise.all(docs.map(async doc => {
             if (doc.username !== 'guest' && doc.username === username) { return; }
             if (lastSent.has(doc.subscription)) { return; }

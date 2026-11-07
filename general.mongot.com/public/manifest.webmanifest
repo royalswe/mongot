@@ -1,0 +1,9 @@
+{
+  "name": "General",
+  "short_name": "General",
+  "start_url": "/lobby",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4ead3",
+  "theme_color": "#231d17"
+}

@@ -94,7 +94,7 @@ function siblingSocket(namespace, socket) {
     return null;
 }
 
-exports.initialize = (server) => {
+exports.initialize = (server, { notifications } = {}) => {
     // allowEIO3 lets tabs still running the old client reconnect after the upgrade; drop it once they are gone.
     io = new Server(server, {allowEIO3: true});
 
@@ -133,8 +133,15 @@ exports.initialize = (server) => {
         socket.on('message', (msg) => relayLobbyChat(socket, msg));
         socket.on('remove_message', (index) => removeLobbyMessage(socket, index));
         socket.on('player_joined', () => {
+            const alreadyPresent = [...lobbyCom.sockets.values()].some(candidate =>
+                candidate !== socket && candidate.username === socket.username);
             if (!socket.isGuest) {
                 socket.broadcast.emit('user_notification', socket.username + ' arrived to the lobby');
+            }
+            // Push does not need a recipient tab or connection; one arrival per account/tab set.
+            if (notifications && !alreadyPresent) {
+                notifications.notifyArrival(socket.username).catch((error) =>
+                    console.error('Failed to send lobby arrival notifications:', error.message));
             }
             socket.emit('render_messages', lobbyChat);
             broadcastUsersOnline();

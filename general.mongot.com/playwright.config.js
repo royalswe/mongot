@@ -24,6 +24,7 @@ module.exports = defineConfig({
             PORT: '5182',
             ROOM_CLEANUP_DELAY_MS: '3000',
             COOKIE_SECRET: COOKIE_SECRET,
+            DOMAIN: 'http://127.0.0.1:5182',
             TEST_ACCOUNTS: JSON.stringify(accounts)
         }
     }
